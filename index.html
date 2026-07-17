@@ -16,12 +16,12 @@
     <div class="title-block">
       <div class="eyebrow">
         <span>ROOTS OF THE ABYSS · DOSSIÊ DE SOBREVIVENTE</span>
-        <span class="reg">Nº <input type="text" placeholder="000-XX"></span>
+        <span class="reg">Nº <input type="text" id="registro" placeholder="000-XX"></span>
       </div>
-      <input class="name-input" type="text" placeholder="NOME DO SOBREVIVENTE">
+      <input class="name-input" id="nome-sobrevivente" type="text" placeholder="NOME DO SOBREVIVENTE">
       <div class="meta-grid">
-        <div class="meta-field"><label>Jogador</label><input type="text" placeholder="—"></div>
-        <div class="meta-field"><label>Idade</label><input type="text" placeholder="—"></div>
+        <div class="meta-field"><label>Jogador</label><input id="jogador" type="text" placeholder="—"></div>
+        <div class="meta-field"><label>Idade</label><input id="idade" type="text" placeholder="—"></div>
         <div class="meta-field"><label>Sangue</label>
           <select id="sangue">
             <option value="velho">Sangue Velho</option>
@@ -40,17 +40,20 @@
           <span class="origin-hint" id="origin-weapon-hint"></span>
         </div>
         <div class="meta-field"><label>Ocupação</label>
-          <select>
+          <select id="ocupacao-select">
             <option value="">— Selecionar —</option>
             <option>Estudioso</option><option>Arsenalista</option><option>Preparado</option>
             <option>Herdeiro</option><option>Determinado</option><option>Prodígio</option><option>Engenhoqueiro</option>
+            <option>Masoquista</option><option>Espectro</option><option>Abutre</option>
+            <option>Verdugo</option><option>Âncora</option><option>Devoto</option>
           </select>
+          <span class="origin-hint" id="occupation-hint"></span>
         </div>
-        <div class="meta-field"><label>Reputação / Arquétipo</label>
-          <select>
+        <div class="meta-field"><label>Reputação / Paradigma</label>
+          <select id="reputacao-select">
             <option value="">— Selecionar —</option>
             <optgroup label="Sublime">
-              <option>Guardião</option><option>Idealista</option><option>Messias</option>
+              <option>Guardião</option><option>Justo</option><option>Messias</option>
             </optgroup>
             <optgroup label="Síntese">
               <option>Peregrino</option><option>Sobrevivente</option><option>Imperfeito</option>
@@ -60,20 +63,23 @@
             </optgroup>
           </select>
         </div>
-        <div class="meta-field"><label>Flor da Corrupção (S. Novo)</label>
-          <select>
+        <div class="meta-field blood-meta blood-new" id="new-blood-meta"><label>Flor da Corrupção</label>
+          <select id="flor-select">
             <option value="">— Nenhuma —</option>
             <option>Orquídea</option><option>Crisântemo</option><option>Dália</option>
-            <option>Íris</option><option>Begônia</option><option>Personalizada</option>
+            <option>Íris</option><option>Begônia</option><option>Jasmim</option>
+            <option>Jarro-Titã</option><option>Hibisco</option><option>Camomila</option>
+            <option>Rosa</option><option>Girassol</option><option>Dente-de-Leão</option>
           </select>
         </div>
-        <div class="meta-field"><label>Pulseira (S. Velho)</label>
-          <select>
+        <div class="meta-field blood-meta blood-old" id="old-blood-meta"><label>Sensor da Pulseira</label>
+          <select id="pulseira-select">
             <option>Verde</option><option>Amarelo</option><option>Vermelho</option><option>Preto</option>
           </select>
         </div>
-        <div class="meta-field"><label>Ponto de Partida</label><input type="text" placeholder="Abrigo / Comunidade"></div>
-        <div class="meta-field"><label>Grupo / Estrada</label><input type="text" placeholder="—"></div>
+        <div class="meta-field"><label>Arquétipo</label><input type="text" id="arquetipo-readout" readonly placeholder="Definido pela Origem"></div>
+        <div class="meta-field"><label>Ponto de Partida</label><input id="ponto-partida" type="text" placeholder="Abrigo / Comunidade"></div>
+        <div class="meta-field"><label>Grupo / Estrada</label><input id="grupo-estrada" type="text" placeholder="—"></div>
       </div>
     </div>
   </div>
@@ -181,9 +187,9 @@
             <div class="track-header">
               <span>Pontos de Corrupção (PC)</span>
               <div class="pc-controls">
-                <button type="button" class="pc-control-btn" data-action="dec" title="Diminuir">−</button>
-                <input type="number" id="pc-input" min="0" max="100" value="0">
-                <button type="button" class="pc-control-btn" data-action="inc" title="Aumentar">+</button>
+                <input type="number" id="pc-input" min="0" max="100" value="0" readonly aria-label="Corrupção atual">
+                <input type="number" id="pc-gain-input" min="1" max="100" value="1" aria-label="Ganho de Corrupção">
+                <button type="button" class="pc-control-btn" data-action="add" title="Adicionar Corrupção">+ PC</button>
               </div>
             </div>
             <div class="pc-bar" id="pc-bar">
@@ -266,7 +272,7 @@
             <div class="wound-sev">
               <label><input type="radio" name="wound-severity" value="0"> Nenhum</label>
               <label><input type="radio" name="wound-severity" value="1"> Leve</label>
-              <label><input type="radio" name="wound-severity" value="2"> Mediano</label>
+              <label><input type="radio" name="wound-severity" value="2"> Moderado</label>
               <label><input type="radio" name="wound-severity" value="3"> Grave</label>
             </div>
 
@@ -282,6 +288,8 @@
 
             <label>Descrição / Observações</label>
             <textarea id="wound-note" placeholder="Descreva o ferimento, efeitos, causa, etc."></textarea>
+            <div class="rule-preview" id="wound-rule-preview">Selecione tipo e gravidade para consultar a regra.</div>
+            <label class="check-line"><input type="checkbox" id="wound-apply-pf" checked> Somar os PF deste ferimento ao total</label>
           </div>
           <div class="modal-footer">
             <button type="button" id="wound-save">Salvar</button>
@@ -294,7 +302,7 @@
         <div class="legend-row">
           <div class="legend-item"><span class="legend-swatch none"></span> Nenhum</div>
           <div class="legend-item"><span class="legend-swatch light"></span> Ferimento Leve</div>
-          <div class="legend-item"><span class="legend-swatch medium"></span> Ferimento Mediano</div>
+          <div class="legend-item"><span class="legend-swatch medium"></span> Ferimento Moderado</div>
           <div class="legend-item"><span class="legend-swatch severe"></span> Ferimento Grave</div>
         </div>
         <div class="wound-summary-box">
@@ -350,7 +358,7 @@
   <!-- ===================== INVENTÁRIO / ARMAS / RECURSOS ===================== -->
   <div class="row-2">
     <div class="section">
-      <div class="section-title">Inventário <span class="tag">MÁX. = FÍSICO</span></div>
+      <div class="section-title">Inventário <span class="tag" id="inventory-capacity-tag">MÁX. = 2 + FÍSICO</span></div>
       <div class="section-body">
         <div class="inv-grid" id="inv-grid"></div>
         <button type="button" class="add-inv-btn" id="add-inv-btn">+ Adicionar Item</button>
@@ -413,6 +421,7 @@
   <input type="file" id="backup-file-input" accept=".json" style="display:none;">
 </div>
 
+<script src="rules-data.js"></script>
 <script src="script.js"></script>
 
 </body>

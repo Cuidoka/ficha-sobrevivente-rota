@@ -1,1145 +1,1406 @@
-(
-  function(){
+(function(){
+  'use strict';
 
-  var SHEET_STORAGE_KEY = 'survivor-sheet-state-v2';
-  function collectSheetState(){
-    var formFields = Array.prototype.slice.call(document.querySelectorAll('input[type="text"], input[type="number"], textarea, select'));
-    var formValues = formFields.map(function(el){ return el.value; });
-    var pipStates = Array.prototype.slice.call(document.querySelectorAll('.pips')).map(function(group){
-      return {
-        id: group.id || '',
-        value: group.dataset.value || '0',
-        origin: group.dataset.origin || '0',
-        max: group.dataset.max || ''
-      };
+  var DATA = window.ROOTS_DATA;
+  if(!DATA){ throw new Error('ROOTS_DATA não foi carregado.'); }
+
+  var STORAGE_KEY = 'roots-survivor-state-v3';
+  var LEGACY_STORAGE_KEY = 'survivor-sheet-state-v2';
+  var LEGACY_NOTES_KEY = 'survivor-notes-state-v2';
+  var saveTimer = null;
+  var model = loadModel();
+
+  function $(selector, root){ return (root || document).querySelector(selector); }
+  function $$(selector, root){ return Array.prototype.slice.call((root || document).querySelectorAll(selector)); }
+  function clamp(value, min, max){ return Math.max(min, Math.min(max, Number(value) || 0)); }
+  function uid(prefix){ return prefix + '-' + Date.now() + '-' + Math.floor(Math.random() * 100000); }
+  function escapeHtml(value){
+    return String(value == null ? '' : value)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function clone(value){ return JSON.parse(JSON.stringify(value)); }
+  function isObject(value){ return value && typeof value === 'object' && !Array.isArray(value); }
+  function mergeModel(base, saved){
+    if(!isObject(saved)) return base;
+    Object.keys(saved).forEach(function(key){
+      if(isObject(saved[key]) && isObject(base[key])) mergeModel(base[key], saved[key]);
+      else base[key] = clone(saved[key]);
     });
-    var dorStates = Array.prototype.slice.call(document.querySelectorAll('.dor-row .dor-check')).map(function(chk){
-      return chk.dataset.checked || '0';
-    });
-    var zoneStates = {};
-    document.querySelectorAll('.zone').forEach(function(z){
-      zoneStates[z.id] = zoneState && zoneState[z.id] !== undefined ? zoneState[z.id] : 0;
-    });
-    var zoneDetailsSnapshot = {};
-    document.querySelectorAll('.zone').forEach(function(z){
-      try{ zoneDetailsSnapshot[z.id] = zoneDetails && zoneDetails[z.id] ? JSON.parse(JSON.stringify(zoneDetails[z.id])) : null; }catch(e){ zoneDetailsSnapshot[z.id] = null; }
-    });
+    return base;
+  }
+
+  function defaultNotes(){
     return {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      formValues: formValues,
-      pipStates: pipStates,
-      dorStates: dorStates,
-      zoneStates: zoneStates,
-      zoneDetails: zoneDetailsSnapshot,
-      pc: document.getElementById('pc-input') ? document.getElementById('pc-input').value : '0',
-      notes: notesState ? JSON.parse(JSON.stringify(notesState)) : null
+      selectedNotebookId:'notebook-history',
+      notebooks:[
+        { id:'notebook-history', title:'História Principal', notes:[{ id:'note-summary', title:'Resumo', content:'' }] },
+        { id:'notebook-missions', title:'Anotações de Missões', notes:[{ id:'note-objectives', title:'Objetivos', content:'' }] }
+      ]
     };
   }
-  function saveSheetState(){
+
+  function defaultModel(){
+    var skillValues = {};
+    Object.keys(DATA.skills).forEach(function(attribute){
+      DATA.skills[attribute].forEach(function(skill){ skillValues[skill] = 1; });
+    });
+    var resources = {};
+    DATA.resources.forEach(function(resource){ resources[resource] = 0; });
+    var armor = {};
+    DATA.armors.forEach(function(item){ armor[item.id] = { equipped:false, remaining:0 }; });
+    return {
+      version:3,
+      updatedAt:null,
+      fields:{
+        registro:'', 'nome-sobrevivente':'', jogador:'', idade:'', sangue:'velho',
+        'origem-select':'', 'ocupacao-select':'', 'reputacao-select':'',
+        'flor-select':'', 'pulseira-select':'Verde', 'ponto-partida':'',
+        'grupo-estrada':'', 'attr-bonus-manual':0, 'pp-bonus-manual':0,
+        'prodigio-skill-1':'', 'prodigio-skill-2':'', 'abutre-resource':'',
+        'history-before':'', 'history-loss':'', 'history-purpose':'',
+        'history-fear':'', 'history-bonds':'', 'growth-stage':0
+      },
+      attributes:{ Físico:1, Destreza:1, Intelecto:1, Instinto:1, Espírito:1 },
+      skills:skillValues,
+      originSkills:[],
+      originPowers:[],
+      health:{ pf:0, pe:0, permanentPf:0, permanentPe:0 },
+      pc:0,
+      wounds:{},
+      conditions:[],
+      characteristics:{ vantagens:['',''], desvantagens:[''], cicatrizes:[''] },
+      pains:[{checked:false,text:''},{checked:false,text:''},{checked:false,text:''}],
+      inventory:[],
+      weapons:[emptyWeapon(), emptyWeapon()],
+      armor:armor,
+      resources:resources,
+      parts:0,
+      knownRecipes:[],
+      allowCampaignRecipes:false,
+      notes:defaultNotes(),
+      ui:{ activePage:'principal', lastRoll:null }
+    };
+  }
+
+  function emptyWeapon(){
+    return { weaponId:'', current:0, mods:[], notes:'', customName:'', customDamage:'', customRange:'', customMax:0 };
+  }
+
+  function loadModel(){
+    var base = defaultModel();
     try{
-      localStorage.setItem(SHEET_STORAGE_KEY, JSON.stringify(collectSheetState()));
-    } catch(e){
-      console.warn('Não foi possível salvar a ficha automaticamente.', e);
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){ return normalizeModel(mergeModel(base, JSON.parse(raw))); }
+      var legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if(legacyRaw){ return normalizeModel(migrateLegacy(JSON.parse(legacyRaw), base)); }
+      var notesRaw = localStorage.getItem(LEGACY_NOTES_KEY);
+      if(notesRaw){ base.notes = JSON.parse(notesRaw); }
+    } catch(error){ console.warn('Não foi possível restaurar a ficha.', error); }
+    return normalizeModel(base);
+  }
+
+  function normalizeModel(value){
+    var base = mergeModel(defaultModel(), value || {});
+    base.version = 3;
+    if(!Array.isArray(base.weapons)) base.weapons = [emptyWeapon(), emptyWeapon()];
+    while(base.weapons.length < 2) base.weapons.push(emptyWeapon());
+    if(!Array.isArray(base.inventory)) base.inventory = [];
+    if(!Array.isArray(base.originSkills)) base.originSkills = [];
+    if(!Array.isArray(base.originPowers)) base.originPowers = [];
+    if(!Array.isArray(base.knownRecipes)) base.knownRecipes = [];
+    if(!Array.isArray(base.conditions)) base.conditions = [];
+    if(!base.notes || !Array.isArray(base.notes.notebooks) || !base.notes.notebooks.length) base.notes = defaultNotes();
+    if(!base.notes.selectedNotebookId || !base.notes.notebooks.some(function(nb){ return nb.id === base.notes.selectedNotebookId; })){
+      base.notes.selectedNotebookId = base.notes.notebooks[0].id;
+    }
+    DATA.resources.forEach(function(name){ if(base.resources[name] == null) base.resources[name] = 0; });
+    DATA.armors.forEach(function(item){
+      if(!base.armor[item.id]) base.armor[item.id] = { equipped:false, remaining:0 };
+    });
+    return base;
+  }
+
+  function migrateLegacy(snapshot, base){
+    if(!snapshot) return base;
+    var fields = snapshot.formValues || [];
+    var fieldMap = {
+      0:'registro', 1:'nome-sobrevivente', 2:'jogador', 3:'idade', 4:'sangue',
+      5:'origem-select', 6:'ocupacao-select', 7:'reputacao-select', 8:'flor-select',
+      9:'pulseira-select', 10:'ponto-partida', 11:'grupo-estrada',
+      12:'attr-bonus-manual', 17:'pp-bonus-manual'
+    };
+    Object.keys(fieldMap).forEach(function(index){
+      if(fields[index] != null) base.fields[fieldMap[index]] = fields[index];
+    });
+    var characterStart = 18;
+    base.characteristics.vantagens = fields.slice(characterStart, characterStart + 5).filter(Boolean);
+    base.characteristics.desvantagens = fields.slice(characterStart + 5, characterStart + 10).filter(Boolean);
+    base.characteristics.cicatrizes = fields.slice(characterStart + 10, characterStart + 15).filter(Boolean);
+    if(!base.characteristics.vantagens.length) base.characteristics.vantagens = ['',''];
+    if(!base.characteristics.desvantagens.length) base.characteristics.desvantagens = [''];
+    if(!base.characteristics.cicatrizes.length) base.characteristics.cicatrizes = [''];
+    base.inventory = fields.slice(33, 41).filter(Boolean).map(function(name){ return { id:uid('item'), name:name, uses:'' }; });
+    if(fields[41]){
+      base.weapons[0] = { weaponId:'custom', current:parseInt(fields[44],10) || 0, mods:[], notes:'', customName:fields[41], customDamage:fields[42] || '', customRange:fields[43] || '', customMax:parseInt(fields[44],10) || 0 };
+    }
+    if(fields[45]){
+      base.weapons[1] = { weaponId:'custom', current:0, mods:[], notes:'Recuo: ' + (fields[48] || ''), customName:fields[45], customDamage:'Munição: ' + (fields[46] || ''), customRange:fields[47] || '', customMax:0 };
+    }
+    for(var painIndex=0; painIndex<3; painIndex++){
+      base.pains[painIndex].text = fields[49 + painIndex] || '';
+      base.pains[painIndex].checked = snapshot.dorStates && snapshot.dorStates[painIndex] === '1';
+    }
+    (snapshot.pipStates || []).forEach(function(pip, index){
+      var value = parseInt(pip.value || '0', 10) || 0;
+      var attributeMap = { 'attr-fisico':'Físico', 'attr-destreza':'Destreza', 'attr-intelecto':'Intelecto', 'attr-instinto':'Instinto', 'attr-espirito':'Espírito' };
+      if(attributeMap[pip.id]) base.attributes[attributeMap[pip.id]] = value;
+      if(pip.id === 'pf-boxes') base.health.pf = value;
+      if(pip.id === 'pe-boxes') base.health.pe = value;
+      if(/^res-\d+$/.test(pip.id)){
+        var resourceIndex = parseInt(pip.id.split('-')[1],10);
+        if(DATA.resources[resourceIndex]) base.resources[DATA.resources[resourceIndex]] = value;
+      }
+      if(/^sk-\d+$/.test(pip.id)){
+        var flatSkills = [];
+        Object.keys(DATA.skills).forEach(function(attr){ flatSkills = flatSkills.concat(DATA.skills[attr]); });
+        var skill = flatSkills[parseInt(pip.id.split('-')[1],10) - 1];
+        if(skill){
+          base.skills[skill] = value;
+          if(pip.origin === '1') base.originSkills.push(skill);
+        }
+      }
+    });
+    base.pc = clamp(snapshot.pc, 0, 100);
+    base.wounds = snapshot.zoneDetails || {};
+    if(snapshot.notes) base.notes = snapshot.notes;
+    return base;
+  }
+
+  function saveModel(immediate){
+    if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
+    var write = function(){
+      try{
+        model.updatedAt = new Date().toISOString();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(model));
+        localStorage.setItem(LEGACY_NOTES_KEY, JSON.stringify(model.notes));
+      } catch(error){ console.warn('Não foi possível salvar automaticamente.', error); }
+    };
+    if(immediate) write();
+    else saveTimer = setTimeout(write, 180);
+  }
+
+  function buildTabs(){
+    var sheet = $('#sheet');
+    var footer = $('.footer', sheet);
+    var mainNodes = [$('.doc-header'), $$('.row-2')[0], $('.diagram-section'), $('#skills-grid').closest('.section'), $('#vantagens-list').closest('.section')];
+    var equipmentLegacy = $('#inv-grid').closest('.row-2');
+    var painSection = $('#dores-list').closest('.section');
+    var notesSection = $('#notes-canvas').closest('.section');
+    var nav = document.createElement('nav');
+    nav.className = 'sheet-tabs no-print';
+    nav.setAttribute('role','tablist');
+    nav.innerHTML = [
+      ['principal','Ficha Principal'], ['equipamentos','Equipamentos'],
+      ['historia','História & Anotações'], ['origem','Origem & Corrupção']
+    ].map(function(item){
+      return '<button type="button" class="sheet-tab" role="tab" data-page-target="'+item[0]+'">'+item[1]+'</button>';
+    }).join('');
+    sheet.insertBefore(nav, sheet.firstChild);
+
+    var pages = {};
+    ['principal','equipamentos','historia','origem'].forEach(function(name){
+      var page = document.createElement('section');
+      page.className = 'sheet-page';
+      page.id = 'page-' + name;
+      page.dataset.page = name;
+      page.setAttribute('role','tabpanel');
+      pages[name] = page;
+      sheet.insertBefore(page, footer);
+    });
+    mainNodes.forEach(function(node){ if(node) pages.principal.appendChild(node); });
+    if(equipmentLegacy){ equipmentLegacy.remove(); }
+    if(painSection) pages.historia.appendChild(painSection);
+    if(notesSection) pages.historia.appendChild(notesSection);
+    buildMainEnhancements(pages.principal);
+    buildEquipmentPage(pages.equipamentos);
+    buildHistoryPage(pages.historia);
+    buildOriginPage(pages.origem);
+    activatePage(model.ui.activePage || 'principal');
+  }
+
+  function pageHeading(title, subtitle){
+    return '<div class="page-heading"><div><span class="page-kicker">DOSSIÊ DE SOBREVIVENTE</span><h1>'+title+'</h1></div><p>'+subtitle+'</p></div>';
+  }
+
+  function buildMainEnhancements(page){
+    var header = $('.doc-header', page);
+    var dice = document.createElement('div');
+    dice.className = 'section dice-section';
+    dice.innerHTML = '<div class="section-title">Rolador de Testes <span class="tag">ATRIBUTO = DADOS · PERÍCIA = LIMITE</span></div>'+
+      '<div class="section-body dice-layout">'+
+        '<div class="dice-controls">'+
+          '<label>Atributo<select id="roll-attribute"></select></label>'+
+          '<label>Perícia<select id="roll-skill"></select></label>'+
+          '<label>Bônus<input id="roll-bonus" type="number" min="0" max="3" value="0"></label>'+
+          '<label>Penalidades<input id="roll-penalty" type="number" min="0" max="3" value="0"></label>'+
+          '<label>NS exigido<select id="roll-target"><option value="0">Sem alvo</option><option value="1">Sofrido</option><option value="2">Gangrenado</option><option value="3">Dilacerante</option><option value="4">Profano</option><option value="5">Absoluto</option></select></label>'+
+          '<label>Número escolhido (0 dados)<select id="roll-guess"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>'+
+        '</div>'+
+        '<div class="dice-options">'+
+          '<label class="check-line"><input type="checkbox" id="roll-plague"> Dado da Praga</label>'+
+          '<label class="check-line hidden" id="roll-devotee-option"><input type="checkbox" id="roll-devotee"> Teste rolado contra o Devoto</label>'+
+          '<label class="check-line"><input type="checkbox" id="roll-stress"> Apostar Estresse (+1 dado, +2 PE)</label>'+
+          '<button type="button" class="primary-action" id="roll-button">Rolar dados</button>'+
+        '</div>'+
+        '<div class="dice-result" id="roll-result"><span>Escolha Atributo e Perícia para rolar.</span></div>'+
+      '</div>';
+    if(header && header.nextSibling) page.insertBefore(dice, header.nextSibling);
+    else page.appendChild(dice);
+
+    var conditionSection = document.createElement('div');
+    conditionSection.className = 'section';
+    conditionSection.innerHTML = '<div class="section-title">Condições Ativas <span class="tag">CORPO · MENTE · AMBIENTE</span></div>'+
+      '<div class="section-body condition-shell"><div class="condition-add">'+
+      '<select id="condition-select"><option value="">— Selecionar —</option></select>'+
+      '<input id="condition-custom" type="text" placeholder="Condição personalizada">'+
+      '<button type="button" class="notes-btn" id="condition-add-button">Adicionar</button></div>'+
+      '<div class="condition-list" id="condition-list"></div></div>';
+    var diagram = $('.diagram-section', page);
+    if(diagram && diagram.nextSibling) page.insertBefore(conditionSection, diagram.nextSibling);
+    else page.appendChild(conditionSection);
+
+    var pfBlock = $('#pf-boxes').closest('.track-block');
+    var peBlock = $('#pe-boxes').closest('.track-block');
+    var permanentPf = document.createElement('label');
+    permanentPf.className = 'permanent-control';
+    permanentPf.innerHTML = 'PF permanentes <input id="pf-permanent" type="number" min="0" max="20" value="0">';
+    pfBlock.appendChild(permanentPf);
+    var permanentPe = document.createElement('label');
+    permanentPe.className = 'permanent-control';
+    permanentPe.innerHTML = 'PE permanentes <input id="pe-permanent" type="number" min="0" max="20" value="0">';
+    peBlock.appendChild(permanentPe);
+  }
+
+  function buildEquipmentPage(page){
+    page.innerHTML = pageHeading('Equipamentos','Carga, armas, proteção e fabricação em uma página própria.')+
+      '<div class="row-2 equipment-top">'+
+        '<div class="section"><div class="section-title">Inventário <span class="tag" id="inventory-capacity-tag">MÁX. = 2 + FÍSICO</span></div><div class="section-body">'+
+          '<div class="status-line"><span id="inventory-status"></span><span id="initial-items-status"></span></div>'+
+          '<div class="inv-grid" id="inv-grid"></div><button type="button" class="add-inv-btn" id="add-inv-btn">+ Adicionar espaço sobrecarregado</button>'+
+        '</div></div>'+
+        '<div class="section"><div class="section-title">Espaços de Arma <span class="tag" id="weapon-slots-tag">2 EXCLUSIVOS</span></div><div class="section-body"><div id="weapons-list"></div></div></div>'+
+      '</div>'+
+      '<div class="row-2">'+
+        '<div class="section"><div class="section-title">Armadura</div><div class="section-body"><div class="armor-grid" id="armor-list"></div></div></div>'+
+        '<div class="section"><div class="section-title">Recursos & Partes</div><div class="section-body">'+
+          '<div class="parts-control"><span>Partes</span><button type="button" data-parts-delta="-1">−</button><input id="parts-input" type="number" min="0" value="0"><button type="button" data-parts-delta="1">+</button></div>'+
+          '<div class="weapon-card-title">Bolsa de Recursos (¼ de unidade)</div><div class="res-pips-grid" id="res-pips-grid"></div>'+
+        '</div></div>'+
+      '</div>'+
+      '<div class="section"><div class="section-title">Receitas de Fabricação <span class="tag" id="recipe-limit-tag">CONHECIDAS = INTELECTO</span></div><div class="section-body">'+
+        '<div class="recipe-toolbar"><span id="recipe-known-status"></span><label class="check-line"><input type="checkbox" id="allow-campaign-recipes"> Permitir receitas aprendidas durante a campanha</label></div>'+
+        '<div class="recipe-grid" id="recipe-grid"></div></div></div>';
+  }
+
+  function buildHistoryPage(page){
+    var background = document.createElement('div');
+    background.className = 'section';
+    background.innerHTML = '<div class="section-title">História do Sobrevivente <span class="tag">MEMÓRIA · PROPÓSITO · LAÇOS</span></div><div class="section-body history-grid">'+
+      historyField('history-before','Quem você era antes?','Infância, profissão, comunidade e visão do mundo...')+
+      historyField('history-loss','O que você perdeu?','Pessoas, lugares, certezas ou partes de si...')+
+      historyField('history-purpose','O que mantém você na estrada?','Sobrevivência, redenção, vingança, esperança...')+
+      historyField('history-fear','O que você mais teme?','O que não pode perder novamente?')+
+      historyField('history-bonds','Laços e conflitos','Família, aliados, rivais, dívidas e promessas...')+
+      '</div>';
+    page.insertBefore(background, page.firstChild);
+    var heading = document.createElement('div');
+    heading.innerHTML = pageHeading('História & Anotações','O que aconteceu, quem ficou e por que continuar.');
+    page.insertBefore(heading.firstChild, page.firstChild);
+  }
+
+  function historyField(id, label, placeholder){
+    return '<label class="history-field"><span>'+label+'</span><textarea id="'+id+'" placeholder="'+placeholder+'"></textarea></label>';
+  }
+
+  function buildOriginPage(page){
+    page.innerHTML = pageHeading('Origem & Corrupção','Poderes, Ocupação, Crescimento e a marca da Praga.')+
+      '<div class="row-2">'+
+        '<div class="section"><div class="section-title">Poderes de Origem <span class="tag">TODOS OS PO DEVEM SER GASTOS</span></div><div class="section-body">'+
+          '<div class="origin-overview" id="origin-overview"></div><div class="origin-budget" id="origin-budget"></div><div class="power-list" id="origin-power-list"></div>'+
+        '</div></div>'+
+        '<div class="section"><div class="section-title">Ocupação</div><div class="section-body"><div id="occupation-detail"></div></div></div>'+
+      '</div>'+
+      '<div class="section"><div class="section-title">Disseminação <span class="tag" id="plague-threshold-tag">DADO DA PRAGA: 1</span></div><div class="section-body">'+
+        '<div class="corruption-overview" id="corruption-overview"></div>'+
+        '<div class="blood-path" id="new-blood-panel"><div class="subsection-heading">Flor da Corrupção</div><div id="flower-overview"></div><div class="flower-stages" id="flower-stages"></div></div>'+
+        '<div class="blood-path" id="old-blood-panel"><div class="subsection-heading">Filtro Corruptivo</div>'+filterControls()+'<div id="filter-result" class="rule-preview"></div></div>'+
+      '</div></div>'+
+      '<div class="section"><div class="section-title">Crescimento <span class="tag">TRILHA I–X</span></div><div class="section-body growth-row">'+
+        '<label>Arquétipo<input id="growth-archetype" type="text" readonly></label><label>Etapa<select id="growth-stage"><option value="0">Ainda não iniciou</option>'+growthOptions()+'</select></label><div id="growth-summary" class="rule-preview"></div>'+
+      '</div></div>';
+  }
+
+  function filterControls(){
+    return '<div class="filter-grid">'+
+      '<div><label>Ganho fixo de PC<input id="filter-fixed-input" type="number" min="0" value="5"></label><button type="button" class="notes-btn" id="filter-fixed-button">Aplicar com −4 PC</button></div>'+
+      '<div><label>Dados de ganho variável<input id="filter-dice-count" type="number" min="1" max="6" value="2"></label><button type="button" class="notes-btn" id="filter-variable-button">Rolar e descartar o maior</button></div>'+
+      '<div><p>Sobrecarga anula todo o ganho, mas causa 2 PF permanentes e Inconsciente.</p><button type="button" class="notes-btn danger" id="filter-overload-button">Acionar Sobrecarga</button></div>'+
+      '</div>';
+  }
+
+  function growthOptions(){
+    var roman = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
+    return roman.map(function(label, index){ return '<option value="'+(index+1)+'">'+label+'</option>'; }).join('');
+  }
+
+  function activatePage(name){
+    if(!$('#page-' + name)) name = 'principal';
+    model.ui.activePage = name;
+    $$('.sheet-page').forEach(function(page){ page.classList.toggle('active', page.dataset.page === name); });
+    $$('.sheet-tab').forEach(function(tab){
+      var active = tab.dataset.pageTarget === name;
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    saveModel();
+  }
+
+  function bindFields(){
+    var ids = [
+      'registro','nome-sobrevivente','jogador','idade','sangue','origem-select','ocupacao-select','reputacao-select',
+      'flor-select','pulseira-select','ponto-partida','grupo-estrada','attr-bonus-manual','pp-bonus-manual',
+      'history-before','history-loss','history-purpose','history-fear','history-bonds','growth-stage'
+    ];
+    ids.forEach(function(id){
+      var element = $('#' + id);
+      if(element){ element.dataset.modelField = id; }
+    });
+  }
+
+  function applyFields(){
+    $$('[data-model-field]').forEach(function(element){
+      var value = model.fields[element.dataset.modelField];
+      if(value != null) element.value = value;
+    });
+    $('#pf-permanent').value = model.health.permanentPf;
+    $('#pe-permanent').value = model.health.permanentPe;
+    $('#parts-input').value = model.parts;
+    $('#allow-campaign-recipes').checked = !!model.allowCampaignRecipes;
+  }
+
+  function buildSkills(){
+    var grid = $('#skills-grid');
+    grid.innerHTML = '';
+    var skillIndex = 0;
+    Object.keys(DATA.skills).forEach(function(attribute){
+      var column = document.createElement('div');
+      column.innerHTML = '<div class="skill-col-title">'+attribute+'</div>';
+      DATA.skills[attribute].forEach(function(skill){
+        skillIndex++;
+        var row = document.createElement('div');
+        row.className = 'skill-row';
+        row.dataset.skill = skill;
+        row.dataset.attribute = attribute;
+        row.innerHTML = '<span class="skill-name">'+skill+'</span><div class="pips skill-pips" id="sk-'+skillIndex+'" data-skill-name="'+skill+'" data-attribute="'+attribute+'" data-max="4">'+pipButtons(5)+'</div>';
+        column.appendChild(row);
+      });
+      grid.appendChild(column);
+    });
+    var attrOptions = Object.keys(DATA.skills).map(function(name){ return '<option>'+name+'</option>'; }).join('');
+    $('#roll-attribute').innerHTML = attrOptions;
+    $('#roll-skill').innerHTML = flattenSkills().map(function(name){ return '<option>'+name+'</option>'; }).join('');
+  }
+
+  function flattenSkills(){
+    var list = [];
+    Object.keys(DATA.skills).forEach(function(attribute){ list = list.concat(DATA.skills[attribute]); });
+    return list;
+  }
+
+  function pipButtons(max){
+    var html = '';
+    for(var index=1; index<=max; index++) html += '<button type="button" class="pip" data-i="'+index+'" title="'+index+'"></button>';
+    return html;
+  }
+
+  function renderPips(group, value, max, options){
+    options = options || {};
+    group.dataset.value = String(value);
+    group.dataset.max = String(max);
+    $$('.pip', group).forEach(function(pip){
+      var index = parseInt(pip.dataset.i,10);
+      pip.classList.toggle('filled', index <= value);
+      pip.classList.toggle('permanent', !!options.permanentFrom && index >= options.permanentFrom && index <= options.permanentTo);
+      pip.classList.toggle('overflow', !!options.safeMax && index > options.safeMax);
+    });
+  }
+
+  function attributeId(name){
+    return { Físico:'attr-fisico', Destreza:'attr-destreza', Intelecto:'attr-intelecto', Instinto:'attr-instinto', Espírito:'attr-espirito' }[name];
+  }
+
+  function getOccupation(){ return DATA.occupations[model.fields['ocupacao-select']] || null; }
+  function getOrigin(){ return DATA.origins[model.fields['origem-select']] || null; }
+  function attributeBudget(values){
+    values = values || model.attributes;
+    var spent = 0, zeroCount = 0;
+    Object.keys(values).forEach(function(name){
+      spent += Math.max(0, Number(values[name]) - 1);
+      if(Number(values[name]) === 0) zeroCount++;
+    });
+    var occupation = getOccupation();
+    var manual = parseInt(model.fields['attr-bonus-manual'] || 0,10) || 0;
+    var max = 8 + (zeroCount ? 2 : 0) + (occupation && occupation.attributeBonus || 0) + manual;
+    return { spent:spent, zeroCount:zeroCount, max:max, remaining:max-spent };
+  }
+
+  function renderAttributes(){
+    Object.keys(model.attributes).forEach(function(name){
+      var group = $('#' + attributeId(name));
+      var value = clamp(model.attributes[name],0,5);
+      model.attributes[name] = value;
+      renderPips(group,value,5);
+      var readout = $('.readout', group.parentElement);
+      if(readout) readout.textContent = String(value).padStart(2,'0') + '/05';
+    });
+    var budget = attributeBudget();
+    $('#attr-spent').textContent = budget.spent;
+    $('#attr-max').textContent = budget.max;
+    $('#attr-remaining').textContent = budget.remaining;
+    $('#attr-remaining').classList.toggle('over', budget.remaining < 0);
+    renderSkills();
+    renderInventory();
+    renderRecipes();
+  }
+
+  function skillAttribute(skill){
+    var result = '';
+    Object.keys(DATA.skills).some(function(attribute){
+      if(DATA.skills[attribute].indexOf(skill) >= 0){ result = attribute; return true; }
+      return false;
+    });
+    return result;
+  }
+
+  function isSkillLocked(skill){ return model.attributes[skillAttribute(skill)] === 0; }
+  function effectiveOriginSkills(){ return model.originSkills.filter(function(skill){ return !isSkillLocked(skill); }); }
+  function blockedOriginCount(){ return model.originSkills.filter(isSkillLocked).length; }
+
+  function skillBudget(){
+    var intellect = model.attributes.Intelecto;
+    var bonusMap = {0:0,1:0,2:2,3:4,4:6,5:8};
+    var occupation = getOccupation();
+    var manual = parseInt(model.fields['pp-bonus-manual'] || 0,10) || 0;
+    var bonus = bonusMap[intellect] || 0;
+    var blockedBonus = blockedOriginCount() * 3;
+    var growthBonus = model.fields['ocupacao-select'] === 'Estudioso' ? clamp(model.fields['growth-stage'],0,10) : 0;
+    var total = 28 + bonus + blockedBonus + (occupation && occupation.ppBonus || 0) + growthBonus + manual;
+    var spent = 0;
+    Object.keys(model.skills).forEach(function(skill){
+      if(model.originSkills.indexOf(skill) < 0 && !isSkillLocked(skill)) spent += Math.max(0, model.skills[skill] - 1);
+    });
+    return { bonus:bonus, blockedBonus:blockedBonus, growthBonus:growthBonus, total:total, spent:spent, remaining:total-spent };
+  }
+
+  function renderSkills(){
+    $$('.skill-row').forEach(function(row){
+      var skill = row.dataset.skill;
+      var group = $('.skill-pips', row);
+      var locked = isSkillLocked(skill);
+      var origin = model.originSkills.indexOf(skill) >= 0;
+      var value = locked ? 0 : (origin ? 5 : clamp(model.skills[skill],1,4));
+      group.classList.toggle('origin-active', origin && !locked);
+      group.classList.toggle('skill-locked', locked);
+      row.classList.toggle('locked', locked);
+      row.title = locked ? (origin ? 'Perícia de Origem bloqueada: concede +3 PP.' : 'Bloqueada pela Fraqueza Absoluta.') : '';
+      renderPips(group,value,origin ? 5 : 4);
+    });
+    var budget = skillBudget();
+    $('#pp-bonus').textContent = budget.bonus + (budget.blockedBonus ? ' + ' + budget.blockedBonus : '') + (budget.growthBonus ? ' + ' + budget.growthBonus + ' Cresc.' : '');
+    $('#pp-total').textContent = budget.total;
+    $('#pp-spent').textContent = budget.spent;
+    $('#pp-remaining').textContent = budget.remaining;
+    $('#pp-remaining').classList.toggle('over', budget.remaining < 0);
+    $('#origin-count').textContent = effectiveOriginSkills().length;
+    $('#origin-count').classList.toggle('over', effectiveOriginSkills().length !== 4 && !!getOrigin());
+  }
+
+  function bloodLimits(){
+    if(model.fields.sangue === 'novo') return { pf:15, pe:20, pfSegments:[5,10,15], peSegments:[8,15,20] };
+    return { pf:20, pe:15, pfSegments:[8,15,20], peSegments:[5,10,15] };
+  }
+
+  function buildTrackPips(group, max){
+    if($$('.pip',group).length === max) return;
+    group.innerHTML = pipButtons(max);
+  }
+
+  function applyMasochistRelief(pfReceived){
+    if(model.fields['ocupacao-select'] !== 'Masoquista' || pfReceived <= 0) return;
+    var reduction = Math.ceil(pfReceived / 2);
+    model.health.pe = Math.max(0,model.health.pe-reduction);
+    if(reduction >= 5 && model.conditions.indexOf('Florescer na Dor — Bônus') < 0){
+      model.conditions.push('Florescer na Dor — Bônus');
+      renderConditions();
     }
   }
-  function applySnapshot(snapshot){
-    if(!snapshot || !snapshot.version){ return; }
-    var formFields = Array.prototype.slice.call(document.querySelectorAll('input[type="text"], input[type="number"], textarea, select'));
-    if(snapshot.formValues && formFields.length){
-      formFields.forEach(function(el, idx){
-        if(snapshot.formValues[idx] !== undefined){
-          el.value = snapshot.formValues[idx];
-        }
-      });
+
+  function renderHealth(){
+    var limits = bloodLimits();
+    model.health.permanentPf = clamp(model.health.permanentPf,0,limits.pf);
+    model.health.permanentPe = clamp(model.health.permanentPe,0,limits.pe);
+    model.health.pf = clamp(model.health.pf,0,limits.pf + 6 - model.health.permanentPf);
+    model.health.pe = clamp(model.health.pe,0,limits.pe - model.health.permanentPe);
+    var pfTotal = model.health.pf + model.health.permanentPf;
+    var peTotal = model.health.pe + model.health.permanentPe;
+    var pfGroup = $('#pf-boxes');
+    var peGroup = $('#pe-boxes');
+    buildTrackPips(pfGroup, limits.pf + 6);
+    buildTrackPips(peGroup, limits.pe);
+    var permanentPfFrom = model.health.permanentPf ? limits.pf - model.health.permanentPf + 1 : 0;
+    var permanentPeFrom = model.health.permanentPe ? limits.pe - model.health.permanentPe + 1 : 0;
+    renderPips(pfGroup,pfTotal,limits.pf+6,{ safeMax:limits.pf, permanentFrom:permanentPfFrom, permanentTo:limits.pf });
+    renderPips(peGroup,peTotal,limits.pe,{ permanentFrom:permanentPeFrom, permanentTo:limits.pe });
+    $('#pf-max-label').textContent = '/' + limits.pf + ' (+' + Math.max(0,pfTotal-limits.pf) + ')';
+    $('#pe-max-label').textContent = '/' + limits.pe;
+    $('#pf-readout').childNodes[0].nodeValue = String(pfTotal).padStart(2,'0');
+    $('#pe-readout').childNodes[0].nodeValue = String(peTotal).padStart(2,'0');
+    $('#pf-permanent').value = model.health.permanentPf;
+    $('#pe-permanent').value = model.health.permanentPe;
+    renderTrackZones('pf', limits.pfSegments, limits.pf);
+    renderTrackZones('pe', limits.peSegments, limits.pe);
+    var pfStage = pfTotal === 0 ? 'Nenhum' : (pfTotal <= limits.pfSegments[0] ? 'Machucado' : (pfTotal <= limits.pfSegments[1] ? 'Ferido' : (pfTotal <= limits.pf ? 'Crítico' : (pfTotal <= limits.pf + 5 ? 'Morrendo' : 'Morte Direta'))));
+    var peStage = peTotal === 0 ? 'Nenhum' : (peTotal <= limits.peSegments[0] ? 'Estável' : (peTotal <= limits.peSegments[1] ? 'Instável' : (peTotal < limits.pe ? 'Desequilibrado' : 'Enlouquecendo')));
+    $('#pf-stage').textContent = 'Estágio atual: ' + pfStage;
+    $('#pe-stage').textContent = 'Estágio atual: ' + peStage;
+    $('#pf-stage').className = 'track-stage ' + (pfStage === 'Morte Direta' ? 'stage-crit' : (pfStage === 'Morrendo' || pfStage === 'Crítico' ? 'stage-warn' : 'stage-ok'));
+    $('#pe-stage').className = 'track-stage ' + (peStage === 'Enlouquecendo' ? 'stage-crit' : (peStage === 'Desequilibrado' ? 'stage-warn' : 'stage-ok'));
+  }
+
+  function renderTrackZones(type, segments, max){
+    var strip = $('#' + type + '-zones');
+    var text = $('#' + type + '-zones-text');
+    strip.innerHTML = '';
+    var previous = 0;
+    segments.forEach(function(end,index){
+      var segment = document.createElement('div');
+      segment.className = 'zone-seg ' + ['zone-ok','zone-warn','zone-crit'][index];
+      segment.style.flex = end - previous;
+      strip.appendChild(segment);
+      previous = end;
+    });
+    if(type === 'pf') text.textContent = 'Base ' + max + ' · Morrendo até +' + 5 + ' · Morte Direta em +' + 6;
+    else text.textContent = 'Limite ' + max + ' · pontos permanentes ocupam o fim da barra';
+  }
+
+  function currentCorruptionStage(){
+    var pc = clamp(model.pc,0,100);
+    return DATA.corruptionStages.filter(function(stage){ return pc >= stage.min && pc <= stage.max; })[0] || DATA.corruptionStages[0];
+  }
+
+  function renderPC(){
+    model.pc = clamp(model.pc,0,100);
+    $('#pc-input').value = model.pc;
+    $('#pc-marker').style.left = model.pc + '%';
+    var stage = currentCorruptionStage();
+    $('#pc-stage').textContent = 'Estágio atual: ' + stage.name;
+    $('#pc-stage').className = 'pc-stage stage-' + stage.name.toLowerCase().replace(/í/g,'i');
+    renderCorruption();
+  }
+
+  function addPC(amount){
+    amount = Math.max(0, parseInt(amount,10) || 0);
+    model.pc = clamp(model.pc + amount,0,100);
+    renderPC();
+    saveModel();
+  }
+
+  function renderBloodVisibility(){
+    var isNew = model.fields.sangue === 'novo';
+    $('#new-blood-meta').classList.toggle('hidden', !isNew);
+    $('#old-blood-meta').classList.toggle('hidden', isNew);
+    $('#new-blood-panel').classList.toggle('hidden', !isNew);
+    $('#old-blood-panel').classList.toggle('hidden', isNew);
+  }
+
+  function renderOrigin(){
+    var originName = model.fields['origem-select'];
+    var origin = DATA.origins[originName];
+    var archetype = DATA.archetypes[originName] || '';
+    $('#arquetipo-readout').value = archetype;
+    $('#growth-archetype').value = archetype;
+    $('#origin-weapon-hint').textContent = origin ? 'Categoria de arma inicial: ' + origin.weapon : '';
+    if(!origin){
+      $('#origin-overview').innerHTML = '<p class="empty-state">Selecione uma Origem na Ficha Principal.</p>';
+      $('#origin-budget').innerHTML = '';
+      $('#origin-power-list').innerHTML = '';
+      renderGrowth();
+      return;
     }
-    var pipGroups = Array.prototype.slice.call(document.querySelectorAll('.pips'));
-    if(snapshot.pipStates && pipGroups.length){
-      pipGroups.forEach(function(group, idx){
-        if(snapshot.pipStates[idx]){
-          group.dataset.value = snapshot.pipStates[idx].value || group.dataset.value || '0';
-          group.dataset.origin = snapshot.pipStates[idx].origin || group.dataset.origin || '0';
-          group.dataset.max = snapshot.pipStates[idx].max || group.dataset.max || '';
-        }
-      });
+    var initial = origin.initial || {name:'Poder Inicial',description:''};
+    $('#origin-overview').innerHTML = '<div class="origin-summary-line"><strong>'+originName+'</strong><span>'+origin.weapon+'</span><span>'+origin.skills.join(' · ')+'</span></div>'+
+      '<article class="power-card initial-power"><span class="power-cost">GRÁTIS</span><h3>'+escapeHtml(initial.name)+'</h3><p>'+escapeHtml(initial.description)+'</p></article>';
+    var occupation = getOccupation();
+    var total = 7 + (occupation && occupation.originPointsBonus || 0);
+    var spent = origin.powers.reduce(function(sum,power){ return sum + (model.originPowers.indexOf(power.name) >= 0 ? power.cost : 0); },0);
+    $('#origin-budget').innerHTML = '<span>Total <b>'+total+' PO</b></span><span>Gasto <b>'+spent+'</b></span><span class="'+(spent === total ? 'budget-ok' : (spent > total ? 'over' : ''))+'">Restante <b>'+(total-spent)+'</b></span>';
+    $('#origin-power-list').innerHTML = origin.powers.map(function(power){
+      var checked = model.originPowers.indexOf(power.name) >= 0;
+      return '<label class="power-card selectable '+(checked ? 'selected' : '')+'"><input type="checkbox" class="origin-power-check" data-power="'+escapeHtml(power.name)+'" '+(checked ? 'checked' : '')+'><span class="power-cost">'+power.cost+' PO</span><h3>'+escapeHtml(power.name)+'</h3><p>'+escapeHtml(power.description)+'</p></label>';
+    }).join('');
+    renderGrowth();
+  }
+
+  function applyOrigin(originName){
+    model.originSkills.forEach(function(skill){ if(model.skills[skill] === 5) model.skills[skill] = 1; });
+    model.fields['origem-select'] = originName;
+    var origin = DATA.origins[originName];
+    model.originSkills = origin ? origin.skills.slice() : [];
+    model.originSkills.forEach(function(skill){ model.skills[skill] = 5; });
+    model.originPowers = [];
+    renderOrigin();
+    renderAttributes();
+    renderEquipment();
+    saveModel();
+  }
+
+  function renderOccupation(){
+    var name = model.fields['ocupacao-select'];
+    var occupation = DATA.occupations[name];
+    var detail = $('#occupation-detail');
+    configureParadigmOptions(occupation && occupation.paradigm || '');
+    $('#roll-devotee-option').classList.toggle('hidden', name !== 'Devoto');
+    if(name !== 'Devoto') $('#roll-devotee').checked = false;
+    if(!occupation){
+      $('#occupation-hint').textContent = '';
+      detail.innerHTML = '<p class="empty-state">Selecione uma Ocupação na Ficha Principal.</p>';
+      return;
     }
-    var dorChecks = Array.prototype.slice.call(document.querySelectorAll('.dor-row .dor-check'));
-    if(snapshot.dorStates && dorChecks.length){
-      dorChecks.forEach(function(chk, idx){
-        if(snapshot.dorStates[idx] !== undefined){
-          chk.dataset.checked = snapshot.dorStates[idx];
-          chk.classList.toggle('checked', snapshot.dorStates[idx] === '1');
-        }
-      });
+    var warning = occupation.requiresBlood && model.fields.sangue !== occupation.requiresBlood;
+    $('#occupation-hint').textContent = occupation.bonus || '';
+    $('#occupation-hint').classList.toggle('hint-warning', warning);
+    detail.innerHTML = '<div class="occupation-title"><strong>'+escapeHtml(name)+'</strong>'+(warning ? '<span class="warning-chip">Requer Sangue Novo</span>' : '')+'</div>'+
+      '<p>'+escapeHtml(occupation.bonus || '')+'</p><div class="occupation-powers">'+occupation.powers.map(function(power){ return '<span>'+escapeHtml(power)+'</span>'; }).join('')+'</div>'+occupationChoiceControls(name);
+  }
+
+  function occupationChoiceControls(name){
+    if(name === 'Prodígio'){
+      var options1 = flattenSkills().map(function(skill){ return '<option '+(model.fields['prodigio-skill-1'] === skill ? 'selected' : '')+'>'+escapeHtml(skill)+'</option>'; }).join('');
+      var options2 = flattenSkills().map(function(skill){ return '<option '+(model.fields['prodigio-skill-2'] === skill ? 'selected' : '')+'>'+escapeHtml(skill)+'</option>'; }).join('');
+      return '<div class="occupation-choice"><strong>Dom Superior</strong><p>Escolha duas Perícias; o rolador aplica 1 Bônus automaticamente.</p><div class="occupation-choice-grid">'+
+        '<select id="prodigio-skill-1" class="prodigio-skill"><option value="">— Perícia 1 —</option>'+options1+'</select>'+
+        '<select id="prodigio-skill-2" class="prodigio-skill"><option value="">— Perícia 2 —</option>'+options2+'</select></div></div>';
     }
-    if(snapshot.zoneStates){
-      Object.keys(snapshot.zoneStates).forEach(function(zoneId){
-        if(zoneState && zoneState[zoneId] !== undefined){
-          zoneState[zoneId] = snapshot.zoneStates[zoneId];
-        }
-        var zoneEl = document.getElementById(zoneId);
-        if(zoneEl){ applyZoneState(zoneEl); }
-      });
+    if(name === 'Abutre'){
+      return '<div class="occupation-choice"><strong>Acumulador</strong><p>O Recurso escolhido nunca fica abaixo de 1 unidade.</p><select id="abutre-resource"><option value="">— Escolher Recurso —</option>'+DATA.resources.map(function(resource){ return '<option '+(model.fields['abutre-resource'] === resource ? 'selected' : '')+'>'+resource+'</option>'; }).join('')+'</select></div>';
     }
-    if(snapshot.zoneDetails){
-      Object.keys(snapshot.zoneDetails).forEach(function(zoneId){
-        try{
-          zoneDetails[zoneId] = snapshot.zoneDetails[zoneId] ? JSON.parse(JSON.stringify(snapshot.zoneDetails[zoneId])) : null;
-        }catch(e){ zoneDetails[zoneId] = null; }
-        var zoneEl2 = document.getElementById(zoneId);
-        if(zoneEl2){ /* no-op: details used in summary/modal */ }
-      });
-      updateWoundSummary();
+    if(name === 'Masoquista'){
+      return '<div class="occupation-choice"><strong>Carne Voluntária</strong><p>Uma vez por Ciclo: +1 PC e Bônus em todos os testes até o fim da Cena.</p><button type="button" class="notes-btn" id="masoquista-voluntary">Aceitar +1 PC</button></div>';
     }
-    var pcInput = document.getElementById('pc-input');
-    if(pcInput && snapshot.pc !== undefined){
-      pcInput.value = snapshot.pc;
+    return '';
+  }
+
+  function configureParadigmOptions(requiredGroup){
+    var allowed = {
+      'Síntese':['Peregrino','Sobrevivente','Imperfeito'],
+      'Abissal':['Ceifador','Mercenário','Inquisidor']
+    };
+    $$('#reputacao-select option').forEach(function(option){
+      option.disabled = !!requiredGroup && !!option.value && allowed[requiredGroup].indexOf(option.value) < 0;
+    });
+  }
+
+  function applyOccupation(name){
+    model.fields['ocupacao-select'] = name;
+    var occupation = getOccupation();
+    if(occupation && occupation.requiresBlood){ model.fields.sangue = occupation.requiresBlood; }
+    if(occupation && occupation.paradigm){
+      var allowed = occupation.paradigm === 'Síntese' ? ['Peregrino','Sobrevivente','Imperfeito'] : ['Ceifador','Mercenário','Inquisidor'];
+      if(allowed.indexOf(model.fields['reputacao-select']) < 0) model.fields['reputacao-select'] = '';
     }
-    if(snapshot.notes){
-      notesState = snapshot.notes;
+    applyFields();
+    renderOccupation();
+    renderAttributes();
+    renderHealth();
+    renderPC();
+    ensureWeaponSlots();
+    renderEquipment();
+    renderOrigin();
+    renderCharacteristics();
+    saveModel();
+  }
+
+  function renderCorruption(){
+    if(!$('#corruption-overview')) return;
+    var stage = currentCorruptionStage();
+    $('#corruption-overview').innerHTML = '<div><strong>'+stage.name+'</strong><span>'+model.pc+' PC</span></div><p>'+escapeHtml(stage.summary)+'</p>';
+    $('#plague-threshold-tag').textContent = stage.name === 'Corrompido' ? 'ENRAIZAMENTO' : 'DADO DA PRAGA: 1–' + stage.plagueThreshold;
+    renderBloodVisibility();
+    renderFlower();
+  }
+
+  function renderFlower(){
+    var name = model.fields['flor-select'];
+    var flower = DATA.flowers[name];
+    if(!flower){
+      $('#flower-overview').innerHTML = '<p class="empty-state">Escolha uma Flor na Ficha Principal.</p>';
+      $('#flower-stages').innerHTML = '';
+      return;
+    }
+    $('#flower-overview').innerHTML = '<h3>'+escapeHtml(name)+'</h3><p>'+escapeHtml(flower.description)+'</p>';
+    var stage = currentCorruptionStage();
+    var currentIndex = DATA.corruptionStages.indexOf(stage);
+    if(currentIndex > 4) currentIndex = 4;
+    var occupation = getOccupation();
+    var effectiveIndex = occupation && model.fields['ocupacao-select'] === 'Devoto' ? Math.min(4,currentIndex+1) : currentIndex;
+    $('#flower-stages').innerHTML = flower.stages.map(function(item,index){
+      var active = index === effectiveIndex;
+      var unlocked = index <= effectiveIndex;
+      return '<article class="flower-stage '+(active ? 'active' : '')+' '+(unlocked ? 'unlocked' : 'locked')+'"><span>'+escapeHtml(item.stage)+'</span><h4>'+escapeHtml(item.name)+'</h4><p>'+escapeHtml(item.description)+'</p>'+(active && effectiveIndex !== currentIndex ? '<em>Ativa um estágio acima por Devoto.</em>' : '')+'</article>';
+    }).join('');
+  }
+
+  function growthSummary(stage){
+    if(!stage) return 'A Trilha de Crescimento começa ao fim do primeiro Arco.';
+    var rewards = stage % 3 === 0 ? 'Libera uma nova Origem e concede PO.' : 'Concede benefícios do Arquétipo, PO e possivelmente PP/PA.';
+    if(stage === 10) rewards = 'Ápice da Trilha. A partir daqui: +2 PO e +2 PP por Arco.';
+    return 'Etapa ' + ['','I','II','III','IV','V','VI','VII','VIII','IX','X'][stage] + ': ' + rewards;
+  }
+
+  function renderGrowth(){
+    if(!$('#growth-stage')) return;
+    var stage = clamp(model.fields['growth-stage'],0,10);
+    $('#growth-stage').value = String(stage);
+    $('#growth-summary').textContent = growthSummary(stage);
+    if(model.fields['ocupacao-select'] === 'Estudioso') renderSkills();
+  }
+
+  function inventoryCapacity(){ return 2 + model.attributes.Físico; }
+  function initialItemLimit(){ var occ = getOccupation(); return occ && occ.initialItems || 3; }
+  function ensureInventorySlots(){
+    var capacity = inventoryCapacity();
+    while(model.inventory.length < capacity) model.inventory.push({ id:uid('item'), name:'', uses:'' });
+    while(model.inventory.length > capacity && !model.inventory[model.inventory.length-1].name && !model.inventory[model.inventory.length-1].uses){ model.inventory.pop(); }
+  }
+
+  function renderInventory(){
+    if(!$('#inv-grid')) return;
+    ensureInventorySlots();
+    var used = model.inventory.filter(function(item){ return String(item.name || '').trim(); }).length;
+    var capacity = inventoryCapacity();
+    $('#inventory-capacity-tag').textContent = 'MÁX. = ' + capacity + ' (2 + FÍSICO)';
+    var excess = Math.max(0,used-capacity);
+    $('#inventory-status').textContent = 'Ocupados: ' + used + '/' + capacity + (excess ? ' · Sobrecarregado: −1 PA em Físico ou Destreza por item ('+excess+')' : '');
+    $('#inventory-status').className = used > capacity ? 'over' : '';
+    $('#initial-items-status').textContent = 'Criação: até ' + initialItemLimit() + ' itens';
+    $('#inv-grid').innerHTML = model.inventory.map(function(item,index){
+      return '<div class="inv-slot '+(index >= capacity ? 'overloaded-slot' : '')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div class="inventory-fields"><input type="text" class="inventory-name" value="'+escapeHtml(item.name)+'" placeholder="Item..."><input type="text" class="inventory-uses" value="'+escapeHtml(item.uses)+'" placeholder="Usos"></div><button type="button" class="list-row-remove inventory-remove" title="Excluir">×</button></div>';
+    }).join('');
+  }
+
+  function allowedWeaponSlots(){ var occ = getOccupation(); return occ && occ.weaponSlots || 2; }
+  function ensureWeaponSlots(){
+    var count = allowedWeaponSlots();
+    while(model.weapons.length < count) model.weapons.push(emptyWeapon());
+    while(model.weapons.length > count){
+      var last = model.weapons[model.weapons.length-1];
+      if(last.weaponId || last.customName || last.notes) break;
+      model.weapons.pop();
     }
   }
-  function restoreSheetState(){
-    try{
-      var raw = localStorage.getItem(SHEET_STORAGE_KEY);
-      if(!raw) return;
-      applySnapshot(JSON.parse(raw));
-    } catch(e){
-      console.warn('Não foi possível restaurar a ficha salva.', e);
-    }
+
+  function weaponData(id){ return DATA.weapons.filter(function(item){ return item.id === id; })[0] || null; }
+  function weaponMax(weaponState){
+    var data = weaponData(weaponState.weaponId);
+    if(!data) return parseInt(weaponState.customMax,10) || 0;
+    var max = data.durability || data.ammo || 0;
+    if(weaponState.mods.indexOf('pistola-pente') >= 0) max += 3;
+    return max;
   }
+  function applicableMods(weapon){
+    if(!weapon || weapon.unmodifiable) return [];
+    return DATA.modifications.filter(function(mod){
+      if(mod.weapon) return mod.weapon === weapon.id;
+      return mod.group === weapon.group;
+    });
+  }
+
+  function weaponAllowedInSlot(weapon,index){
+    if(index >= 2) return true;
+    var ranged = weapon.category === 'De Fogo' || weapon.group === 'disparo';
+    return index === 0 ? !ranged : ranged;
+  }
+  function weaponSlotLabel(index){ return index === 0 ? 'Arma Branca' : (index === 1 ? 'Fogo / Disparo' : 'Livre'); }
+  function weaponOptions(selected,index){
+    var groups = ['Leves','Versáteis','Pesadas','De Fogo'];
+    var html = '<option value="">— Espaço vazio —</option><option value="custom" '+(selected === 'custom' ? 'selected' : '')+'>Arma personalizada</option>';
+    groups.forEach(function(category){
+      var choices = DATA.weapons.filter(function(weapon){ return weapon.category === category && weaponAllowedInSlot(weapon,index); });
+      if(!choices.length) return;
+      html += '<optgroup label="'+category+'">';
+      choices.forEach(function(weapon){
+        html += '<option value="'+weapon.id+'" '+(selected === weapon.id ? 'selected' : '')+'>'+weapon.name+'</option>';
+      });
+      html += '</optgroup>';
+    });
+    var selectedWeapon = weaponData(selected);
+    if(selectedWeapon && !weaponAllowedInSlot(selectedWeapon,index)) html += '<option value="'+selectedWeapon.id+'" selected>'+selectedWeapon.name+' · incompatível com o espaço</option>';
+    return html;
+  }
+
+  function renderWeapons(){
+    ensureWeaponSlots();
+    var allowed = allowedWeaponSlots();
+    $('#weapon-slots-tag').textContent = allowed + ' EXCLUSIVOS' + (model.weapons.length > allowed ? ' · SOBRECARREGADO' : '');
+    $('#weapons-list').innerHTML = model.weapons.map(function(state,index){
+      var weapon = weaponData(state.weaponId);
+      var max = weaponMax(state);
+      state.current = clamp(state.current,0,max || 99);
+      var stats = weapon ? [weapon.category,weapon.damage,weapon.severity,weapon.range,weapon.recoil ? 'Recuo: '+weapon.recoil : ''].filter(Boolean).join(' · ') : '';
+      var special = weapon ? weapon.specials.join(' · ') : '';
+      var modLimit = weapon ? (weapon.maxMods || 2) : 0;
+      var mods = weapon ? applicableMods(weapon) : [];
+      var modHtml = '';
+      for(var modIndex=0; modIndex<modLimit; modIndex++){
+        var selected = state.mods[modIndex] || '';
+        modHtml += '<label>Modificação '+(modIndex+1)+'<select class="weapon-mod-select" data-mod-index="'+modIndex+'"><option value="">— Nenhuma —</option>'+mods.map(function(mod){ return '<option value="'+mod.id+'" '+(selected === mod.id ? 'selected' : '')+'>'+mod.name+' · '+mod.cost+' Partes</option>'; }).join('')+'</select></label>';
+      }
+      var custom = state.weaponId === 'custom' ? '<div class="custom-weapon-fields"><input class="custom-weapon-name" value="'+escapeHtml(state.customName)+'" placeholder="Nome"><input class="custom-weapon-damage" value="'+escapeHtml(state.customDamage)+'" placeholder="Ferimento / munição"><input class="custom-weapon-range" value="'+escapeHtml(state.customRange)+'" placeholder="Distância / recuo"><input class="custom-weapon-max" type="number" min="0" value="'+state.customMax+'" placeholder="Usos"></div>' : '';
+      var track = max ? '<div class="weapon-track"><span>'+(weapon && weapon.durability ? 'Durabilidade' : 'Munição')+' <b>'+state.current+'/'+max+'</b></span><div class="pips weapon-pips" data-weapon-index="'+index+'">'+pipButtons(max)+'</div></div>' : '<div class="weapon-track muted">Munição carregada diretamente do Inventário.</div>';
+      var invalidSlot = weapon && !weaponAllowedInSlot(weapon,index);
+      return '<article class="weapon-card '+(index >= allowed || invalidSlot ? 'overloaded-slot' : '')+'" data-weapon-index="'+index+'"><div class="weapon-card-header"><div class="weapon-card-title">Espaço '+(index+1)+' · '+weaponSlotLabel(index)+'</div>'+(invalidSlot ? '<span class="warning-chip">Espaço incompatível</span>' : '')+'</div><select class="weapon-select">'+weaponOptions(state.weaponId,index)+'</select>'+custom+'<div class="weapon-stats">'+escapeHtml(stats)+'</div><div class="weapon-specials">'+escapeHtml(special)+'</div>'+track+'<div class="weapon-mods">'+modHtml+'</div><textarea class="weapon-notes" placeholder="Anotações, munição no Inventário, reparos...">'+escapeHtml(state.notes)+'</textarea></article>';
+    }).join('');
+    $$('.weapon-pips').forEach(function(group){
+      var index = parseInt(group.dataset.weaponIndex,10);
+      renderPips(group,model.weapons[index].current,weaponMax(model.weapons[index]));
+    });
+  }
+
+  function renderArmor(){
+    $('#armor-list').innerHTML = DATA.armors.map(function(item){
+      var state = model.armor[item.id];
+      return '<article class="armor-card '+(state.equipped ? 'equipped' : '')+'" data-armor-id="'+item.id+'"><label class="check-line"><input type="checkbox" class="armor-equipped" '+(state.equipped ? 'checked' : '')+'> <strong>'+item.name+'</strong></label><p>'+item.effect+'</p><span>Integridade '+state.remaining+'/'+item.maxUses+'</span><div class="pips armor-pips">'+pipButtons(item.maxUses)+'</div></article>';
+    }).join('');
+    $$('.armor-card').forEach(function(card){
+      var item = DATA.armors.filter(function(entry){ return entry.id === card.dataset.armorId; })[0];
+      renderPips($('.armor-pips',card),model.armor[item.id].remaining,item.maxUses);
+    });
+  }
+
+  function resourceMax(){ var occ = getOccupation(); return occ && occ.resourceMax || 4; }
+  function renderResources(){
+    var max = resourceMax();
+    var guaranteed = model.fields['ocupacao-select'] === 'Abutre' ? model.fields['abutre-resource'] : '';
+    if(guaranteed && model.resources[guaranteed] < 4) model.resources[guaranteed] = 4;
+    $('#res-pips-grid').innerHTML = DATA.resources.map(function(name,index){
+      return '<div class="res-pip-row"><span class="skill-name">'+name+'</span><div class="pips res-pips" id="res-'+index+'" data-resource="'+name+'">'+pipButtons(max)+'</div><span class="resource-readout">'+model.resources[name]+'/'+max+'</span></div>';
+    }).join('');
+    $$('.res-pips').forEach(function(group){ renderPips(group,clamp(model.resources[group.dataset.resource],0,max),max); });
+    $('#parts-input').value = model.parts;
+  }
+
+  function recipeLimit(){ return model.attributes.Intelecto; }
+  function findInventoryIngredient(name){
+    var wanted = String(name || '').trim().toLocaleLowerCase('pt-BR');
+    return model.inventory.filter(function(item){
+      var candidate = String(item.name || '').trim().toLocaleLowerCase('pt-BR').replace(/^\d+\s+/, '');
+      return candidate === wanted || candidate === wanted + 's';
+    })[0] || null;
+  }
+  function repairTarget(){
+    return model.weapons.filter(function(state){
+      var max = weaponMax(state);
+      return max > 0 && state.current < max && (state.weaponId || state.customName);
+    })[0] || null;
+  }
+  function canCraftRecipe(recipe){
+    var resourcesReady = recipe.ingredients.every(function(name){ return model.resources[name] >= 4; });
+    if(!resourcesReady) return false;
+    if(recipe.itemIngredient && !findInventoryIngredient(recipe.itemIngredient)) return false;
+    if(recipe.id === 'conserto-arma' && !repairTarget()) return false;
+    return true;
+  }
+  function consumeInventoryIngredient(name){
+    var item = findInventoryIngredient(name);
+    if(!item) return;
+    var uses = parseInt(item.uses,10);
+    if(uses > 1) item.uses = String(uses-1);
+    else { item.name = ''; item.uses = ''; }
+  }
+  function renderRecipes(){
+    if(!$('#recipe-grid')) return;
+    var limit = recipeLimit();
+    var known = model.knownRecipes.length;
+    $('#recipe-limit-tag').textContent = 'CONHECIDAS NA CRIAÇÃO = ' + limit;
+    $('#recipe-known-status').textContent = 'Conhecidas: ' + known + (model.allowCampaignRecipes ? ' · campanha liberada' : '/' + limit);
+    $('#recipe-known-status').className = !model.allowCampaignRecipes && known > limit ? 'over' : '';
+    $('#recipe-grid').innerHTML = DATA.recipes.map(function(recipe){
+      var learned = model.knownRecipes.indexOf(recipe.id) >= 0;
+      var enough = canCraftRecipe(recipe);
+      return '<article class="recipe-card '+(learned ? 'known' : '')+'"><label class="check-line"><input type="checkbox" class="recipe-known" data-recipe-id="'+recipe.id+'" '+(learned ? 'checked' : '')+'> <strong>'+recipe.name+'</strong></label><div class="ingredient-list">'+recipe.ingredients.map(function(name){ return '<span>'+name+'</span>'; }).join('')+(recipe.itemIngredient ? '<span>'+recipe.itemIngredient+'</span>' : '')+'</div><p>'+recipe.effect+'</p><button type="button" class="notes-btn craft-button" data-recipe-id="'+recipe.id+'" '+(!learned || !enough ? 'disabled' : '')+'>Fabricar</button></article>';
+    }).join('');
+  }
+
+  function renderEquipment(){
+    if(!$('#inv-grid')) return;
+    renderInventory();
+    renderWeapons();
+    renderArmor();
+    renderResources();
+    renderRecipes();
+  }
+
+  function renderCharacteristics(){
+    var map = { 'vantagens-list':'vantagens', 'desvantagens-list':'desvantagens', 'cicatrizes-list':'cicatrizes' };
+    Object.keys(map).forEach(function(containerId){
+      var key = map[containerId];
+      var list = model.characteristics[key];
+      $('#' + containerId).innerHTML = list.map(function(value,index){
+        return '<div class="list-input-row" data-character-type="'+key+'" data-character-index="'+index+'"><span class="list-num">'+(index+1)+'</span><div class="list-row-actions"><input type="text" value="'+escapeHtml(value)+'" placeholder="'+(key === 'vantagens' ? 'Vantagem...' : (key === 'desvantagens' ? 'Desvantagem...' : 'Cicatriz...'))+'"><button type="button" class="list-row-remove character-remove">×</button></div></div>';
+      }).join('');
+    });
+    var advantages = model.characteristics.vantagens.filter(Boolean).length;
+    var disadvantages = model.characteristics.desvantagens.filter(Boolean).length;
+    var minimumDisadvantages = model.fields['ocupacao-select'] === 'Prodígio' ? 0 : 1;
+    var maxAdvantages = Math.min(5,2 + Math.max(0,disadvantages-minimumDisadvantages));
+    var section = $('#vantagens-list').closest('.section-body');
+    var status = $('#character-status');
+    if(!status){ status = document.createElement('div'); status.id = 'character-status'; status.className = 'status-line character-status'; section.insertBefore(status, section.firstChild); }
+    status.textContent = 'Criação: 2 Vantagens, ' + (minimumDisadvantages ? '1 Desvantagem' : 'nenhuma Desvantagem por Prodígio') + ' e 1 Cicatriz opcional · limite atual de Vantagens: ' + maxAdvantages + ' · preenchidas: ' + advantages;
+    status.classList.toggle('over',advantages > maxAdvantages || disadvantages < minimumDisadvantages);
+  }
+
+  function renderPains(){
+    $('#dores-list').innerHTML = model.pains.map(function(pain,index){
+      return '<div class="dor-row" data-pain-index="'+index+'"><button type="button" class="dor-check '+(pain.checked ? 'checked' : '')+'" aria-pressed="'+(pain.checked ? 'true' : 'false')+'"></button><span class="dor-label">DOR '+(index+1)+'</span><input type="text" value="'+escapeHtml(pain.text)+'" placeholder="Ex.: Eu não deixarei mais ninguém morrer..."></div>';
+    }).join('');
+    var checked = model.pains.filter(function(pain){ return pain.checked; }).length;
+    $('#dores-list').closest('.section').classList.toggle('pain-exhausted',checked >= 3);
+  }
+
+  function conditionOptions(){
+    return ['Atordoado','Desorientado','Aterrorizado','Pânico','Atraído','Enraivecido','Envenenado','Cego','Caído','Surdo','Exaustão','Clima Extremo','Corrosão','Paralisado','Em Chamas','Inconsciente','Preso','Irritação','Vulnerável','Necrose','Insolação','Sangrando','Ferida Profunda','Ferida Severa','Desmembramento','Tratado','Estabilizado','Quebrado','Infecção','Tétano'];
+  }
+  function renderConditions(){
+    $('#condition-select').innerHTML = '<option value="">— Selecionar —</option>' + conditionOptions().map(function(name){ return '<option>'+name+'</option>'; }).join('');
+    $('#condition-list').innerHTML = model.conditions.length ? model.conditions.map(function(name,index){ return '<span class="condition-chip">'+escapeHtml(name)+'<button type="button" data-condition-index="'+index+'" title="Remover">×</button></span>'; }).join('') : '<span class="empty-state">Nenhuma condição ativa.</span>';
+  }
+  function addCondition(name){
+    name = String(name || '').trim();
+    if(name && model.conditions.indexOf(name) < 0) model.conditions.push(name);
+    renderConditions();
+    saveModel();
+  }
+
+  function renderWounds(){
+    $$('.zone').forEach(function(zone){
+      var detail = model.wounds[zone.id];
+      var severity = detail ? Number(detail.severity) || 0 : 0;
+      zone.classList.remove('w-none','w-light','w-medium','w-severe');
+      zone.classList.add(severity === 1 ? 'w-light' : (severity === 2 ? 'w-medium' : (severity === 3 ? 'w-severe' : 'w-none')));
+    });
+    var lines = [];
+    $$('.zone').forEach(function(zone){
+      var detail = model.wounds[zone.id];
+      if(detail && detail.severity){
+        var label = detail.severity === 1 ? 'Leve' : (detail.severity === 2 ? 'Moderado' : 'Grave');
+        lines.push('<div><strong>'+escapeHtml(zone.dataset.part)+'</strong> · '+label+(detail.type ? ' · '+escapeHtml(detail.type) : '')+(detail.pf != null ? ' · '+detail.pf+' PF' : '')+(detail.condition ? ' · '+escapeHtml(detail.condition) : '')+(detail.note ? '<span>'+escapeHtml(detail.note)+'</span>' : '')+'</div>');
+      }
+    });
+    $('#wound-summary').innerHTML = lines.length ? lines.join('') : 'Nenhum ferimento registrado.';
+  }
+
+  function woundRegion(zoneId){
+    if(zoneId === 'z-cabeca') return 'Cabeça';
+    if(zoneId === 'z-tronco') return 'Tronco';
+    if(/braco|antebraco|mao/.test(zoneId)) return 'Braços';
+    return 'Pernas';
+  }
+  function woundRule(type, severity, zoneId){
+    if(!type || !severity) return {pf:0,condition:''};
+    var region = woundRegion(zoneId);
+    if(DATA.woundTable[type] && DATA.woundTable[type][region]) return clone(DATA.woundTable[type][region][severity-1]);
+    var environment = {
+      'Explosão':{pf:10,condition:'Caído'}, 'Corrosão':{pf:8,condition:'Corrosão'},
+      'Fogo':{pf:6,condition:'Em Chamas'}, 'Veneno':{pf:4,condition:'Envenenado'},
+      'Clima':{pf:0,condition:'Clima Extremo'}
+    };
+    return environment[type] || {pf:0,condition:''};
+  }
+  function armorForRegion(region){
+    var item = DATA.armors.filter(function(entry){ return entry.location === region; })[0];
+    if(!item) return null;
+    var state = model.armor[item.id];
+    return state && state.equipped && state.remaining > 0 ? {item:item,state:state} : null;
+  }
+
+  var editingZoneId = null;
+  function openWoundModal(zone){
+    editingZoneId = zone.id;
+    var detail = model.wounds[zone.id] || {type:'',condition:'',note:'',severity:0};
+    $('#wound-zone-name').textContent = zone.dataset.part;
+    $('#wound-type').value = detail.type || '';
+    $('#wound-condition').value = detail.condition || '';
+    $('#wound-note').value = detail.note || '';
+    $$('input[name="wound-severity"]').forEach(function(radio){ radio.checked = Number(radio.value) === Number(detail.severity || 0); });
+    $('#wound-apply-pf').checked = !detail.severity;
+    updateWoundPreview();
+    $('#wound-modal').style.display = 'flex';
+  }
+  function closeWoundModal(){ editingZoneId = null; $('#wound-modal').style.display = 'none'; }
+  function selectedWoundSeverity(){
+    var checked = $('input[name="wound-severity"]:checked');
+    return checked ? parseInt(checked.value,10) : 0;
+  }
+  function updateWoundPreview(){
+    if(!editingZoneId) return;
+    var rule = woundRule($('#wound-type').value,selectedWoundSeverity(),editingZoneId);
+    $('#wound-rule-preview').textContent = selectedWoundSeverity() ? ('Regra base: '+rule.pf+' PF'+(rule.condition ? ' · '+rule.condition : '')+'. Armadura equipada será aplicada automaticamente.') : 'Selecione tipo e gravidade para consultar a regra.';
+    if(rule.condition && !$('#wound-condition').value) $('#wound-condition').value = rule.condition;
+  }
+
+  function applyWound(){
+    if(!editingZoneId) return;
+    var severity = selectedWoundSeverity();
+    if(!severity){ delete model.wounds[editingZoneId]; renderWounds(); saveModel(); closeWoundModal(); return; }
+    var type = $('#wound-type').value;
+    var rule = woundRule(type,severity,editingZoneId);
+    var condition = $('#wound-condition').value || rule.condition || '';
+    var pf = rule.pf;
+    var armor = armorForRegion(woundRegion(editingZoneId));
+    if(armor && $('#wound-apply-pf').checked){
+      if(armor.item.reduction === 'todos') pf = 0;
+      else pf = Math.max(0,pf-armor.item.reduction);
+      condition = '';
+      armor.state.remaining = Math.max(0,armor.state.remaining-1);
+    }
+    model.wounds[editingZoneId] = { type:type, severity:severity, condition:condition, note:$('#wound-note').value, pf:pf };
+    if($('#wound-apply-pf').checked){ model.health.pf += pf; applyMasochistRelief(pf); if(condition) addCondition(condition); }
+    renderWounds(); renderHealth(); renderArmor(); saveModel(); closeWoundModal();
+  }
+
+  function getSelectedNotebook(){
+    return model.notes.notebooks.filter(function(nb){ return nb.id === model.notes.selectedNotebookId; })[0] || model.notes.notebooks[0];
+  }
+  function renderNotes(){
+    $('#notes-tabs').innerHTML = model.notes.notebooks.map(function(nb){ return '<button type="button" class="notes-tab '+(nb.id === model.notes.selectedNotebookId ? 'active' : '')+'" data-notebook-id="'+nb.id+'">'+escapeHtml(nb.title || 'Novo Caderno')+'</button>'; }).join('');
+    var notebook = getSelectedNotebook();
+    $('#notebook-title-input').value = notebook.title || '';
+    $('#notes-canvas').innerHTML = notebook.notes && notebook.notes.length ? notebook.notes.map(function(note){
+      return '<article class="note-card" data-note-id="'+note.id+'"><div class="note-card-header"><input type="text" class="note-title-input" value="'+escapeHtml(note.title)+'" placeholder="Título"><button type="button" class="notes-btn small danger note-remove-btn">×</button></div><textarea class="note-content" placeholder="Anote ideias, pistas, capítulos, missões...">'+escapeHtml(note.content)+'</textarea></article>';
+    }).join('') : '<div class="empty-notebook"><p>Nenhum post-it aqui ainda.</p><span>Adicione um novo post-it para começar.</span></div>';
+  }
+
+  function buildLists(){ renderCharacteristics(); renderPains(); renderNotes(); renderConditions(); }
+
+  function renderAll(){
+    applyFields();
+    renderOccupation();
+    renderAttributes();
+    renderHealth();
+    renderPC();
+    renderOrigin();
+    renderEquipment();
+    buildLists();
+    renderWounds();
+    renderGrowth();
+    activatePage(model.ui.activePage || 'principal');
+  }
+
+  function handleAttributeClick(group, index){
+    var name = Object.keys(model.attributes).filter(function(attribute){ return attributeId(attribute) === group.id; })[0];
+    if(!name) return;
+    var current = model.attributes[name];
+    var target = current === index ? index-1 : index;
+    target = clamp(target,0,5);
+    if(target === 0 && Object.keys(model.attributes).some(function(other){ return other !== name && model.attributes[other] === 0; })){
+      alert('Só é possível ter uma Fraqueza Absoluta por vez.'); return;
+    }
+    var proposed = clone(model.attributes); proposed[name] = target;
+    if(attributeBudget(proposed).remaining < 0 && target > current) return;
+    model.attributes[name] = target;
+    if(target === 0){
+      DATA.skills[name].forEach(function(skill){ if(model.originSkills.indexOf(skill) < 0) model.skills[skill] = 1; });
+    }
+    renderAttributes(); renderHealth(); renderOrigin(); renderEquipment(); saveModel();
+  }
+
+  function handleSkillClick(group,index){
+    var skill = group.dataset.skillName;
+    if(isSkillLocked(skill) || model.originSkills.indexOf(skill) >= 0 || index > 4) return;
+    var current = model.skills[skill];
+    var target = current === index ? Math.max(1,index-1) : index;
+    var previous = model.skills[skill];
+    model.skills[skill] = clamp(target,1,4);
+    if(skillBudget().remaining < 0 && target > previous){ model.skills[skill] = previous; return; }
+    renderSkills(); saveModel();
+  }
+
+  function handleTrackClick(group,index){
+    if(group.id === 'pf-boxes'){
+      var total = model.health.pf + model.health.permanentPf;
+      var target = total === index ? index-1 : index;
+      model.health.pf = Math.max(0,target-model.health.permanentPf);
+      applyMasochistRelief(Math.max(0,target-total));
+    } else {
+      var peTotal = model.health.pe + model.health.permanentPe;
+      var peTarget = peTotal === index ? index-1 : index;
+      model.health.pe = Math.max(0,peTarget-model.health.permanentPe);
+    }
+    renderHealth(); saveModel();
+  }
+
+  function handleResourceClick(group,index){
+    var name = group.dataset.resource;
+    var current = model.resources[name];
+    var target = current === index ? index-1 : index;
+    if(model.fields['ocupacao-select'] === 'Abutre' && model.fields['abutre-resource'] === name) target = Math.max(4,target);
+    model.resources[name] = target;
+    renderResources(); renderRecipes(); saveModel();
+  }
+
+  function handleArmorPip(card,index){
+    var id = card.dataset.armorId;
+    var current = model.armor[id].remaining;
+    model.armor[id].remaining = current === index ? index-1 : index;
+    model.armor[id].equipped = model.armor[id].remaining > 0;
+    renderArmor(); saveModel();
+  }
+
+  function handleWeaponPip(group,index){
+    var weapon = model.weapons[parseInt(group.dataset.weaponIndex,10)];
+    weapon.current = weapon.current === index ? index-1 : index;
+    renderWeapons(); saveModel();
+  }
+
+  function rollDice(){
+    var attribute = $('#roll-attribute').value;
+    var skill = $('#roll-skill').value;
+    var attributeValue = model.attributes[attribute] || 0;
+    var skillValue = isSkillLocked(skill) ? 0 : (model.originSkills.indexOf(skill) >= 0 ? 5 : model.skills[skill]);
+    var prodigyBonus = model.fields['ocupacao-select'] === 'Prodígio' && [model.fields['prodigio-skill-1'],model.fields['prodigio-skill-2']].indexOf(skill) >= 0 ? 1 : 0;
+    var bonus = clamp((Number($('#roll-bonus').value) || 0) + prodigyBonus,0,3);
+    var penalty = clamp($('#roll-penalty').value,0,3);
+    var stress = $('#roll-stress').checked;
+    var net = bonus - penalty + (stress ? 1 : 0);
+    var count = Math.max(0,attributeValue + net);
+    var results = [];
+    var successes = 0;
+    var penalized = count === 0;
+    var desperateSuccess = false;
+    if(penalized){
+      var desperate = 1 + Math.floor(Math.random()*6);
+      results.push(desperate);
+      desperateSuccess = desperate === parseInt($('#roll-guess').value,10);
+      successes = desperateSuccess ? 1 : 0;
+    } else {
+      for(var index=0; index<count; index++){
+        var die = 1 + Math.floor(Math.random()*6); results.push(die); if(die <= skillValue) successes++;
+      }
+    }
+    var plagueResult = null, symptom = false;
+    var againstDevotee = model.fields['ocupacao-select'] === 'Devoto' && $('#roll-devotee').checked;
+    if($('#roll-plague').checked){
+      plagueResult = 1 + Math.floor(Math.random()*6);
+      symptom = plagueResult <= currentCorruptionStage().plagueThreshold;
+      if(againstDevotee) successes++;
+    }
+    var target = parseInt($('#roll-target').value,10) || 0;
+    if(stress){ model.health.pe += 2; renderHealth(); }
+    var labels = ['Falha','Sofrido','Gangrenado','Dilacerante','Profano','Absoluto'];
+    var nsIndex = Math.min(5,successes);
+    var passed = target ? successes >= target : null;
+    var crisis = stress && target && !passed;
+    var html = '<div class="roll-summary"><strong>'+labels[nsIndex]+'</strong><span>'+successes+' sucesso'+(successes === 1 ? '' : 's')+'</span>'+(passed === null ? '' : '<span class="'+(passed ? 'budget-ok' : 'over')+'">'+(passed ? 'NS alcançado' : 'NS não alcançado')+'</span>')+'</div>'+
+      '<div class="dice-faces">'+results.map(function(die){ return '<span class="die '+(penalized ? (desperateSuccess ? 'success' : 'fail') : (die <= skillValue ? 'success' : 'fail'))+'">'+die+'</span>'; }).join('')+'</div>'+
+      (prodigyBonus ? '<p>Dom Superior aplicou 1 Bônus a esta Perícia.</p>' : '')+
+      (penalized ? '<p>Teste penalizado: o número escolhido era '+$('#roll-guess').value+'.</p>' : '')+
+      (plagueResult != null ? '<p>Dado da Praga: <b>'+plagueResult+'</b> · '+(symptom ? 'provoca Sintoma de '+currentCorruptionStage().name : 'sem Sintoma')+(againstDevotee ? ' · conta como sucesso adicional; o Sintoma só se manifesta ao fim da Cena' : '')+'.</p>' : '')+
+      (crisis ? '<p class="over">A Aposta de Estresse falhou: ocorre uma Crise de Estresse.</p>' : '');
+    $('#roll-result').innerHTML = html;
+    model.ui.lastRoll = { attribute:attribute, skill:skill, results:results, successes:successes, plague:plagueResult, at:new Date().toISOString() };
+    saveModel();
+  }
+
+  function craftRecipe(id){
+    var recipe = DATA.recipes.filter(function(item){ return item.id === id; })[0];
+    if(!recipe || model.knownRecipes.indexOf(id) < 0) return;
+    if(!canCraftRecipe(recipe)) return;
+    var targetWeapon = recipe.id === 'conserto-arma' ? repairTarget() : null;
+    recipe.ingredients.forEach(function(name){ model.resources[name] -= 4; });
+    if(recipe.itemIngredient) consumeInventoryIngredient(recipe.itemIngredient);
+    if(targetWeapon){
+      targetWeapon.current = weaponMax(targetWeapon);
+      renderEquipment(); saveModel(); return;
+    }
+    var label = recipe.id === 'flecha' ? 'Flechas' : recipe.name;
+    var empty = model.inventory.filter(function(item){ return !item.name; })[0];
+    if(empty){ empty.name = label; empty.uses = recipe.id === 'flecha' ? '2' : ''; }
+    else model.inventory.push({id:uid('item'),name:label,uses:recipe.id === 'flecha' ? '2' : ''});
+    renderEquipment(); saveModel();
+  }
+
   function exportBackup(){
-    try{
-      var snapshot = collectSheetState();
-      var blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
-      var url = URL.createObjectURL(blob);
-      var link = document.createElement('a');
-      link.href = url;
-      link.download = 'backup-ficha-sobrevivente-' + new Date().toISOString().slice(0,10) + '.json';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch(e){
-      alert('Não foi possível exportar o backup.');
-    }
+    saveModel(true);
+    var blob = new Blob([JSON.stringify(model,null,2)],{type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url; link.download = 'roots-ficha-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
   }
   function importBackup(file){
     if(!file) return;
     var reader = new FileReader();
     reader.onload = function(){
       try{
-        var snapshot = JSON.parse(reader.result);
-        applySnapshot(snapshot);
-        localStorage.setItem(SHEET_STORAGE_KEY, JSON.stringify(snapshot));
-        if(snapshot.notes){
-          notesState = snapshot.notes;
-          saveNotesState();
-        }
-        renderNotesUI();
-        document.querySelectorAll('.pips').forEach(renderGroup);
-        updateWoundSummary();
-        updateBloodThresholds();
-        setPC(parseInt(document.getElementById('pc-input').value || '0', 10));
-        recomputeSkillStats();
-        alert('Backup importado com sucesso.');
-      } catch(e){
-        alert('O arquivo de backup não é válido.');
-      }
+        var parsed = JSON.parse(reader.result);
+        model = parsed.version === 3 ? normalizeModel(parsed) : normalizeModel(migrateLegacy(parsed,defaultModel()));
+        renderAll(); saveModel(true); alert('Backup restaurado com sucesso.');
+      } catch(error){ alert('O arquivo de backup não é válido.'); }
     };
     reader.readAsText(file);
   }
-  var backupFileInput = document.getElementById('backup-file-input');
-  if(backupFileInput){
-    backupFileInput.addEventListener('change', function(e){
-      if(e.target.files && e.target.files[0]){
-        importBackup(e.target.files[0]);
-        e.target.value = '';
-      }
-    });
-  }
-  document.getElementById('btn-save-backup').addEventListener('click', exportBackup);
-  document.getElementById('btn-load-backup').addEventListener('click', function(){ if(backupFileInput){ backupFileInput.click(); } });
 
-  var SKILLS = {
-    "Físico":   ["Atletismo","Acrobacia","Força","Briga","Respiração","Esquivar","Tolerância"],
-    "Destreza": ["Armas Brancas","Furtividade","Mirar","Cautela","Condução","Crime","Fuga"],
-    "Intelecto":["Medicina","Planejar","Exatas","Humanas","Ciências","Mecânica","Raízologia"],
-    "Instinto": ["Percepção","Intuição","Improvisar","Sobrevivência","Reflexos","Investigação","Lidar com Animais"],
-    "Espírito": ["Empatia","Intimidação","Persuasão","Performance","Determinação","Coragem","Mentira"]
-  };
-
-  var RESOURCES = ["Pano","Álcool","Recipiente","Sucata","Explosivo","Fita"];
-
-  /* ---------- build skills grid ---------- */
-  var skillsGrid = document.getElementById('skills-grid');
-  var skillIndex = 0;
-  Object.keys(SKILLS).forEach(function(attr){
-    var col = document.createElement('div');
-    var title = document.createElement('div');
-    title.className = 'skill-col-title';
-    title.textContent = attr;
-    col.appendChild(title);
-    SKILLS[attr].forEach(function(name){
-      skillIndex++;
-      var row = document.createElement('div');
-      row.className = 'skill-row';
-      var id = 'sk-' + skillIndex;
-      row.innerHTML =
-        '<span class="skill-name">'+name+'</span>' +
-        '<div class="pips skill-pips" data-value="1" data-max="4" data-origin="0" data-skill-name="'+name+'" id="'+id+'">' +
-          '<button type="button" class="pip" data-i="1" title="1"></button>' +
-          '<button type="button" class="pip" data-i="2" title="2"></button>' +
-          '<button type="button" class="pip" data-i="3" title="3"></button>' +
-          '<button type="button" class="pip" data-i="4" title="4"></button>' +
-          '<button type="button" class="pip origin-pip" data-i="5" title="Perícia de Origem (+5)"></button>' +
-        '</div>';
-      col.appendChild(row);
-    });
-    skillsGrid.appendChild(col);
-  });
-
-  /* ---------- Origem: 4 perícias fixas + categoria de arma ---------- */
-  var ORIGIN_DATA = {
-    "Cultivador": { skills:["Raízologia","Medicina","Tolerância","Força"], weapon:"Pesadas" },
-    "Camaleão":   { skills:["Performance","Acrobacia","Persuasão","Intimidação"], weapon:"Leves" },
-    "Acadêmico":  { skills:["Condução","Ciências","Exatas","Improvisar"], weapon:"Versáteis" },
-    "Curandeiro": { skills:["Determinação","Medicina","Cautela","Coragem"], weapon:"Leves" },
-    "Líder":      { skills:["Intuição","Planejar","Reflexos","Empatia"], weapon:"Versáteis" },
-    "Cronista":   { skills:["Mentira","Humanas","Investigação","Percepção"], weapon:"Leves" },
-    "Renegado":   { skills:["Intimidação","Briga","Força","Tolerância"], weapon:"Pesadas" },
-    "Corredor":   { skills:["Atletismo","Respiração","Condução","Furtividade"], weapon:"Leves" },
-    "Gótico":     { skills:["Determinação","Performance","Empatia","Intuição"], weapon:"Versáteis" },
-    "Andarilho":  { skills:["Furtividade","Fuga","Crime","Sobrevivência"], weapon:"Pesadas" },
-    "Ith'Na":     { skills:["Lidar com Animais","Raízologia","Armas Brancas","Improvisar"], weapon:"Versáteis" },
-    "Bélico":     { skills:["Mirar","Investigação","Cautela","Reflexos"], weapon:"De Fogo" },
-    "Lutador":    { skills:["Briga","Esquivar","Acrobacia","Atletismo"], weapon:"Nenhuma" },
-    "Caçador":    { skills:["Sobrevivência","Armas Brancas","Mirar","Percepção"], weapon:"Versáteis ou De Fogo" },
-    "Fundador":   { skills:["Mecânica","Planejar","Ciências","Exatas"], weapon:"Pesadas" },
-    "Áspide":     { skills:["Persuasão","Humanas","Mentira","Crime"], weapon:"Leves" }
-  };
-
-  function resetAllOriginSkills(){
-    document.querySelectorAll('.skill-pips').forEach(function(g){
-      if(g.dataset.origin === '1'){
-        g.dataset.origin = '0';
-        g.dataset.value = '1';
-        renderGroup(g);
-      }
-    });
-  }
-  function updateOriginWeaponHint(originName){
-    var hintEl = document.getElementById('origin-weapon-hint');
-    if(!hintEl) return;
-    var data = ORIGIN_DATA[originName];
-    hintEl.textContent = data ? ('Categoria de arma inicial: ' + data.weapon) : '';
-  }
-  function applyOriginSkills(originName){
-    resetAllOriginSkills();
-    var data = ORIGIN_DATA[originName];
-    if(data){
-      data.skills.forEach(function(skillName){
-        var g = document.querySelector('.skill-pips[data-skill-name="' + skillName + '"]');
-        if(g){
-          g.dataset.origin = '1';
-          g.dataset.value = '5';
-          renderGroup(g);
-        }
-      });
-    }
-    updateOriginWeaponHint(originName);
-    recomputeSkillStats();
-  }
-  var origemSelect = document.getElementById('origem-select');
-  if(origemSelect){
-    origemSelect.addEventListener('change', function(){
-      var newValue = origemSelect.value;
-      var previous = origemSelect.dataset.lastValue || '';
-      if(previous){
-        var ok = confirm('Trocar de Origem vai resetar as 4 Perícias de Origem atuais (de "' + previous + '") e travar as novas 4 perícias fixas de "' + (newValue || '— nenhuma —') + '". Continuar?');
-        if(!ok){
-          origemSelect.value = previous;
-          return;
-        }
-      }
-      applyOriginSkills(newValue);
-      origemSelect.dataset.lastValue = newValue;
-      saveSheetState();
-    });
-  }
-
-  /* ---------- build resource pips ---------- */
-  var resGrid = document.getElementById('res-pips-grid');
-  RESOURCES.forEach(function(name, idx){
-    var row = document.createElement('div');
-    row.className = 'res-pip-row';
-    var id = 'res-' + idx;
-    row.innerHTML =
-      '<span class="skill-name">'+name+'</span>' +
-      '<div class="pips res-pips" data-value="0" data-max="4" id="'+id+'">' +
-        '<button type="button" class="pip" data-i="1"></button>' +
-        '<button type="button" class="pip" data-i="2"></button>' +
-        '<button type="button" class="pip" data-i="3"></button>' +
-        '<button type="button" class="pip" data-i="4"></button>' +
-      '</div>';
-    resGrid.appendChild(row);
-  });
-
-  /* ---------- build weapons list ---------- */
-  var weaponsList = document.getElementById('weapons-list');
-  function buildWeaponCard(type, index){
-    var card = document.createElement('div');
-    card.className = 'weapon-card';
-    card.dataset.weaponType = type;
-    var titleLabel = type === 'fogo' ? 'Arma de Fogo / Disparo' : 'Arma Branca';
-    var fieldsHtml = type === 'fogo' ?
-      '<div class="meta-field"><label>Nome</label><input type="text"></div>' +
-      '<div class="meta-field"><label>Munição</label><input type="text" placeholder="X / X"></div>' +
-      '<div class="meta-field"><label>Distância</label><input type="text"></div>' +
-      '<div class="meta-field"><label>Recuo</label><input type="text"></div>' :
-      '<div class="meta-field"><label>Nome</label><input type="text"></div>' +
-      '<div class="meta-field"><label>Ferimento</label><input type="text" placeholder="Leve–Grave"></div>' +
-      '<div class="meta-field"><label>Distância</label><input type="text"></div>' +
-      '<div class="meta-field"><label>Durabilidade</label><input type="text"></div>';
-    card.innerHTML = '<div class="weapon-card-header"><div class="weapon-card-title">Espaço de Arma ' + index + ' — ' + titleLabel + '</div><button type="button" class="weapon-card-remove-btn" title="Remover arma">×</button></div><div class="weapon-fields">' + fieldsHtml + '</div>';
-    return card;
-  }
-  function refreshWeaponCards(){
-    if(!weaponsList) return;
-    var cards = weaponsList.querySelectorAll('.weapon-card');
-    cards.forEach(function(card, idx){
-      var title = card.querySelector('.weapon-card-title');
-      if(!title) return;
-      var type = card.dataset.weaponType === 'fogo' ? 'Arma de Fogo / Disparo' : 'Arma Branca';
-      title.textContent = 'Espaço de Arma ' + (idx + 1) + ' — ' + type;
-    });
-  }
-  function addWeapon(type){
-    if(!weaponsList) return;
-    var nextIndex = weaponsList.querySelectorAll('.weapon-card').length + 1;
-    weaponsList.appendChild(buildWeaponCard(type, nextIndex));
-    refreshWeaponCards();
-  }
-  if(weaponsList){
-    addWeapon('branca');
-    addWeapon('fogo');
-  }
-  document.querySelectorAll('.add-weapon-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){ addWeapon(btn.getAttribute('data-type')); });
-  });
-  if(weaponsList){
-    weaponsList.addEventListener('click', function(e){
-      var removeBtn = e.target.closest('.weapon-card-remove-btn');
-      if(!removeBtn) return;
-      var card = removeBtn.closest('.weapon-card');
-      if(card){
-        card.remove();
-        refreshWeaponCards();
-      }
-    });
-  }
-
-  /* ---------- build inventory slots ---------- */
-  function buildInventorySlot(index){
-    var slot = document.createElement('div');
-    slot.className = 'inv-slot';
-    slot.innerHTML = '<span class="list-num">'+String(index).padStart(2,'0')+'</span><div class="list-row-actions"><input type="text" placeholder="Item..."><button type="button" class="list-row-remove" title="Excluir">×</button></div>';
-    return slot;
-  }
-  var invGrid = document.getElementById('inv-grid');
-  for(var s=1;s<=8;s++){
-    invGrid.appendChild(buildInventorySlot(s));
-  }
-  function refreshInventoryNumbers(){
-    var slots = invGrid.querySelectorAll('.inv-slot');
-    slots.forEach(function(slot, idx){
-      var num = slot.querySelector('.list-num');
-      if(num){ num.textContent = String(idx + 1).padStart(2,'0'); }
-    });
-  }
-  document.getElementById('add-inv-btn').addEventListener('click', function(){
-    invGrid.appendChild(buildInventorySlot(invGrid.querySelectorAll('.inv-slot').length + 1));
-    refreshInventoryNumbers();
-  });
-
-  /* ---------- build vantagens / desvantagens / cicatrizes ---------- */
-  function buildList(containerId, count, placeholder){
-    var el = document.getElementById(containerId);
-    for(var i=1;i<=count;i++){
-      var row = document.createElement('div');
-      row.className = 'list-input-row';
-      row.innerHTML = '<span class="list-num">'+i+'</span><input type="text" placeholder="'+placeholder+'">';
-      el.appendChild(row);
-    }
-  }
-  function addListItem(containerId, placeholder){
-    var el = document.getElementById(containerId);
-    if(!el) return;
-    var existing = el.querySelectorAll('.list-input-row').length + 1;
-    var row = document.createElement('div');
-    row.className = 'list-input-row';
-    row.innerHTML = '<span class="list-num">'+existing+'</span><div class="list-row-actions"><input type="text" placeholder="'+placeholder+'"><button type="button" class="list-row-remove" title="Excluir">×</button></div>';
-    el.appendChild(row);
-    refreshListNumbers(containerId);
-  }
-  function refreshListNumbers(containerId){
-    var el = document.getElementById(containerId);
-    if(!el) return;
-    var rows = el.querySelectorAll('.list-input-row');
-    rows.forEach(function(row, idx){
-      var num = row.querySelector('.list-num');
-      if(num){ num.textContent = idx + 1; }
-    });
-  }
-  function buildList(containerId, count, placeholder){
-    var el = document.getElementById(containerId);
-    for(var i=1;i<=count;i++){
-      var row = document.createElement('div');
-      row.className = 'list-input-row';
-      row.innerHTML = '<span class="list-num">'+i+'</span><div class="list-row-actions"><input type="text" placeholder="'+placeholder+'"><button type="button" class="list-row-remove" title="Excluir">×</button></div>';
-      el.appendChild(row);
-    }
-  }
-  function addListItem(containerId, placeholder){
-    var el = document.getElementById(containerId);
-    if(!el) return;
-    var row = document.createElement('div');
-    row.className = 'list-input-row';
-    row.innerHTML = '<span class="list-num">'+(el.querySelectorAll('.list-input-row').length + 1)+'</span><div class="list-row-actions"><input type="text" placeholder="'+placeholder+'"><button type="button" class="list-row-remove" title="Excluir">×</button></div>';
-    el.appendChild(row);
-    refreshListNumbers(containerId);
-  }
-  function refreshListNumbers(containerId){
-    var el = document.getElementById(containerId);
-    if(!el) return;
-    var rows = el.querySelectorAll('.list-input-row');
-    rows.forEach(function(row, idx){
-      var num = row.querySelector('.list-num');
-      if(num){ num.textContent = idx + 1; }
-    });
-  }
-  buildList('vantagens-list', 5, 'Vantagem...');
-  buildList('desvantagens-list', 5, 'Desvantagem...');
-  buildList('cicatrizes-list', 5, 'Cicatriz...');
-
-  document.querySelectorAll('.add-char-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var listId = btn.getAttribute('data-list');
-      var placeholder = listId === 'vantagens-list' ? 'Vantagem...' : (listId === 'desvantagens-list' ? 'Desvantagem...' : 'Cicatriz...');
-      addListItem(listId, placeholder);
-    });
-  });
-
-  function autoExpandTextarea(el){
-    if(!el) return;
-    el.style.height = 'auto';
-    el.style.height = Math.max(150, el.scrollHeight) + 'px';
-  }
-  document.addEventListener('input', function(e){
-    var input = e.target;
-    if(input.matches('.note-content')){
-      autoExpandTextarea(input);
-    }
-    if(input.matches('.list-input-row input, .inv-slot input')){
-      input.style.height = 'auto';
-      input.style.height = Math.max(24, input.scrollHeight) + 'px';
-    }
-    saveSheetState();
-  });
-  document.addEventListener('change', function(){
-    saveSheetState();
-  });
-  document.addEventListener('click', function(e){
-    var removeBtn = e.target.closest('.list-row-remove');
-    if(!removeBtn) return;
-    var row = removeBtn.closest('.list-input-row');
-    var slot = removeBtn.closest('.inv-slot');
-    if(row){
-      row.remove();
-      var listId = row.parentElement.id;
-      refreshListNumbers(listId);
-    }
-    if(slot){
-      slot.remove();
-      refreshInventoryNumbers();
-    }
-  });
-
-  /* ---------- build dores ---------- */
-  var doresList = document.getElementById('dores-list');
-  for(var d=1; d<=3; d++){
-    var drow = document.createElement('div');
-    drow.className = 'dor-row';
-    drow.innerHTML =
-      '<span class="dor-check" data-checked="0"></span>' +
-      '<span class="dor-label">DOR '+d+'</span>' +
-      '<input type="text" placeholder="Ex.: Eu não deixarei mais ninguém morrer...">';
-    doresList.appendChild(drow);
-  }
-  doresList.addEventListener('click', function(e){
-    var chk = e.target.closest('.dor-check');
-    if(!chk) return;
-    var checked = chk.dataset.checked === '1';
-    chk.dataset.checked = checked ? '0' : '1';
-    chk.classList.toggle('checked', !checked);
-    saveSheetState();
-  });
-
-  /* ---------- generic pip rendering ---------- */
-  var BASE_ATTRIBUTE_POINTS = 8;
-  var ATTRIBUTE_ZERO_BONUS = 2;
-  function getAttributeCost(value){
-    var v = parseInt(value || '0', 10);
-    return Math.max(0, v - 1);
-  }
-  function getAttributeMaxPoints(){
-    var zeroCount = 0;
-    document.querySelectorAll('.attr-row .pips').forEach(function(group){
-      if(parseInt(group.dataset.value || '1', 10) === 0){ zeroCount++; }
-    });
-    return BASE_ATTRIBUTE_POINTS + (zeroCount * ATTRIBUTE_ZERO_BONUS);
-  }
-  function getManualBonus(inputId){
-    var el = document.getElementById(inputId);
-    return el ? (parseInt(el.value || '0', 10) || 0) : 0;
-  }
-  function updateAttributeBudget(){
-    var spent = 0;
-    var zeroCount = 0;
-    document.querySelectorAll('.attr-row .pips').forEach(function(group){
-      var val = parseInt(group.dataset.value || '1', 10);
-      spent += getAttributeCost(val);
-      if(val === 0){ zeroCount++; }
-    });
-    var manualBonus = getManualBonus('attr-bonus-manual');
-    var maxPoints = BASE_ATTRIBUTE_POINTS + (zeroCount * ATTRIBUTE_ZERO_BONUS) + manualBonus;
-    var remaining = maxPoints - spent;
-    var spentEl = document.getElementById('attr-spent');
-    if(spentEl){ spentEl.textContent = spent; }
-    var maxEl = document.getElementById('attr-max');
-    if(maxEl){ maxEl.textContent = maxPoints; }
-    var remainingEl = document.getElementById('attr-remaining');
-    if(remainingEl){
-      remainingEl.textContent = remaining;
-      remainingEl.classList.toggle('over', remaining < 0);
-    }
-  }
-
-  function getTrackStageForIndex(index, stages){
-    for(var i=0; i<stages.length; i++){
-      if(index <= stages[i].max){
-        return stages[i] || null;
-      }
-    }
-    return stages && stages.length ? stages[stages.length - 1] : null;
-  }
-
-  function renderGroup(group){
-    var val = parseInt(group.dataset.value || '0', 10);
-    group.querySelectorAll('.pip').forEach(function(p){
-      var i = parseInt(p.dataset.i, 10);
-      var filled = i <= val;
-      p.classList.toggle('filled', filled);
-      p.classList.remove('stage-ok','stage-warn','stage-crit');
-      if(filled && (group.id === 'pf-boxes' || group.id === 'pe-boxes')){
-        var stages = group.id === 'pf-boxes' ? trackStageData.pf : trackStageData.pe;
-        var stage = getTrackStageForIndex(i, stages);
-        if(stage){ p.classList.add(stage.className); }
-      }
-    });
-    group.classList.toggle('origin-active', group.dataset.origin === '1');
-    var readout = group.parentElement ? group.parentElement.querySelector('.readout') : null;
-    if(readout && !readout.querySelector('.track-max')){
-      readout.textContent = String(val).padStart(2,'0') + '/' + group.dataset.max;
-    } else if(readout){
-      readout.childNodes[0].nodeValue = String(val).padStart(2,'0');
-    }
-    if(group.id && group.id.indexOf('attr-') === 0){
-      updateAttributeBudget();
-    }
-  }
-
-  document.addEventListener('click', function(e){
-    var pip = e.target.closest('.pip');
-    if(!pip) return;
-    var group = pip.closest('.pips');
-    if(!group) return;
-    var i = parseInt(pip.dataset.i, 10);
-    var isOriginPip = group.classList.contains('skill-pips') && i === 5;
-    var isAttributeGroup = group.id && group.id.indexOf('attr-') === 0;
-    var cur = parseInt(group.dataset.value || '1', 10);
-
-    if(isOriginPip){
-      var isOrigin = group.dataset.origin === '1';
-      if(isOrigin){ group.dataset.origin = '0'; group.dataset.value = '1'; }
-      else { group.dataset.origin = '1'; group.dataset.value = '5'; }
-    } else if(isAttributeGroup){
-      var targetValue = (cur === i) ? (i - 1) : i;
-      targetValue = Math.max(0, Math.min(parseInt(group.dataset.max || '5', 10), targetValue));
-      if(targetValue === 0 && cur !== 0){
-        var alreadyZeroed = false;
-        document.querySelectorAll('.attr-row .pips').forEach(function(otherGroup){
-          if(otherGroup !== group && parseInt(otherGroup.dataset.value || '1', 10) === 0){ alreadyZeroed = true; }
-        });
-        if(alreadyZeroed){
-          alert('Só é possível ter uma Fraqueza Absoluta (um único atributo em 0) por vez.');
-          return;
-        }
-      }
-      if(targetValue > cur){
-        var attrValues = [];
-        document.querySelectorAll('.attr-row .pips').forEach(function(attrGroup){
-          var attrValue = parseInt(attrGroup.dataset.value || '1', 10);
-          if(attrGroup === group){
-            attrValues.push(targetValue);
-          } else {
-            attrValues.push(attrValue);
-          }
-        });
-        var proposedSpent = 0;
-        var proposedZeroCount = 0;
-        attrValues.forEach(function(attrValue){
-          proposedSpent += getAttributeCost(attrValue);
-          if(attrValue === 0){ proposedZeroCount++; }
-        });
-        var proposedMax = BASE_ATTRIBUTE_POINTS + (proposedZeroCount * ATTRIBUTE_ZERO_BONUS) + getManualBonus('attr-bonus-manual');
-        if(proposedSpent > proposedMax){
-          return;
-        }
-      }
-      group.dataset.value = String(targetValue);
-    } else {
-      if(group.dataset.origin === '1') return;
-      group.dataset.value = (cur === i) ? (i - 1) : i;
-    }
-    renderGroup(group);
-    saveSheetState();
-    if(group.id === 'attr-intelecto' || group.classList.contains('skill-pips')){
-      recomputeSkillStats();
-    }
-    if(group.id === 'pf-boxes'){
-      updateTrackStage('pf-readout', parseInt(group.dataset.value || '0', 10), parseInt(group.dataset.max || '0', 10), trackStageData.pf);
-    }
-    if(group.id === 'pe-boxes'){
-      updateTrackStage('pe-readout', parseInt(group.dataset.value || '0', 10), parseInt(group.dataset.max || '0', 10), trackStageData.pe);
-    }
-  });
-
-  function recomputeSkillStats(){
-    var basePP = 28;
-    var intVal = parseInt(document.getElementById('attr-intelecto').dataset.value || '0', 10);
-    var bonusMap = {0:0,1:0,2:2,3:4,4:6,5:8};
-    var bonus = bonusMap[intVal] || 0;
-    var manualBonus = getManualBonus('pp-bonus-manual');
-    var total = basePP + bonus + manualBonus;
-    var spent = 0, originCount = 0;
-    document.querySelectorAll('.skill-pips').forEach(function(g){
-      var val = parseInt(g.dataset.value || '0', 10);
-      if(g.dataset.origin === '1'){ originCount++; }
-      else { spent += Math.max(0, val - 1); }
-    });
-    var remaining = total - spent;
-    document.getElementById('pp-bonus').textContent = bonus;
-    document.getElementById('pp-total').textContent = total;
-    document.getElementById('pp-spent').textContent = spent;
-    var remEl = document.getElementById('pp-remaining');
-    remEl.textContent = remaining;
-    remEl.classList.toggle('over', remaining < 0);
-    var origEl = document.getElementById('origin-count');
-    origEl.textContent = originCount;
-    origEl.classList.toggle('over', originCount > 4);
-  }
-
-  /* ---------- blood-based PF / PE thresholds ---------- */
-  function buildBoxRow(id, max){
-    var el = document.getElementById(id);
-    el.innerHTML = '';
-    var curVal = parseInt(el.dataset.value || '0', 10);
-    el.dataset.max = max;
-    if(curVal > max) curVal = max;
-    el.dataset.value = curVal;
-    for(var i=1;i<=max;i++){
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'pip';
-      b.dataset.i = i;
-      el.appendChild(b);
-    }
-    renderGroup(el);
-  }
-
-  function buildZones(stripId, textId, segs, labels){
-    var strip = document.getElementById(stripId);
-    strip.innerHTML = '';
-    var classes = ['zone-ok','zone-warn','zone-crit'];
-    segs.forEach(function(w, idx){
-      var seg = document.createElement('div');
-      seg.className = 'zone-seg ' + classes[idx];
-      seg.style.flex = w;
-      strip.appendChild(seg);
-    });
-    document.getElementById(textId).textContent = labels.join('  ·  ');
-  }
-
-  var trackStageData = {
-    pf: null,
-    pe: null
-  };
-
-  function updateTrackStage(trackId, value, max, stages){
-    var readout = document.getElementById(trackId);
-    var stageLabelEl = document.getElementById(trackId === 'pf-readout' ? 'pf-stage' : 'pe-stage');
-    if(!readout || !stageLabelEl || !stages) return;
-
-    var stageLabel = 'Nenhum';
-    var stageClass = 'stage-ok';
-    for(var i=0; i<stages.length; i++){
-      if(value <= stages[i].max){
-        stageLabel = stages[i].label;
-        stageClass = stages[i].className;
-        break;
-      }
-    }
-    if(value === 0){ stageLabel = 'Nenhum'; stageClass = 'stage-ok'; }
-
-    readout.className = 'readout ' + stageClass;
-    stageLabelEl.className = 'track-stage ' + stageClass;
-    stageLabelEl.textContent = 'Estágio atual: ' + stageLabel;
-    readout.querySelector('.track-max') && (readout.querySelector('.track-max').className = 'track-max');
-  }
-
-  function updateBloodThresholds(){
-    var sangue = document.getElementById('sangue').value;
-    var pfMax, pfSegs, peMax, peSegs;
-    if(sangue === 'novo'){
-      pfMax = 15; pfSegs = [5,5,5];
-      trackStageData.pf = [
-        { max:5, label:'Machucado', className:'stage-ok' },
-        { max:10, label:'Ferido', className:'stage-warn' },
-        { max:15, label:'Crítico', className:'stage-crit' }
-      ];
-      peMax = 20; peSegs = [8,7,5];
-      trackStageData.pe = [
-        { max:8, label:'Estável', className:'stage-ok' },
-        { max:15, label:'Instável', className:'stage-warn' },
-        { max:20, label:'Desequilibrado', className:'stage-crit' }
-      ];
-      buildZones('pf-zones', 'pf-zones-text', pfSegs, ['Machucado 1–5','Ferido 6–10','Crítico 11–15']);
-      buildZones('pe-zones', 'pe-zones-text', peSegs, ['Estável 1–8','Instável 9–15','Desequilibrado 16–20']);
-    } else {
-      pfMax = 20; pfSegs = [8,7,5];
-      trackStageData.pf = [
-        { max:8, label:'Machucado', className:'stage-ok' },
-        { max:15, label:'Ferido', className:'stage-warn' },
-        { max:20, label:'Crítico', className:'stage-crit' }
-      ];
-      peMax = 15; peSegs = [5,5,5];
-      trackStageData.pe = [
-        { max:5, label:'Estável', className:'stage-ok' },
-        { max:10, label:'Instável', className:'stage-warn' },
-        { max:15, label:'Desequilibrado', className:'stage-crit' }
-      ];
-      buildZones('pf-zones', 'pf-zones-text', pfSegs, ['Machucado 1–8','Ferido 9–15','Crítico 16+']);
-      buildZones('pe-zones', 'pe-zones-text', peSegs, ['Estável 1–5','Instável 6–10','Desequilibrado 11–15']);
-    }
-
-    document.getElementById('pf-max-label').textContent = '/' + pfMax;
-    document.getElementById('pe-max-label').textContent = '/' + peMax;
-    buildBoxRow('pf-boxes', pfMax);
-    buildBoxRow('pe-boxes', peMax);
-    var pfValue = parseInt(document.getElementById('pf-boxes').dataset.value || '0', 10);
-    var peValue = parseInt(document.getElementById('pe-boxes').dataset.value || '0', 10);
-    updateTrackStage('pf-readout', pfValue, pfMax, trackStageData.pf);
-    updateTrackStage('pe-readout', peValue, peMax, trackStageData.pe);
-  }
-  document.getElementById('sangue').addEventListener('change', updateBloodThresholds);
-
-  /* ---------- corruption bar ---------- */
-  function setPC(val){
-    val = Math.max(0, Math.min(100, val));
-    document.getElementById('pc-input').value = val;
-    document.getElementById('pc-marker').style.left = val + '%';
-    var stage;
-    var stageClass = 'stage-imaculada';
-    if(val >= 100){ stage = 'Corrompido'; stageClass = 'stage-corrompido'; }
-    else if(val >= 80){ stage = 'Crítica'; stageClass = 'stage-critica'; }
-    else if(val >= 60){ stage = 'Severa'; stageClass = 'stage-severa'; }
-    else if(val >= 40){ stage = 'Alarmante'; stageClass = 'stage-alarmante'; }
-    else if(val >= 20){ stage = 'Incipiente'; stageClass = 'stage-incipiente'; }
-    else{ stage = 'Imaculada'; stageClass = 'stage-imaculada'; }
-    var stageEl = document.getElementById('pc-stage');
-    stageEl.textContent = 'Estágio atual: ' + stage;
-    stageEl.className = 'pc-stage ' + stageClass;
-  }
-  document.getElementById('pc-bar').addEventListener('click', function(e){
-    var rect = this.getBoundingClientRect();
-    var pct = Math.round((e.clientX - rect.left) / rect.width * 100);
-    setPC(pct);
-  });
-  document.querySelectorAll('.pc-control-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var current = parseInt(document.getElementById('pc-input').value || '0', 10);
-      var delta = btn.getAttribute('data-action') === 'inc' ? 1 : -1;
-      setPC(Math.max(0, Math.min(100, current + delta)));
-    });
-  });
-  document.getElementById('pc-input').addEventListener('input', function(e){
-    setPC(parseInt(e.target.value || '0', 10));
-  });
-
-  /* ---------- wound diagram (with detail modal) ---------- */
-  var zoneState = {};
-  var zoneDetails = {};
-  var currentEditingZone = null;
-
-  // mapping for automatic condition suggestions
-  var WOUND_CONDITION_MAP = {
-    'Explosão': 'Caído',
-    'Corrosão': 'Corrosão',
-    'Fogo': 'Em Chamas',
-    'Veneno': 'Envenenado',
-    'Clima': 'Clima Extremo'
-  };
-
-  document.querySelectorAll('.zone').forEach(function(z){
-    zoneState[z.id] = 0;
-    zoneDetails[z.id] = zoneDetails[z.id] || null;
-    z.addEventListener('click', function(e){
-      openWoundModal(z);
-    });
-  });
-
-  function applyZoneState(z){
-    z.classList.remove('w-none','w-light','w-medium','w-severe');
-    var s = parseInt(zoneState[z.id] || 0, 10) || 0;
-    z.classList.add(s === 0 ? 'w-none' : (s === 1 ? 'w-light' : (s === 2 ? 'w-medium' : 'w-severe')));
-  }
-
-  function updateWoundSummary(){
-    var list = [];
-    document.querySelectorAll('.zone').forEach(function(z){
-      var s = parseInt(zoneState[z.id] || 0, 10) || 0;
-      if(s > 0){
-        var label = s === 1 ? 'Leve' : (s === 2 ? 'Mediano' : 'Grave');
-        var det = zoneDetails[z.id] || {};
-        var typeLabel = det.type ? (' (' + det.type + ')') : '';
-        var note = det && det.note ? ' — ' + det.note : '';
-        list.push(z.dataset.part + ' — ' + label + typeLabel + note);
-      }
-    });
-    document.getElementById('wound-summary').textContent = list.length ? list.join('  ·  ') : 'Nenhum ferimento registrado.';
-  }
-
-  // Modal behavior
-  function openWoundModal(zoneEl){
-    currentEditingZone = zoneEl.id;
-    var title = zoneEl.dataset.part || zoneEl.id;
-    document.getElementById('wound-zone-name').textContent = title;
-    var det = zoneDetails[zoneEl.id] || { type:'', condition:'', note:'', severity:0 };
-    document.getElementById('wound-type').value = det.type || '';
-    document.getElementById('wound-condition').value = det.condition || '';
-    document.getElementById('wound-note').value = det.note || '';
-    var radios = document.getElementsByName('wound-severity');
-    for(var i=0;i<radios.length;i++){ radios[i].checked = (parseInt(radios[i].value,10) === (det.severity||0)); }
-    document.getElementById('wound-modal').style.display = 'flex';
-  }
-  function closeWoundModal(){
-    currentEditingZone = null;
-    document.getElementById('wound-modal').style.display = 'none';
-  }
-
-  document.getElementById('wound-cancel').addEventListener('click', function(){ closeWoundModal(); });
-  document.getElementById('wound-save').addEventListener('click', function(){
-    if(!currentEditingZone) return closeWoundModal();
-    var type = document.getElementById('wound-type').value || '';
-    var condition = document.getElementById('wound-condition').value || '';
-    var note = document.getElementById('wound-note').value || '';
-    var radios = document.getElementsByName('wound-severity');
-    var severity = 0;
-    for(var i=0;i<radios.length;i++){ if(radios[i].checked){ severity = parseInt(radios[i].value,10); break; } }
-
-    // automatic condition suggestion if none selected
-    if(!condition && WOUND_CONDITION_MAP[type]){ condition = WOUND_CONDITION_MAP[type]; }
-
-    zoneState[currentEditingZone] = severity;
-    if(severity === 0){
-      // treat 'Nenhum' as cleared
-      zoneDetails[currentEditingZone] = null;
-    } else {
-      zoneDetails[currentEditingZone] = { type: type, condition: condition, note: note, severity: severity };
-    }
-    var el = document.getElementById(currentEditingZone);
-    if(el){ applyZoneState(el); }
-    updateWoundSummary();
-    saveSheetState();
-    closeWoundModal();
-  });
-
-  // auto-update suggested condition when type changes
-  document.getElementById('wound-type').addEventListener('change', function(e){
-    var v = e.target.value;
-    var suggested = WOUND_CONDITION_MAP[v] || '';
-    if(suggested){ document.getElementById('wound-condition').value = suggested; }
-  });
-
-  /* ---------- notebooks / post-its ---------- */
-  var NOTES_STORAGE_KEY = 'survivor-notes-state-v2';
-  function createNotebookId(){ return 'nb-' + Date.now() + '-' + Math.floor(Math.random()*100000); }
-  function createNoteId(){ return 'note-' + Date.now() + '-' + Math.floor(Math.random()*100000); }
-  function escapeHtml(value){ return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-  function loadNotesState(){
-    try{
-      var raw = localStorage.getItem(NOTES_STORAGE_KEY);
-      if(raw){
-        var parsed = JSON.parse(raw);
-        if(parsed && Array.isArray(parsed.notebooks) && parsed.notebooks.length){
-          return parsed;
-        }
-      }
-    } catch(e){}
-    return {
-      notebooks: [
-        { id:createNotebookId(), title:'História Principal', notes:[{ id:createNoteId(), title:'Resumo', content:'' }] },
-        { id:createNotebookId(), title:'Anotações de Missões', notes:[{ id:createNoteId(), title:'Objetivos', content:'' }] }
-      ],
-      selectedNotebookId: null
-    };
-  }
-  function saveNotesState(){
-    localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify({ notebooks: notesState.notebooks, selectedNotebookId: notesState.selectedNotebookId }));
-    saveSheetState();
-  }
-  var notesState = loadNotesState();
-  if(!notesState.selectedNotebookId || !notesState.notebooks.some(function(nb){ return nb.id === notesState.selectedNotebookId; })){
-    notesState.selectedNotebookId = notesState.notebooks[0].id;
-  }
-  function getSelectedNotebook(){
-    return notesState.notebooks.find(function(nb){ return nb.id === notesState.selectedNotebookId; }) || notesState.notebooks[0];
-  }
-  function renderNotebookTabs(){
-    var tabsEl = document.getElementById('notes-tabs');
-    if(!tabsEl) return;
-    tabsEl.innerHTML = '';
-    notesState.notebooks.forEach(function(nb){
-      var tab = document.createElement('button');
-      tab.type = 'button';
-      tab.className = 'notes-tab' + (nb.id === notesState.selectedNotebookId ? ' active' : '');
-      tab.textContent = nb.title || 'Novo Caderno';
-      tab.addEventListener('click', function(){
-        notesState.selectedNotebookId = nb.id;
-        saveNotesState();
-        renderNotebookTabs();
-        renderNotesCanvas();
-      });
-      tabsEl.appendChild(tab);
-    });
-  }
-  function renderNotesCanvas(){
-    var canvas = document.getElementById('notes-canvas');
-    var titleInput = document.getElementById('notebook-title-input');
-    if(!canvas || !titleInput) return;
-    var notebook = getSelectedNotebook();
-    if(!notebook){ return; }
-    titleInput.value = notebook.title || '';
-    canvas.innerHTML = '';
-    if(!notebook.notes || !notebook.notes.length){
-      var empty = document.createElement('div');
-      empty.className = 'empty-notebook';
-      empty.innerHTML = '<p>Nenhum post-it aqui ainda.</p><span>Adicione um novo post-it para começar a organizar.</span>';
-      canvas.appendChild(empty);
-      return;
-    }
-    notebook.notes.forEach(function(note){
-      var card = document.createElement('article');
-      card.className = 'note-card';
-      card.innerHTML = '<div class="note-card-header"><input type="text" class="note-title-input" value="' + escapeHtml(note.title || 'Post-it') + '" placeholder="Título do post-it"><button type="button" class="notes-btn small danger note-remove-btn" data-note-id="' + note.id + '">×</button></div><textarea class="note-content" placeholder="Anote ideias, pistas, capítulos, missões...">' + escapeHtml(note.content || '') + '</textarea>';
-      canvas.appendChild(card);
-    });
-    document.querySelectorAll('.note-content').forEach(autoExpandTextarea);
-  }
-  function renderNotesUI(){
-    renderNotebookTabs();
-    renderNotesCanvas();
-  }
-  function createNotebook(title){
-    var nb = { id:createNotebookId(), title:title || 'Novo Caderno', notes:[{ id:createNoteId(), title:'Novo Post-it', content:'' }] };
-    notesState.notebooks.push(nb);
-    notesState.selectedNotebookId = nb.id;
-    saveNotesState();
-    renderNotesUI();
-  }
-  function addNote(){
-    var notebook = getSelectedNotebook();
-    if(!notebook){ return; }
-    notebook.notes.push({ id:createNoteId(), title:'Novo Post-it', content:'' });
-    saveNotesState();
-    renderNotesCanvas();
-  }
-  document.querySelector('.add-notebook-btn').addEventListener('click', function(){ createNotebook('Novo Caderno'); });
-  document.querySelector('.add-note-btn').addEventListener('click', function(){ addNote(); });
-  document.querySelector('.remove-notebook-btn').addEventListener('click', function(){
-    if(notesState.notebooks.length <= 1){
-      alert('Mantenha pelo menos um caderno para organizar as anotações.');
-      return;
-    }
-    if(confirm('Excluir este caderno e todos os seus post-its?')){
-      notesState.notebooks = notesState.notebooks.filter(function(nb){ return nb.id !== notesState.selectedNotebookId; });
-      notesState.selectedNotebookId = notesState.notebooks[0].id;
-      saveNotesState();
-      renderNotesUI();
-    }
-  });
-  document.getElementById('notes-tabs').addEventListener('click', function(e){
-    var tab = e.target.closest('.notes-tab');
-    if(!tab) return;
-    var id = tab.textContent;
-    var notebook = notesState.notebooks.find(function(nb){ return nb.title === id; });
-    if(notebook){
-      notesState.selectedNotebookId = notebook.id;
-      saveNotesState();
-      renderNotesUI();
-    }
-  });
-  document.getElementById('notes-canvas').addEventListener('input', function(e){
-    var noteTitleInput = e.target.closest('.note-title-input');
-    var noteContent = e.target.closest('.note-content');
-    var notebook = getSelectedNotebook();
-    if(!notebook) return;
-    if(noteTitleInput){
-      var noteId = noteTitleInput.closest('.note-card').querySelector('.note-remove-btn').getAttribute('data-note-id');
-      var note = notebook.notes.find(function(n){ return n.id === noteId; });
-      if(note){ note.title = noteTitleInput.value || 'Post-it'; saveNotesState(); }
-      return;
-    }
-    if(noteContent){
-      var noteId2 = noteContent.closest('.note-card').querySelector('.note-remove-btn').getAttribute('data-note-id');
-      var note2 = notebook.notes.find(function(n){ return n.id === noteId2; });
-      if(note2){ note2.content = noteContent.value; saveNotesState(); }
-    }
-  });
-  document.getElementById('notes-canvas').addEventListener('click', function(e){
-    var removeBtn = e.target.closest('.note-remove-btn');
-    if(!removeBtn) return;
-    var notebook = getSelectedNotebook();
-    if(!notebook) return;
-    notebook.notes = notebook.notes.filter(function(note){ return note.id !== removeBtn.getAttribute('data-note-id'); });
-    saveNotesState();
-    renderNotesCanvas();
-  });
-  document.getElementById('notebook-title-input').addEventListener('input', function(e){
-    var notebook = getSelectedNotebook();
-    if(notebook){
-      notebook.title = e.target.value || 'Novo Caderno';
-      saveNotesState();
-      renderNotebookTabs();
-    }
-  });
-
-  function resetListSection(containerId, count, placeholder){
-    var el = document.getElementById(containerId);
-    if(!el) return;
-    el.innerHTML = '';
-    for(var i=1;i<=count;i++){
-      var row = document.createElement('div');
-      row.className = 'list-input-row';
-      row.innerHTML = '<span class="list-num">'+i+'</span><div class="list-row-actions"><input type="text" placeholder="'+placeholder+'"><button type="button" class="list-row-remove" title="Excluir">×</button></div>';
-      el.appendChild(row);
-    }
-  }
-  function resetSheetState(){
+  function resetSheet(){
     if(!confirm('Isso apagará todos os dados preenchidos na ficha. Continuar?')) return;
-
-    localStorage.removeItem(SHEET_STORAGE_KEY);
-    localStorage.removeItem(NOTES_STORAGE_KEY);
-
-    document.querySelectorAll('input[type="text"], input[type="number"], textarea, select').forEach(function(el){
-      if(el.tagName === 'SELECT'){
-        el.selectedIndex = 0;
-      } else if(el.type === 'number'){
-        el.value = '';
-      } else {
-        el.value = '';
-      }
-    });
-    document.getElementById('sangue').value = 'velho';
-    document.querySelectorAll('.pips').forEach(function(group){
-      if(group.classList.contains('res-pips')){
-        group.dataset.value = '0';
-      } else {
-        group.dataset.value = '1';
-      }
-      group.dataset.origin = '0';
-      group.classList.remove('origin-active');
-      renderGroup(group);
-    });
-    document.querySelectorAll('.dor-row').forEach(function(row){
-      var chk = row.querySelector('.dor-check');
-      if(chk){
-        chk.dataset.checked = '0';
-        chk.classList.remove('checked');
-      }
-      var input = row.querySelector('input');
-      if(input){ input.value = ''; }
-    });
-
-    var weaponsList = document.getElementById('weapons-list');
-    if(weaponsList){
-      weaponsList.innerHTML = '';
-      addWeapon('branca');
-      addWeapon('fogo');
-    }
-
-    var invGrid = document.getElementById('inv-grid');
-    if(invGrid){
-      invGrid.innerHTML = '';
-      for(var s=1;s<=8;s++){
-        invGrid.appendChild(buildInventorySlot(s));
-      }
-    }
-
-    resetListSection('vantagens-list', 5, 'Vantagem...');
-    resetListSection('desvantagens-list', 5, 'Desvantagem...');
-    resetListSection('cicatrizes-list', 5, 'Cicatriz...');
-
-    if(typeof zoneState === 'object'){
-      document.querySelectorAll('.zone').forEach(function(z){
-        zoneState[z.id] = 0;
-        zoneDetails[z.id] = null;
-        applyZoneState(z);
-      });
-      updateWoundSummary();
-    }
-
-    document.getElementById('pc-input').value = '0';
-    setPC(0);
-    updateBloodThresholds();
-    recomputeSkillStats();
-
-    notesState = loadNotesState();
-    if(!notesState.selectedNotebookId || !notesState.notebooks.some(function(nb){ return nb.id === notesState.selectedNotebookId; })){ 
-      notesState.selectedNotebookId = notesState.notebooks[0].id;
-    }
-    renderNotesUI();
-    saveSheetState();
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_NOTES_KEY);
+    model = defaultModel();
+    renderAll(); saveModel(true);
   }
 
-  /* ---------- toolbar ---------- */
-  document.getElementById('btn-print').addEventListener('click', function(){ window.print(); });
-  document.getElementById('btn-reset').addEventListener('click', resetSheetState);
+  function onClick(event){
+    var tab = event.target.closest('.sheet-tab');
+    if(tab){ activatePage(tab.dataset.pageTarget); return; }
+    var pip = event.target.closest('.pip');
+    if(pip){
+      var group = pip.closest('.pips'); var index = parseInt(pip.dataset.i,10);
+      if(group.classList.contains('skill-pips')) handleSkillClick(group,index);
+      else if(/^attr-/.test(group.id)) handleAttributeClick(group,index);
+      else if(group.id === 'pf-boxes' || group.id === 'pe-boxes') handleTrackClick(group,index);
+      else if(group.classList.contains('res-pips')) handleResourceClick(group,index);
+      else if(group.classList.contains('armor-pips')) handleArmorPip(group.closest('.armor-card'),index);
+      else if(group.classList.contains('weapon-pips')) handleWeaponPip(group,index);
+      return;
+    }
+    var zone = event.target.closest('.zone'); if(zone){ openWoundModal(zone); return; }
+    if(event.target.closest('#wound-save')){ applyWound(); return; }
+    if(event.target.closest('#wound-cancel')){ closeWoundModal(); return; }
+    if(event.target.closest('#roll-button')){ rollDice(); return; }
+    if(event.target.closest('.pc-control-btn[data-action="add"]')){
+      var pcGain = Math.max(0, parseInt($('#pc-gain-input').value,10) || 0);
+      addPC(pcGain);
+      $('#pc-gain-input').value = 1;
+      return;
+    }
+    if(event.target.closest('#condition-add-button')){
+      addCondition($('#condition-custom').value || $('#condition-select').value); $('#condition-custom').value=''; return;
+    }
+    if(event.target.closest('#masoquista-voluntary')){
+      addPC(1); addCondition('Carne Voluntária — Bônus'); return;
+    }
+    var conditionRemove = event.target.closest('[data-condition-index]');
+    if(conditionRemove){ model.conditions.splice(parseInt(conditionRemove.dataset.conditionIndex,10),1); renderConditions(); saveModel(); return; }
+    if(event.target.closest('#add-inv-btn')){ model.inventory.push({id:uid('item'),name:'',uses:''}); renderInventory(); saveModel(); return; }
+    var inventoryRemove = event.target.closest('.inventory-remove');
+    if(inventoryRemove){ var itemRow=inventoryRemove.closest('.inv-slot'); model.inventory=model.inventory.filter(function(item){ return item.id!==itemRow.dataset.itemId; }); renderInventory(); saveModel(); return; }
+    var characterRemove = event.target.closest('.character-remove');
+    if(characterRemove){ var charRow=characterRemove.closest('.list-input-row'); model.characteristics[charRow.dataset.characterType].splice(parseInt(charRow.dataset.characterIndex,10),1); renderCharacteristics(); saveModel(); return; }
+    var addCharacter = event.target.closest('.add-char-btn');
+    if(addCharacter){ var key={"vantagens-list":"vantagens","desvantagens-list":"desvantagens","cicatrizes-list":"cicatrizes"}[addCharacter.dataset.list]; if(model.characteristics[key].length<5){ model.characteristics[key].push(''); renderCharacteristics(); saveModel(); } return; }
+    var painCheck = event.target.closest('.dor-check');
+    if(painCheck){ var painIndex=parseInt(painCheck.closest('.dor-row').dataset.painIndex,10); model.pains[painIndex].checked=!model.pains[painIndex].checked; renderPains(); saveModel(); return; }
+    var craft = event.target.closest('.craft-button'); if(craft){ craftRecipe(craft.dataset.recipeId); return; }
+    var parts = event.target.closest('[data-parts-delta]'); if(parts){ model.parts=Math.max(0,model.parts+parseInt(parts.dataset.partsDelta,10)); renderResources(); saveModel(); return; }
+    if(event.target.closest('.add-notebook-btn')){ var nb={id:uid('notebook'),title:'Novo Caderno',notes:[{id:uid('note'),title:'Novo Post-it',content:''}]}; model.notes.notebooks.push(nb); model.notes.selectedNotebookId=nb.id; renderNotes(); saveModel(); return; }
+    if(event.target.closest('.add-note-btn')){ var notebook=getSelectedNotebook(); notebook.notes.push({id:uid('note'),title:'Novo Post-it',content:''}); renderNotes(); saveModel(); return; }
+    if(event.target.closest('.remove-notebook-btn')){ if(model.notes.notebooks.length<=1){alert('Mantenha pelo menos um caderno.');return;} if(confirm('Excluir este caderno e seus post-its?')){model.notes.notebooks=model.notes.notebooks.filter(function(nb){return nb.id!==model.notes.selectedNotebookId;});model.notes.selectedNotebookId=model.notes.notebooks[0].id;renderNotes();saveModel();} return; }
+    var notebookTab=event.target.closest('.notes-tab'); if(notebookTab){model.notes.selectedNotebookId=notebookTab.dataset.notebookId;renderNotes();saveModel();return;}
+    var noteRemove=event.target.closest('.note-remove-btn'); if(noteRemove){var noteCard=noteRemove.closest('.note-card');var selected=getSelectedNotebook();selected.notes=selected.notes.filter(function(note){return note.id!==noteCard.dataset.noteId;});renderNotes();saveModel();return;}
+    if(event.target.closest('#filter-fixed-button')){var gain=Math.max(0,parseInt($('#filter-fixed-input').value,10)||0);var net=Math.max(0,gain-4);addPC(net);$('#filter-result').textContent='Ganho fixo '+gain+' PC · Filtro reduziu 4 · recebido '+net+' PC.';return;}
+    if(event.target.closest('#filter-variable-button')){var diceCount=clamp($('#filter-dice-count').value,1,6);var rolls=[];for(var d=0;d<diceCount;d++)rolls.push(1+Math.floor(Math.random()*6));var discarded=diceCount>1?Math.max.apply(Math,rolls):0;var total=rolls.reduce(function(sum,value){return sum+value;},0)-discarded;addPC(total);$('#filter-result').textContent='Resultados: '+rolls.join(', ') + (discarded?' · maior descartado: '+discarded:'')+' · recebido '+total+' PC.';return;}
+    if(event.target.closest('#filter-overload-button')){model.health.permanentPf+=2;addCondition('Inconsciente');renderHealth();saveModel();$('#filter-result').textContent='Sobrecarga acionada: ganho anulado, +2 PF permanentes e Inconsciente.';return;}
+    if(event.target.closest('#btn-save-backup')){exportBackup();return;}
+    if(event.target.closest('#btn-load-backup')){$('#backup-file-input').click();return;}
+    if(event.target.closest('#btn-print')){window.print();return;}
+    if(event.target.closest('#btn-reset')){resetSheet();return;}
+  }
 
-  /* ---------- footer date ---------- */
-  document.getElementById('footer-date').textContent = 'IMPRESSO EM ' + new Date().toLocaleDateString('pt-BR').toUpperCase();
+  function onInput(event){
+    var target = event.target;
+    if(target.dataset.modelField){
+      if(target.tagName === 'SELECT') return;
+      model.fields[target.dataset.modelField] = target.value;
+      if(target.id === 'attr-bonus-manual' || target.id === 'pp-bonus-manual'){ renderAttributes(); renderOrigin(); }
+      if(target.id === 'growth-stage') renderGrowth();
+      saveModel(); return;
+    }
+    if(target.id === 'pf-permanent'){ model.health.permanentPf=Math.max(0,parseInt(target.value,10)||0);renderHealth();saveModel();return; }
+    if(target.id === 'pe-permanent'){ model.health.permanentPe=Math.max(0,parseInt(target.value,10)||0);renderHealth();saveModel();return; }
+    if(target.id === 'parts-input'){ model.parts=Math.max(0,parseInt(target.value,10)||0);saveModel();return; }
+    var invRow=target.closest('.inv-slot'); if(invRow){var item=model.inventory.filter(function(entry){return entry.id===invRow.dataset.itemId;})[0];if(item){if(target.classList.contains('inventory-name'))item.name=target.value;if(target.classList.contains('inventory-uses'))item.uses=target.value;var used=model.inventory.filter(function(entry){return entry.name.trim();}).length;$('#inventory-status').textContent='Ocupados: '+used+'/'+inventoryCapacity();$('#inventory-status').className=used>inventoryCapacity()?'over':'';saveModel();}return;}
+    var charRow=target.closest('.list-input-row'); if(charRow&&target.tagName==='INPUT'){model.characteristics[charRow.dataset.characterType][parseInt(charRow.dataset.characterIndex,10)]=target.value;saveModel();return;}
+    var painRow=target.closest('.dor-row'); if(painRow&&target.tagName==='INPUT'){model.pains[parseInt(painRow.dataset.painIndex,10)].text=target.value;saveModel();return;}
+    var weaponCard=target.closest('.weapon-card'); if(weaponCard){var weaponState=model.weapons[parseInt(weaponCard.dataset.weaponIndex,10)];if(target.classList.contains('weapon-notes'))weaponState.notes=target.value;if(target.classList.contains('custom-weapon-name'))weaponState.customName=target.value;if(target.classList.contains('custom-weapon-damage'))weaponState.customDamage=target.value;if(target.classList.contains('custom-weapon-range'))weaponState.customRange=target.value;if(target.classList.contains('custom-weapon-max')){weaponState.customMax=Math.max(0,parseInt(target.value,10)||0);weaponState.current=Math.min(weaponState.current,weaponState.customMax);}saveModel();return;}
+    var noteCard=target.closest('.note-card'); if(noteCard){var note=getSelectedNotebook().notes.filter(function(entry){return entry.id===noteCard.dataset.noteId;})[0];if(note){if(target.classList.contains('note-title-input'))note.title=target.value;if(target.classList.contains('note-content'))note.content=target.value;saveModel();}return;}
+    if(target.id==='notebook-title-input'){getSelectedNotebook().title=target.value;renderNotes();saveModel();return;}
+  }
 
-  /* ---------- init ---------- */
-  window.addEventListener('beforeunload', saveSheetState);
-  window.addEventListener('pagehide', saveSheetState);
-  restoreSheetState();
-  document.querySelectorAll('.pips').forEach(renderGroup);
-  updateWoundSummary();
-  updateBloodThresholds();
-  setPC(parseInt(document.getElementById('pc-input').value || '0', 10));
-  recomputeSkillStats();
-  renderNotesUI();
-  saveSheetState();
+  function onChange(event){
+    var target=event.target;
+    if(target.id==='sangue'){
+      if(model.fields['ocupacao-select']==='Devoto' && target.value!=='novo'){
+        target.value='novo';
+        alert('Devoto requer Sangue Novo. Troque a Ocupação antes de escolher Sangue Velho.');
+        return;
+      }
+      model.fields.sangue=target.value;
+      renderHealth();renderPC();renderOccupation();renderFlower();saveModel();return;
+    }
+    if(target.id==='origem-select'){
+      var previous=model.fields['origem-select'];
+      if(previous&&previous!==target.value&&!confirm('Trocar a Origem redefine as quatro Perícias e os Poderes escolhidos. Continuar?')){target.value=previous;return;}
+      applyOrigin(target.value);return;
+    }
+    if(target.id==='ocupacao-select'){applyOccupation(target.value);return;}
+    if(target.id==='flor-select'){model.fields['flor-select']=target.value;renderFlower();saveModel();return;}
+    if(target.classList.contains('prodigio-skill')){
+      var otherSkillId = target.id === 'prodigio-skill-1' ? 'prodigio-skill-2' : 'prodigio-skill-1';
+      if(target.value && model.fields[otherSkillId] === target.value){ alert('Dom Superior exige duas Perícias diferentes.'); renderOccupation(); return; }
+      model.fields[target.id] = target.value; saveModel(); return;
+    }
+    if(target.id==='abutre-resource'){
+      model.fields['abutre-resource']=target.value;
+      renderOccupation();renderResources();renderRecipes();saveModel();return;
+    }
+    if(target.dataset.modelField){model.fields[target.dataset.modelField]=target.value;if(target.id==='growth-stage')renderGrowth();saveModel();return;}
+    if(target.classList.contains('origin-power-check')){
+      var origin=getOrigin();if(!origin)return;var power=origin.powers.filter(function(item){return item.name===target.dataset.power;})[0];var index=model.originPowers.indexOf(power.name);if(target.checked&&index<0){var occ=getOccupation();var total=7+(occ&&occ.originPointsBonus||0);var spent=origin.powers.reduce(function(sum,item){return sum+(model.originPowers.indexOf(item.name)>=0?item.cost:0);},0);if(spent+power.cost>total){target.checked=false;alert('Pontos de Origem insuficientes.');return;}model.originPowers.push(power.name);}else if(!target.checked&&index>=0)model.originPowers.splice(index,1);renderOrigin();saveModel();return;
+    }
+    if(target.classList.contains('weapon-select')){var card=target.closest('.weapon-card');var state=model.weapons[parseInt(card.dataset.weaponIndex,10)];state.weaponId=target.value;state.mods=[];state.current=weaponMax(state);if(target.value!=='custom'){state.customName='';state.customDamage='';state.customRange='';state.customMax=0;}renderWeapons();saveModel();return;}
+    if(target.classList.contains('weapon-mod-select')){var modCard=target.closest('.weapon-card');var weaponState=model.weapons[parseInt(modCard.dataset.weaponIndex,10)];var modIndex=parseInt(target.dataset.modIndex,10);var old=weaponState.mods[modIndex]||'';var next=target.value;if(old&&next!==old){alert('Modificações são permanentes. Apenas poderes específicos permitem removê-las.');renderWeapons();return;}if(next){var mod=DATA.modifications.filter(function(item){return item.id===next;})[0];if(model.parts<mod.cost){alert('Partes insuficientes para instalar esta modificação.');renderWeapons();return;}model.parts-=mod.cost;weaponState.mods[modIndex]=next;renderEquipment();saveModel();}return;}
+    if(target.classList.contains('armor-equipped')){var armorCard=target.closest('.armor-card');var armorItem=DATA.armors.filter(function(item){return item.id===armorCard.dataset.armorId;})[0];var armorState=model.armor[armorItem.id];armorState.equipped=target.checked;if(target.checked&&armorState.remaining===0)armorState.remaining=armorItem.maxUses;renderArmor();saveModel();return;}
+    if(target.classList.contains('recipe-known')){var recipeId=target.dataset.recipeId;var recipeIndex=model.knownRecipes.indexOf(recipeId);if(target.checked&&recipeIndex<0){if(!model.allowCampaignRecipes&&model.knownRecipes.length>=recipeLimit()){target.checked=false;alert('O limite de Receitas conhecidas na criação é igual ao Intelecto.');return;}model.knownRecipes.push(recipeId);}else if(!target.checked&&recipeIndex>=0)model.knownRecipes.splice(recipeIndex,1);renderRecipes();saveModel();return;}
+    if(target.id==='allow-campaign-recipes'){model.allowCampaignRecipes=target.checked;renderRecipes();saveModel();return;}
+    if(target.id==='backup-file-input'){if(target.files&&target.files[0])importBackup(target.files[0]);target.value='';return;}
+    if(target.id==='wound-type'||target.name==='wound-severity'){updateWoundPreview();return;}
+  }
 
+  function initialize(){
+    buildTabs();
+    bindFields();
+    buildSkills();
+    document.addEventListener('click',onClick);
+    document.addEventListener('input',onInput);
+    document.addEventListener('change',onChange);
+    window.addEventListener('pagehide',function(){saveModel(true);});
+    window.addEventListener('beforeunload',function(){saveModel(true);});
+    $('#footer-date').textContent='IMPRESSO EM '+new Date().toLocaleDateString('pt-BR').toUpperCase();
+    renderAll();
+    saveModel(true);
+  }
+
+  initialize();
 })();
