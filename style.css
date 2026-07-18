@@ -396,7 +396,9 @@ input::placeholder, textarea::placeholder{ color:var(--text-faint); font-style:i
 }
 .diagram-frame{
   position:relative;
-  width:260px;
+  width:320px;
+  max-width:100%;
+  box-sizing:border-box;
   padding:14px;
   border:1px solid var(--line);
   background:var(--panel-3);
@@ -421,23 +423,36 @@ input::placeholder, textarea::placeholder{ color:var(--text-faint); font-style:i
 }
 
 svg#body-svg{ width:100%; height:auto; display:block; }
-.zone{
-  fill:var(--panel-2);
-  stroke:var(--line-strong);
-  stroke-width:1.5;
-  cursor:pointer;
-  transition:fill .12s;
-}
-.zone:hover{ stroke:var(--green-bright); }
-.zone.w-light{ fill:var(--green); }
-.zone.w-medium{ fill:var(--yellow); stroke:rgba(215,185,74,0.85); }
-.zone.w-severe{ fill:var(--red-bright); stroke:var(--red-bright); }
-.zone-label{
-  font-family:var(--font-mono);
-  font-size:7.5px;
-  fill:var(--text-faint);
+#body-art-image{
   pointer-events:none;
-  text-anchor:middle;
+  filter:invert(1) contrast(1.08);
+  opacity:.92;
+}
+.zone{
+  fill:transparent;
+  fill-opacity:0;
+  stroke:transparent;
+  stroke-width:8;
+  pointer-events:all;
+  cursor:pointer;
+  transition:fill .15s ease, fill-opacity .15s ease, stroke .15s ease;
+}
+.zone:hover,.zone:focus-visible{ stroke:var(--green-bright); outline:none; }
+.zone.w-none:hover,.zone.w-none:focus-visible{ fill:var(--green-bright); fill-opacity:.28; }
+.zone.w-light{ fill:var(--green); fill-opacity:.72; }
+.zone.w-medium{ fill:var(--yellow); fill-opacity:.74; stroke:rgba(215,185,74,.9); }
+.zone.w-severe{ fill:var(--red-bright); fill-opacity:.78; stroke:var(--red-bright); }
+.zone.w-light:hover,.zone.w-light:focus-visible,
+.zone.w-medium:hover,.zone.w-medium:focus-visible,
+.zone.w-severe:hover,.zone.w-severe:focus-visible{ fill-opacity:.9; }
+.body-map-instruction{
+  margin-top:8px;
+  color:var(--text-faint);
+  font:9px var(--font-mono);
+  line-height:1.45;
+  letter-spacing:.7px;
+  text-align:center;
+  text-transform:uppercase;
 }
 
 .diagram-side{ flex:1; min-width:220px; }
@@ -660,6 +675,7 @@ svg#body-svg{ width:100%; height:auto; display:block; }
   .sheet{ padding:0; max-width:100%; }
   .section{ box-shadow:none; }
   body{ font-size:12px; }
+  #body-art-image{ filter:none; opacity:1; }
 }
 
 /* ===================== NAVEGAÇÃO / PÁGINAS ===================== */

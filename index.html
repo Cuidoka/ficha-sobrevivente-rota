@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ficha de Sobrevivente — Roots of the Abyss</title>
+<link rel="preload" as="image" href="assets/corpos/masculino.png">
+<link rel="preload" as="image" href="assets/corpos/feminino.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -26,6 +28,12 @@
           <select id="sangue">
             <option value="velho">Sangue Velho</option>
             <option value="novo">Sangue Novo</option>
+          </select>
+        </div>
+        <div class="meta-field"><label>Gênero</label>
+          <select id="genero-select">
+            <option value="masculino">Masculino</option>
+            <option value="feminino">Feminino</option>
           </select>
         </div>
         <div class="meta-field"><label>Origem</label>
@@ -220,32 +228,13 @@
       <div class="diagram-frame">
         <span class="corner corner-tl"></span><span class="corner corner-tr"></span>
         <span class="corner corner-bl"></span><span class="corner corner-br"></span>
-        <div class="diagram-caption">Vista Frontal — Silhueta Padrão</div>
-        <svg id="body-svg" viewBox="0 0 300 350" xmlns="http://www.w3.org/2000/svg">
-          <circle class="zone" id="z-cabeca" data-part="Cabeça" cx="150" cy="34" r="24"><title>Cabeça</title></circle>
-          <rect class="zone" id="z-tronco" data-part="Tronco / Peitoral" x="112" y="64" width="76" height="102" rx="12"><title>Tronco / Peitoral</title></rect>
-
-          <rect class="zone" id="z-braco-d" data-part="Braço Direito" x="76" y="70" width="30" height="76" rx="14"><title>Braço Direito</title></rect>
-          <rect class="zone" id="z-braco-e" data-part="Braço Esquerdo" x="194" y="70" width="30" height="76" rx="14"><title>Braço Esquerdo</title></rect>
-
-          <rect class="zone" id="z-antebraco-d" data-part="Antebraço Direito" x="70" y="150" width="26" height="62" rx="12"><title>Antebraço Direito</title></rect>
-          <rect class="zone" id="z-antebraco-e" data-part="Antebraço Esquerdo" x="204" y="150" width="26" height="62" rx="12"><title>Antebraço Esquerdo</title></rect>
-
-          <ellipse class="zone" id="z-mao-d" data-part="Mão Direita" cx="80" cy="224" rx="15" ry="19"><title>Mão Direita</title></ellipse>
-          <ellipse class="zone" id="z-mao-e" data-part="Mão Esquerda" cx="220" cy="224" rx="15" ry="19"><title>Mão Esquerda</title></ellipse>
-
-          <rect class="zone" id="z-coxa-d" data-part="Coxa Direita" x="116" y="170" width="33" height="78" rx="15"><title>Coxa Direita</title></rect>
-          <rect class="zone" id="z-coxa-e" data-part="Coxa Esquerda" x="151" y="170" width="33" height="78" rx="15"><title>Coxa Esquerda</title></rect>
-
-          <rect class="zone" id="z-panturrilha-d" data-part="Panturrilha Direita" x="117" y="252" width="29" height="70" rx="13"><title>Panturrilha Direita</title></rect>
-          <rect class="zone" id="z-panturrilha-e" data-part="Panturrilha Esquerda" x="154" y="252" width="29" height="70" rx="13"><title>Panturrilha Esquerda</title></rect>
-
-          <rect class="zone" id="z-pe-d" data-part="Pé Direito" x="104" y="324" width="42" height="16" rx="7"><title>Pé Direito</title></rect>
-          <rect class="zone" id="z-pe-e" data-part="Pé Esquerdo" x="154" y="324" width="42" height="16" rx="7"><title>Pé Esquerdo</title></rect>
-
-          <text class="zone-label" x="150" y="8">CABEÇA</text>
-          <text class="zone-label" x="150" y="345">D · E</text>
+        <div class="diagram-caption" id="body-map-caption">Vista Frontal — Corpo Masculino</div>
+        <svg id="body-svg" viewBox="0 0 1472 2616" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="body-map-title" xmlns="http://www.w3.org/2000/svg">
+          <title id="body-map-title">Mapeamento somático do corpo masculino</title>
+          <g id="body-zone-layer"></g>
+          <image id="body-art-image" href="assets/corpos/masculino.png" x="0" y="0" width="1472" height="2616" preserveAspectRatio="xMidYMid meet"></image>
         </svg>
+        <div class="body-map-instruction">Clique em Cabeça, Tronco, Braço ou Perna para registrar o ferimento</div>
       </div>
 
       <!-- Wound detail modal -->

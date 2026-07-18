@@ -8,6 +8,49 @@
   var LEGACY_STORAGE_KEY = 'survivor-sheet-state-v2';
   var LEGACY_NOTES_KEY = 'survivor-notes-state-v2';
   var saveTimer = null;
+
+  var BODY_ZONE_LABELS = [
+    {id:'z-cabeca',key:'cabeca',label:'Cabeça'},
+    {id:'z-tronco',key:'tronco',label:'Tronco'},
+    {id:'z-braco-d',key:'braco-d',label:'Braço Direito'},
+    {id:'z-braco-e',key:'braco-e',label:'Braço Esquerdo'},
+    {id:'z-perna-d',key:'perna-d',label:'Perna Direita'},
+    {id:'z-perna-e',key:'perna-e',label:'Perna Esquerda'}
+  ];
+  var BODY_MAPS = {
+    feminino:{
+      label:'Feminino',image:'assets/corpos/feminino.png',zones:{
+        'braco-d':'M 518 637 L 499 668 L 487 710 L 485 804 L 471 948 L 469 962 L 455 980 L 454 1013 L 439 1071 L 421 1272 L 411 1296 L 396 1386 L 397 1406 L 417 1448 L 452 1487 L 464 1487 L 482 1482 L 484 1467 L 482 1453 L 472 1441 L 474 1366 L 458 1292 L 494 1167 L 525 1081 L 530 1020 L 537 996 L 538 943 L 551 895 L 544 772 L 526 667 L 526 637 Z',
+        'braco-e':'M 929 641 L 929 671 L 911 776 L 904 899 L 917 947 L 918 1000 L 931 1089 L 961 1171 L 997 1296 L 981 1370 L 983 1445 L 973 1457 L 971 1471 L 972 1485 L 990 1491 L 1003 1491 L 1038 1452 L 1058 1410 L 1059 1390 L 1044 1300 L 1034 1276 L 1016 1075 L 1001 1017 L 1000 984 L 986 966 L 984 952 L 970 808 L 968 714 L 956 672 L 937 641 Z',
+        cabeca:'M 682 230 L 629 269 L 609 297 L 597 342 L 598 388 L 587 400 L 587 417 L 595 438 L 621 458 L 644 494 L 706 544 L 730 544 L 804 484 L 832 444 L 850 407 L 850 390 L 840 382 L 836 325 L 822 287 L 797 255 L 752 230 Z',
+        'perna-d':'M 524 1207 L 505 1307 L 503 1373 L 515 1492 L 539 1580 L 566 1723 L 561 1820 L 533 1893 L 524 1975 L 525 2023 L 543 2159 L 574 2348 L 575 2431 L 565 2459 L 548 2580 L 588 2613 L 647 2613 L 654 2605 L 655 2581 L 646 2456 L 636 2401 L 634 2304 L 646 2106 L 666 1996 L 665 1848 L 668 1826 L 684 1786 L 680 1706 L 685 1573 L 704 1453 L 711 1358 L 683 1325 L 586 1243 L 534 1207 Z',
+        'perna-e':'M 925 1209 L 873 1245 L 776 1327 L 748 1361 L 755 1455 L 774 1575 L 779 1708 L 775 1788 L 791 1828 L 794 1850 L 793 1998 L 813 2108 L 825 2306 L 823 2403 L 813 2458 L 804 2583 L 804 2603 L 812 2615 L 870 2615 L 911 2582 L 894 2461 L 884 2433 L 885 2350 L 916 2162 L 934 2025 L 935 1977 L 926 1895 L 898 1822 L 893 1725 L 920 1582 L 944 1494 L 956 1375 L 954 1308 L 935 1209 Z',
+        tronco:'M 626 601 L 612 614 L 574 626 L 560 647 L 565 741 L 557 762 L 555 796 L 593 899 L 603 995 L 602 1006 L 543 1128 L 527 1191 L 633 1253 L 707 1315 L 740 1315 L 827 1241 L 923 1193 L 906 1133 L 846 1004 L 842 982 L 848 923 L 884 791 L 882 750 L 892 715 L 900 644 L 885 625 L 840 616 L 810 601 Z'
+      },connections:{
+        cabeca:'M 666 500 L 773 500 L 773 576 L 770 592 L 770 604 L 668 604 L 668 592 L 668 576 Z',
+        'braco-d':'M 520 632 L 575 632 L 565 700 L 558 820 L 551 900 L 540 900 L 544 772 L 526 667 Z',
+        'braco-e':'M 899 632 L 938 632 L 929 671 L 911 776 L 904 900 L 893 900 L 884 820 L 887 700 Z',
+        'perna-d':'M 526 1188 L 640 1248 L 715 1315 L 718 1362 L 711 1358 L 683 1325 L 586 1243 L 524 1207 Z',
+        'perna-e':'M 918 1188 L 935 1209 L 873 1245 L 776 1327 L 748 1361 L 736 1315 L 811 1250 Z'
+      }
+    },
+    masculino:{
+      label:'Masculino',image:'assets/corpos/masculino.png',zones:{
+        'braco-d':'M 534 641 L 501 702 L 489 754 L 487 927 L 467 1121 L 479 1314 L 465 1447 L 470 1469 L 480 1482 L 522 1520 L 536 1520 L 541 1504 L 539 1482 L 551 1471 L 554 1415 L 530 1329 L 531 1283 L 554 1184 L 561 1131 L 560 1029 L 582 933 L 582 900 L 548 717 L 542 641 Z',
+        'braco-e':'M 986 639 L 979 715 L 945 898 L 945 931 L 967 1027 L 967 1138 L 997 1293 L 997 1327 L 973 1413 L 976 1469 L 988 1480 L 986 1502 L 992 1518 L 1004 1518 L 1047 1480 L 1057 1467 L 1062 1445 L 1048 1312 L 1060 1119 L 1040 925 L 1038 752 L 1026 700 L 994 639 Z',
+        cabeca:'M 735 250 L 704 269 L 679 298 L 667 339 L 665 380 L 652 383 L 647 406 L 657 437 L 683 466 L 693 487 L 748 542 L 773 542 L 830 484 L 870 412 L 870 391 L 855 381 L 855 341 L 846 304 L 828 281 L 783 250 Z',
+        'perna-d':'M 582 1270 L 586 1542 L 605 1692 L 605 1794 L 589 1868 L 585 1926 L 607 2072 L 620 2252 L 611 2268 L 613 2299 L 607 2317 L 553 2451 L 553 2460 L 576 2477 L 664 2477 L 693 2462 L 698 2454 L 700 2271 L 693 2247 L 692 2171 L 706 2042 L 723 1958 L 723 1897 L 712 1815 L 712 1745 L 730 1625 L 746 1404 L 590 1270 Z',
+        'perna-e':'M 938 1272 L 897 1312 L 784 1404 L 799 1627 L 817 1747 L 817 1818 L 806 1899 L 806 1960 L 823 2044 L 837 2173 L 836 2249 L 829 2273 L 831 2456 L 836 2464 L 865 2479 L 953 2479 L 976 2462 L 976 2453 L 922 2319 L 916 2301 L 918 2270 L 909 2254 L 922 2074 L 944 1928 L 940 1870 L 924 1796 L 924 1694 L 943 1544 L 948 1272 Z',
+        tronco:'M 626 603 L 587 616 L 575 631 L 571 652 L 575 748 L 597 881 L 626 1006 L 623 1058 L 593 1191 L 587 1245 L 633 1271 L 748 1368 L 788 1368 L 931 1240 L 940 1226 L 897 1037 L 908 956 L 922 910 L 960 715 L 960 653 L 954 632 L 936 618 L 830 603 Z'
+      },connections:{
+        cabeca:'M 691 510 L 830 510 L 831 555 L 826 592 L 826 604 L 696 604 L 696 592 L 690 555 Z',
+        'braco-d':'M 532 632 L 578 632 L 568 680 L 570 720 L 582 900 L 570 900 L 548 717 L 542 641 Z',
+        'braco-e':'M 950 632 L 994 632 L 986 639 L 979 715 L 945 898 L 935 898 L 945 820 L 960 720 L 960 660 Z',
+        'perna-d':'M 584 1236 L 641 1271 L 756 1368 L 746 1404 L 590 1270 L 582 1270 Z',
+        'perna-e':'M 940 1226 L 938 1272 L 897 1312 L 784 1404 L 780 1368 L 923 1238 Z'
+      }
+    }
+  };
   var model = loadModel();
 
   function $(selector, root){ return (root || document).querySelector(selector); }
@@ -53,7 +96,7 @@
       version:3,
       updatedAt:null,
       fields:{
-        registro:'', 'nome-sobrevivente':'', jogador:'', idade:'', sangue:'velho',
+        registro:'', 'nome-sobrevivente':'', jogador:'', idade:'', sangue:'velho', 'genero-select':'masculino',
         'origem-select':'', 'ocupacao-select':'', 'reputacao-select':'',
         'flor-select':'', 'pulseira-select':'Verde', 'ponto-partida':'',
         'grupo-estrada':'', 'attr-bonus-manual':0, 'pp-bonus-manual':0,
@@ -118,6 +161,7 @@
     if(!Array.isArray(base.conditions)) base.conditions = [];
     if(!Array.isArray(base.corruptionFilters)) base.corruptionFilters = [];
     base.corruptionFilters = base.corruptionFilters.filter(function(key){ return typeof key === 'string'; });
+    if(!BODY_MAPS[base.fields['genero-select']]) base.fields['genero-select'] = 'masculino';
     if(!base.rest || !Array.isArray(base.rest.actions)) base.rest = {scenes:0,actions:[{type:'',note:''},{type:'',note:''}]};
     base.rest.scenes = clamp(base.rest.scenes,0,8);
     while(base.rest.actions.length < 2) base.rest.actions.push({type:'',note:''});
@@ -441,7 +485,7 @@
 
   function bindFields(){
     var ids = [
-      'registro','nome-sobrevivente','jogador','idade','sangue','origem-select','ocupacao-select','reputacao-select',
+      'registro','nome-sobrevivente','jogador','idade','sangue','genero-select','origem-select','ocupacao-select','reputacao-select',
       'flor-select','pulseira-select','ponto-partida','grupo-estrada','attr-bonus-manual','pp-bonus-manual',
       'history-before','history-loss','history-purpose','history-fear','history-bonds','growth-stage'
     ];
@@ -461,6 +505,25 @@
     $('#parts-input').value = model.parts;
     $('#allow-campaign-recipes').checked = !!model.allowCampaignRecipes;
     renderParadigmStyle();
+    renderBodyMap();
+  }
+
+  function renderBodyMap(){
+    var gender = BODY_MAPS[model.fields['genero-select']] ? model.fields['genero-select'] : 'masculino';
+    var body = BODY_MAPS[gender];
+    var svg = $('#body-svg');
+    var layer = $('#body-zone-layer');
+    var image = $('#body-art-image');
+    if(!svg || !layer || !image) return;
+    svg.dataset.gender = gender;
+    image.setAttribute('href',body.image);
+    $('#body-map-title').textContent = 'Mapeamento somático do corpo ' + body.label.toLowerCase();
+    $('#body-map-caption').textContent = 'Vista Frontal — Corpo ' + body.label;
+    layer.innerHTML = BODY_ZONE_LABELS.map(function(zone){
+      var connection = body.connections && body.connections[zone.key] ? ' ' + body.connections[zone.key] : '';
+      return '<path class="zone" id="'+zone.id+'" data-part="'+zone.label+'" d="'+body.zones[zone.key]+connection+'" tabindex="0" role="button" aria-label="Marcar ferimento em '+zone.label+'"><title>'+zone.label+'</title></path>';
+    }).join('');
+    renderWounds();
   }
 
   function buildSkills(){
@@ -1305,16 +1368,37 @@
     saveModel();
   }
 
+  var BODY_WOUND_GROUPS = {
+    'z-cabeca':['z-cabeca'],
+    'z-tronco':['z-tronco'],
+    'z-braco-d':['z-braco-d','z-antebraco-d','z-mao-d'],
+    'z-braco-e':['z-braco-e','z-antebraco-e','z-mao-e'],
+    'z-perna-d':['z-perna-d','z-coxa-d','z-panturrilha-d','z-pe-d'],
+    'z-perna-e':['z-perna-e','z-coxa-e','z-panturrilha-e','z-pe-e']
+  };
+  function woundIdsForBodyZone(zoneId){ return BODY_WOUND_GROUPS[zoneId] || [zoneId]; }
+  function woundForBodyZone(zoneId){
+    var entries = woundIdsForBodyZone(zoneId).map(function(id){ return {id:id,detail:model.wounds[id]}; })
+      .filter(function(entry){ return entry.detail && Number(entry.detail.severity); });
+    if(!entries.length) return null;
+    return entries.sort(function(a,b){
+      var difference = (Number(b.detail.severity) || 0) - (Number(a.detail.severity) || 0);
+      if(difference) return difference;
+      if(a.id === zoneId) return -1;
+      if(b.id === zoneId) return 1;
+      return 0;
+    })[0].detail;
+  }
   function renderWounds(){
     $$('.zone').forEach(function(zone){
-      var detail = model.wounds[zone.id];
+      var detail = woundForBodyZone(zone.id);
       var severity = detail ? Number(detail.severity) || 0 : 0;
       zone.classList.remove('w-none','w-light','w-medium','w-severe');
       zone.classList.add(severity === 1 ? 'w-light' : (severity === 2 ? 'w-medium' : (severity === 3 ? 'w-severe' : 'w-none')));
     });
     var lines = [];
     $$('.zone').forEach(function(zone){
-      var detail = model.wounds[zone.id];
+      var detail = woundForBodyZone(zone.id);
       if(detail && detail.severity){
         var label = detail.severity === 1 ? 'Leve' : (detail.severity === 2 ? 'Moderado' : 'Grave');
         lines.push('<div><strong>'+escapeHtml(zone.dataset.part)+'</strong> · '+label+(detail.type ? ' · '+escapeHtml(detail.type) : '')+(detail.pf != null ? ' · '+detail.pf+' PF' : '')+(detail.condition ? ' · '+escapeHtml(detail.condition) : '')+(detail.note ? '<span>'+escapeHtml(detail.note)+'</span>' : '')+'</div>');
@@ -1348,9 +1432,11 @@
   }
 
   var editingZoneId = null;
+  var editingZoneIds = [];
   function openWoundModal(zone){
     editingZoneId = zone.id;
-    var detail = model.wounds[zone.id] || {type:'',condition:'',note:'',severity:0};
+    editingZoneIds = woundIdsForBodyZone(zone.id);
+    var detail = model.wounds[zone.id] || woundForBodyZone(zone.id) || {type:'',condition:'',note:'',severity:0};
     $('#wound-zone-name').textContent = zone.dataset.part;
     $('#wound-type').value = detail.type || '';
     $('#wound-condition').value = detail.condition || '';
@@ -1360,7 +1446,7 @@
     updateWoundPreview();
     $('#wound-modal').style.display = 'flex';
   }
-  function closeWoundModal(){ editingZoneId = null; $('#wound-modal').style.display = 'none'; }
+  function closeWoundModal(){ editingZoneId = null; editingZoneIds = []; $('#wound-modal').style.display = 'none'; }
   function selectedWoundSeverity(){
     var checked = $('input[name="wound-severity"]:checked');
     return checked ? parseInt(checked.value,10) : 0;
@@ -1375,7 +1461,7 @@
   function applyWound(){
     if(!editingZoneId) return;
     var severity = selectedWoundSeverity();
-    if(!severity){ delete model.wounds[editingZoneId]; renderWounds(); saveModel(); closeWoundModal(); return; }
+    if(!severity){ editingZoneIds.forEach(function(zoneId){ delete model.wounds[zoneId]; }); renderWounds(); saveModel(); closeWoundModal(); return; }
     var type = $('#wound-type').value;
     var rule = woundRule(type,severity,editingZoneId);
     var condition = $('#wound-condition').value || rule.condition || '';
@@ -1387,6 +1473,7 @@
       condition = '';
       armor.state.remaining = Math.max(0,armor.state.remaining-1);
     }
+    editingZoneIds.forEach(function(zoneId){ if(zoneId !== editingZoneId) delete model.wounds[zoneId]; });
     model.wounds[editingZoneId] = { type:type, severity:severity, condition:condition, note:$('#wound-note').value, pf:pf };
     if($('#wound-apply-pf').checked){ model.health.pf += pf; applyMasochistRelief(pf); if(condition) addCondition(condition); }
     renderWounds(); renderHealth(); renderArmor(); saveModel(); closeWoundModal();
@@ -1744,7 +1831,7 @@
       model.fields['abutre-resource']=target.value;
       renderOccupation();renderResources();renderRecipes();saveModel();return;
     }
-    if(target.dataset.modelField){model.fields[target.dataset.modelField]=target.value;if(target.id==='growth-stage')renderGrowth();if(target.id==='reputacao-select')renderParadigmStyle();saveModel();return;}
+    if(target.dataset.modelField){model.fields[target.dataset.modelField]=target.value;if(target.id==='growth-stage')renderGrowth();if(target.id==='reputacao-select')renderParadigmStyle();if(target.id==='genero-select')renderBodyMap();saveModel();return;}
     if(target.classList.contains('origin-power-check')){
       var origin=getOrigin();if(!origin)return;var power=origin.powers.filter(function(item){return item.name===target.dataset.power;})[0];var index=model.originPowers.indexOf(power.name);if(target.checked&&index<0){var occ=getOccupation();var total=7+(occ&&occ.originPointsBonus||0);var spent=origin.powers.reduce(function(sum,item){return sum+(model.originPowers.indexOf(item.name)>=0?item.cost:0);},0);if(spent+power.cost>total){target.checked=false;alert('Pontos de Origem insuficientes.');return;}model.originPowers.push(power.name);}else if(!target.checked&&index>=0)model.originPowers.splice(index,1);renderOrigin();renderRest();saveModel();return;
     }
@@ -1765,6 +1852,14 @@
     if(target.id==='wound-type'||target.name==='wound-severity'){updateWoundPreview();return;}
   }
 
+  function onKeyDown(event){
+    var zone = event.target.closest && event.target.closest('.zone');
+    if(zone && (event.key === 'Enter' || event.key === ' ')){
+      event.preventDefault();
+      openWoundModal(zone);
+    }
+  }
+
   function initialize(){
     buildTabs();
     bindFields();
@@ -1772,6 +1867,7 @@
     document.addEventListener('click',onClick);
     document.addEventListener('input',onInput);
     document.addEventListener('change',onChange);
+    document.addEventListener('keydown',onKeyDown);
     window.addEventListener('pagehide',function(){saveModel(true);});
     window.addEventListener('beforeunload',function(){saveModel(true);});
     $('#footer-date').textContent='IMPRESSO EM '+new Date().toLocaleDateString('pt-BR').toUpperCase();
