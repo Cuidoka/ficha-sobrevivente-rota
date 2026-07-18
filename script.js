@@ -67,6 +67,7 @@
       originPowers:[],
       health:{ pf:0, pe:0, permanentPf:0, permanentPe:0 },
       pc:0,
+      corruptionFilters:[],
       wounds:{},
       conditions:[],
       characteristics:{ vantagens:['',''], desvantagens:[''], cicatrizes:[''] },
@@ -78,8 +79,9 @@
       parts:0,
       knownRecipes:[],
       allowCampaignRecipes:false,
+      rest:{ scenes:0, actions:[{type:'',note:''},{type:'',note:''}] },
       notes:defaultNotes(),
-      ui:{ activePage:'principal', lastRoll:null }
+      ui:{ activePage:'principal', lastRoll:null, filterMode:'', editingInventoryWeaponId:'' }
     };
   }
 
@@ -106,10 +108,26 @@
     if(!Array.isArray(base.weapons)) base.weapons = [emptyWeapon(), emptyWeapon()];
     while(base.weapons.length < 2) base.weapons.push(emptyWeapon());
     if(!Array.isArray(base.inventory)) base.inventory = [];
+    base.inventory = base.inventory.map(function(entry){
+      if(entry && entry.kind === 'weapon' && entry.weapon) return {id:entry.id || uid('weapon-item'),kind:'weapon',weapon:mergeModel(emptyWeapon(),entry.weapon)};
+      return { id:entry && entry.id || uid('item'), kind:'item', name:String(entry && entry.name || ''), uses:String(entry && entry.uses || '') };
+    });
     if(!Array.isArray(base.originSkills)) base.originSkills = [];
     if(!Array.isArray(base.originPowers)) base.originPowers = [];
     if(!Array.isArray(base.knownRecipes)) base.knownRecipes = [];
     if(!Array.isArray(base.conditions)) base.conditions = [];
+    if(!Array.isArray(base.corruptionFilters)) base.corruptionFilters = [];
+    base.corruptionFilters = base.corruptionFilters.filter(function(key){ return typeof key === 'string'; });
+    if(!base.rest || !Array.isArray(base.rest.actions)) base.rest = {scenes:0,actions:[{type:'',note:''},{type:'',note:''}]};
+    base.rest.scenes = clamp(base.rest.scenes,0,8);
+    while(base.rest.actions.length < 2) base.rest.actions.push({type:'',note:''});
+    base.rest.actions = base.rest.actions.map(function(action){
+      return { type:String(action && action.type || ''), note:String(action && action.note || '') };
+    });
+    if(!base.ui) base.ui = {activePage:'principal',lastRoll:null,filterMode:'',editingInventoryWeaponId:''};
+    if(typeof base.ui.filterMode !== 'string') base.ui.filterMode = '';
+    if(typeof base.ui.editingInventoryWeaponId !== 'string') base.ui.editingInventoryWeaponId = '';
+    if(base.ui.editingInventoryWeaponId && !base.inventory.some(function(item){ return item.id === base.ui.editingInventoryWeaponId && item.kind === 'weapon'; })) base.ui.editingInventoryWeaponId = '';
     if(!base.notes || !Array.isArray(base.notes.notebooks) || !base.notes.notebooks.length) base.notes = defaultNotes();
     if(!base.notes.selectedNotebookId || !base.notes.notebooks.some(function(nb){ return nb.id === base.notes.selectedNotebookId; })){
       base.notes.selectedNotebookId = base.notes.notebooks[0].id;
@@ -233,6 +251,31 @@
     return '<div class="page-heading"><div><span class="page-kicker">DOSSIÊ DE SOBREVIVENTE</span><h1>'+title+'</h1></div><p>'+subtitle+'</p></div>';
   }
 
+  function modifierPicker(id, label){
+    var dots = '';
+    for(var value=1; value<=3; value++){
+      dots += '<button type="button" class="modifier-option modifier-dot" data-modifier-input="'+id+'" data-value="'+value+'" aria-pressed="false" aria-label="'+label+' '+value+'"></button>';
+    }
+    return '<div class="modifier-control"><span>'+label+'</span><div class="modifier-picker">'+
+      '<input id="'+id+'" class="modifier-number" type="number" min="0" max="3" step="1" value="0" inputmode="numeric" aria-label="Valor de '+label+'">'+
+      '<div class="modifier-dots" role="group" aria-label="'+label+' de zero a três">'+dots+'</div>'+
+      '</div></div>';
+  }
+
+  function setModifier(id, value){
+    value = clamp(parseInt(value,10) || 0,0,3);
+    var input = $('#' + id);
+    if(!input) return;
+    input.value = value;
+    $$('[data-modifier-input="'+id+'"]').forEach(function(option){
+      var filled = Number(option.dataset.value) <= value;
+      var current = Number(option.dataset.value) === value;
+      option.classList.toggle('filled',filled);
+      option.classList.toggle('current',current);
+      option.setAttribute('aria-pressed',filled ? 'true' : 'false');
+    });
+  }
+
   function buildMainEnhancements(page){
     var header = $('.doc-header', page);
     var dice = document.createElement('div');
@@ -242,8 +285,8 @@
         '<div class="dice-controls">'+
           '<label>Atributo<select id="roll-attribute"></select></label>'+
           '<label>Perícia<select id="roll-skill"></select></label>'+
-          '<label>Bônus<input id="roll-bonus" type="number" min="0" max="3" value="0"></label>'+
-          '<label>Penalidades<input id="roll-penalty" type="number" min="0" max="3" value="0"></label>'+
+          modifierPicker('roll-bonus','Bônus')+
+          modifierPicker('roll-penalty','Penalidades')+
           '<label>NS exigido<select id="roll-target"><option value="0">Sem alvo</option><option value="1">Sofrido</option><option value="2">Gangrenado</option><option value="3">Dilacerante</option><option value="4">Profano</option><option value="5">Absoluto</option></select></label>'+
           '<label>Número escolhido (0 dados)<select id="roll-guess"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>'+
         '</div>'+
@@ -251,7 +294,7 @@
           '<label class="check-line"><input type="checkbox" id="roll-plague"> Dado da Praga</label>'+
           '<label class="check-line hidden" id="roll-devotee-option"><input type="checkbox" id="roll-devotee"> Teste rolado contra o Devoto</label>'+
           '<label class="check-line"><input type="checkbox" id="roll-stress"> Apostar Estresse (+1 dado, +2 PE)</label>'+
-          '<button type="button" class="primary-action" id="roll-button">Rolar dados</button>'+
+          '<div class="dice-actions"><button type="button" class="notes-btn small" id="roll-reset-modifiers">Zerar modificadores</button><button type="button" class="primary-action" id="roll-button">Rolar dados</button></div>'+
         '</div>'+
         '<div class="dice-result" id="roll-result"><span>Escolha Atributo e Perícia para rolar.</span></div>'+
       '</div>';
@@ -280,6 +323,13 @@
     permanentPe.className = 'permanent-control';
     permanentPe.innerHTML = 'PE permanentes <input id="pe-permanent" type="number" min="0" max="20" value="0">';
     peBlock.appendChild(permanentPe);
+    var criticalAlert = document.createElement('div');
+    criticalAlert.id = 'critical-state-alert';
+    criticalAlert.className = 'critical-state-alert hidden';
+    criticalAlert.setAttribute('role','alert');
+    criticalAlert.setAttribute('aria-live','assertive');
+    var resourcesList = pfBlock.closest('.resources-list');
+    if(resourcesList) resourcesList.appendChild(criticalAlert);
   }
 
   function buildEquipmentPage(page){
@@ -289,7 +339,9 @@
           '<div class="status-line"><span id="inventory-status"></span><span id="initial-items-status"></span></div>'+
           '<div class="inv-grid" id="inv-grid"></div><button type="button" class="add-inv-btn" id="add-inv-btn">+ Adicionar espaço sobrecarregado</button>'+
         '</div></div>'+
-        '<div class="section"><div class="section-title">Espaços de Arma <span class="tag" id="weapon-slots-tag">2 EXCLUSIVOS</span></div><div class="section-body"><div id="weapons-list"></div></div></div>'+
+        '<div class="section"><div class="section-title">Espaços de Arma <span class="tag" id="weapon-slots-tag">2 EXCLUSIVOS</span></div><div class="section-body">'+
+          '<div class="weapon-add-bar"><label>Catálogo oficial<select id="new-weapon-select">'+allWeaponOptions()+'</select></label><button type="button" class="notes-btn" id="add-weapon-button">Adicionar arma</button></div>'+
+          '<p id="weapon-add-feedback" class="inline-feedback" aria-live="polite"></p><div id="weapons-list"></div></div></div>'+
       '</div>'+
       '<div class="row-2">'+
         '<div class="section"><div class="section-title">Armadura</div><div class="section-body"><div class="armor-grid" id="armor-list"></div></div></div>'+
@@ -313,7 +365,19 @@
       historyField('history-fear','O que você mais teme?','O que não pode perder novamente?')+
       historyField('history-bonds','Laços e conflitos','Família, aliados, rivais, dívidas e promessas...')+
       '</div>';
+    var campaignMeta = document.createElement('div');
+    campaignMeta.className = 'section';
+    campaignMeta.innerHTML = '<div class="section-title">Contexto da História</div><div class="section-body history-meta-grid">'+
+      '<label>Ponto de Partida<input id="ponto-partida" type="text" placeholder="Onde tudo começou..."></label>'+
+      '<label>Grupo / Estrada<input id="grupo-estrada" type="text" placeholder="Companheiros, rota ou campanha..."></label></div>';
+    var rest = document.createElement('div');
+    rest.className = 'section';
+    rest.innerHTML = '<div class="section-title">Descanso & Recuperação <span class="tag">8 CENAS POR CICLO</span></div><div class="section-body rest-shell">'+
+      '<div class="rest-scenes"><div><strong>Cenas descansadas</strong><span id="rest-scenes-readout">0/8</span></div><div class="rest-pips pips" id="rest-scenes-pips">'+pipButtons(8)+'</div><button type="button" class="notes-btn small" id="rest-clear-button">Limpar descanso</button></div>'+
+      '<p class="rule-help">Ao completar 8 cenas de descanso no Ciclo, escolha duas ações de recuperação. O mesmo benefício não pode ser escolhido duas vezes; poderes podem conceder uma terceira ação.</p><div id="rest-actions" class="rest-actions"></div><div id="rest-warning" class="inline-feedback" aria-live="polite"></div></div>';
+    page.insertBefore(rest, page.firstChild);
     page.insertBefore(background, page.firstChild);
+    page.insertBefore(campaignMeta, page.firstChild);
     var heading = document.createElement('div');
     heading.innerHTML = pageHeading('História & Anotações','O que aconteceu, quem ficou e por que continuar.');
     page.insertBefore(heading.firstChild, page.firstChild);
@@ -332,9 +396,9 @@
         '<div class="section"><div class="section-title">Ocupação</div><div class="section-body"><div id="occupation-detail"></div></div></div>'+
       '</div>'+
       '<div class="section"><div class="section-title">Disseminação <span class="tag" id="plague-threshold-tag">DADO DA PRAGA: 1</span></div><div class="section-body">'+
-        '<div class="corruption-overview" id="corruption-overview"></div>'+
+        '<div class="corruption-overview" id="corruption-overview"></div><div class="corruption-effects" id="corruption-effects"></div>'+
         '<div class="blood-path" id="new-blood-panel"><div class="subsection-heading">Flor da Corrupção</div><div id="flower-overview"></div><div class="flower-stages" id="flower-stages"></div></div>'+
-        '<div class="blood-path" id="old-blood-panel"><div class="subsection-heading">Filtro Corruptivo</div>'+filterControls()+'<div id="filter-result" class="rule-preview"></div></div>'+
+        '<div class="blood-path" id="old-blood-panel"><div class="subsection-heading">Filtro Corruptivo</div>'+filterControls()+'<div id="corruption-filter-picker"></div><div id="filter-result" class="rule-preview" aria-live="polite"></div></div>'+
       '</div></div>'+
       '<div class="section"><div class="section-title">Crescimento <span class="tag">TRILHA I–X</span></div><div class="section-body growth-row">'+
         '<label>Arquétipo<input id="growth-archetype" type="text" readonly></label><label>Etapa<select id="growth-stage"><option value="0">Ainda não iniciou</option>'+growthOptions()+'</select></label><div id="growth-summary" class="rule-preview"></div>'+
@@ -342,11 +406,20 @@
   }
 
   function filterControls(){
-    return '<div class="filter-grid">'+
-      '<div><label>Ganho fixo de PC<input id="filter-fixed-input" type="number" min="0" value="5"></label><button type="button" class="notes-btn" id="filter-fixed-button">Aplicar com −4 PC</button></div>'+
-      '<div><label>Dados de ganho variável<input id="filter-dice-count" type="number" min="1" max="6" value="2"></label><button type="button" class="notes-btn" id="filter-variable-button">Rolar e descartar o maior</button></div>'+
-      '<div><p>Sobrecarga anula todo o ganho, mas causa 2 PF permanentes e Inconsciente.</p><button type="button" class="notes-btn danger" id="filter-overload-button">Acionar Sobrecarga</button></div>'+
-      '</div>';
+    return '<p class="rule-help">Escolha como a Pulseira reduz o ganho de PC. A opção usada fica destacada; a seleção pode ser limpa sem alterar a ficha.</p><div class="filter-grid">'+
+      '<div class="filter-mode" data-filter-mode="fixed"><strong>Redução fixa</strong><label>PC antes do filtro<input id="filter-fixed-input" type="number" min="0" value="5"></label><button type="button" class="notes-btn" id="filter-fixed-button">Reduzir 4 PC e aplicar</button></div>'+
+      '<div class="filter-mode" data-filter-mode="variable"><strong>Redução variável</strong><label>Dados do ganho<input id="filter-dice-count" type="number" min="1" max="6" value="2"></label><button type="button" class="notes-btn" id="filter-variable-button">Rolar e descartar o maior</button></div>'+
+      '<div class="filter-mode" data-filter-mode="overload"><strong>Sobrecarga</strong><p>Anula todo o ganho, mas causa 2 PF permanentes e Inconsciente.</p><button type="button" class="notes-btn danger" id="filter-overload-button">Acionar Sobrecarga</button></div>'+
+      '</div><div class="filter-active-line"><span id="active-filter-mode">Nenhum modo selecionado.</span><button type="button" class="notes-btn small" id="clear-filter-mode">Limpar seleção</button></div>';
+  }
+
+  function allWeaponOptions(){
+    var categories = ['Leves','Versáteis','Pesadas','De Fogo'];
+    return '<option value="">— Escolha uma arma —</option>' + categories.map(function(category){
+      return '<optgroup label="'+category+'">'+DATA.weapons.filter(function(weapon){ return weapon.category === category; }).map(function(weapon){
+        return '<option value="'+weapon.id+'">'+escapeHtml(weapon.name)+'</option>';
+      }).join('')+'</optgroup>';
+    }).join('');
   }
 
   function growthOptions(){
@@ -387,6 +460,7 @@
     $('#pe-permanent').value = model.health.permanentPe;
     $('#parts-input').value = model.parts;
     $('#allow-campaign-recipes').checked = !!model.allowCampaignRecipes;
+    renderParadigmStyle();
   }
 
   function buildSkills(){
@@ -527,8 +601,8 @@
   }
 
   function bloodLimits(){
-    if(model.fields.sangue === 'novo') return { pf:15, pe:20, pfSegments:[5,10,15], peSegments:[8,15,20] };
-    return { pf:20, pe:15, pfSegments:[8,15,20], peSegments:[5,10,15] };
+    if(model.fields.sangue === 'novo') return { pf:15, pe:15, pfSegments:[5,10,15], peSegments:[5,10,15] };
+    return { pf:20, pe:20, pfSegments:[8,15,20], peSegments:[7,14,20] };
   }
 
   function buildTrackPips(group, max){
@@ -551,19 +625,19 @@
     model.health.permanentPf = clamp(model.health.permanentPf,0,limits.pf);
     model.health.permanentPe = clamp(model.health.permanentPe,0,limits.pe);
     model.health.pf = clamp(model.health.pf,0,limits.pf + 6 - model.health.permanentPf);
-    model.health.pe = clamp(model.health.pe,0,limits.pe - model.health.permanentPe);
+    model.health.pe = clamp(model.health.pe,0,limits.pe + 1 - model.health.permanentPe);
     var pfTotal = model.health.pf + model.health.permanentPf;
     var peTotal = model.health.pe + model.health.permanentPe;
     var pfGroup = $('#pf-boxes');
     var peGroup = $('#pe-boxes');
     buildTrackPips(pfGroup, limits.pf + 6);
-    buildTrackPips(peGroup, limits.pe);
+    buildTrackPips(peGroup, limits.pe + 1);
     var permanentPfFrom = model.health.permanentPf ? limits.pf - model.health.permanentPf + 1 : 0;
     var permanentPeFrom = model.health.permanentPe ? limits.pe - model.health.permanentPe + 1 : 0;
     renderPips(pfGroup,pfTotal,limits.pf+6,{ safeMax:limits.pf, permanentFrom:permanentPfFrom, permanentTo:limits.pf });
-    renderPips(peGroup,peTotal,limits.pe,{ permanentFrom:permanentPeFrom, permanentTo:limits.pe });
+    renderPips(peGroup,peTotal,limits.pe+1,{ safeMax:limits.pe, permanentFrom:permanentPeFrom, permanentTo:limits.pe });
     $('#pf-max-label').textContent = '/' + limits.pf + ' (+' + Math.max(0,pfTotal-limits.pf) + ')';
-    $('#pe-max-label').textContent = '/' + limits.pe;
+    $('#pe-max-label').textContent = '/' + limits.pe + (peTotal > limits.pe ? ' (+1)' : '');
     $('#pf-readout').childNodes[0].nodeValue = String(pfTotal).padStart(2,'0');
     $('#pe-readout').childNodes[0].nodeValue = String(peTotal).padStart(2,'0');
     $('#pf-permanent').value = model.health.permanentPf;
@@ -571,11 +645,28 @@
     renderTrackZones('pf', limits.pfSegments, limits.pf);
     renderTrackZones('pe', limits.peSegments, limits.pe);
     var pfStage = pfTotal === 0 ? 'Nenhum' : (pfTotal <= limits.pfSegments[0] ? 'Machucado' : (pfTotal <= limits.pfSegments[1] ? 'Ferido' : (pfTotal <= limits.pf ? 'Crítico' : (pfTotal <= limits.pf + 5 ? 'Morrendo' : 'Morte Direta'))));
-    var peStage = peTotal === 0 ? 'Nenhum' : (peTotal <= limits.peSegments[0] ? 'Estável' : (peTotal <= limits.peSegments[1] ? 'Instável' : (peTotal < limits.pe ? 'Desequilibrado' : 'Enlouquecendo')));
+    var peStage = peTotal === 0 ? 'Nenhum' : (peTotal <= limits.peSegments[0] ? 'Estável' : (peTotal <= limits.peSegments[1] ? 'Instável' : (peTotal <= limits.pe ? 'Desequilibrado' : 'Enlouquecendo')));
     $('#pf-stage').textContent = 'Estágio atual: ' + pfStage;
     $('#pe-stage').textContent = 'Estágio atual: ' + peStage;
-    $('#pf-stage').className = 'track-stage ' + (pfStage === 'Morte Direta' ? 'stage-crit' : (pfStage === 'Morrendo' || pfStage === 'Crítico' ? 'stage-warn' : 'stage-ok'));
-    $('#pe-stage').className = 'track-stage ' + (peStage === 'Enlouquecendo' ? 'stage-crit' : (peStage === 'Desequilibrado' ? 'stage-warn' : 'stage-ok'));
+    $('#pf-stage').className = 'track-stage ' + (pfStage === 'Morte Direta' || pfStage === 'Morrendo' || pfStage === 'Crítico' ? 'stage-crit' : (pfStage === 'Machucado' || pfStage === 'Ferido' ? 'stage-warn' : 'stage-ok'));
+    $('#pe-stage').className = 'track-stage ' + (peStage === 'Enlouquecendo' || peStage === 'Desequilibrado' ? 'stage-crit' : (peStage === 'Instável' ? 'stage-warn' : 'stage-ok'));
+    var alertBox = $('#critical-state-alert');
+    if(alertBox){
+      var alertText = '';
+      var alertClass = '';
+      if(pfStage === 'Morte Direta'){
+        alertText = 'MORTE DIRETA — o total de PF atingiu 6 pontos além do limite. Aplique imediatamente a condição de morte prevista pela regra.';
+        alertClass = 'death';
+      } else if(pfStage === 'Morrendo'){
+        alertText = 'MORRENDO — o personagem ultrapassou o limite de PF e precisa ser estabilizado antes de alcançar Morte Direta.';
+        alertClass = 'dying';
+      } else if(peStage === 'Enlouquecendo'){
+        alertText = 'ENLOUQUECENDO — o personagem ultrapassou o limite de PE ('+(model.fields.sangue === 'novo' ? '16+' : '21+')+').';
+        alertClass = 'insanity';
+      }
+      alertBox.textContent = alertText;
+      alertBox.className = 'critical-state-alert' + (alertText ? ' '+alertClass : ' hidden');
+    }
   }
 
   function renderTrackZones(type, segments, max){
@@ -591,7 +682,7 @@
       previous = end;
     });
     if(type === 'pf') text.textContent = 'Base ' + max + ' · Morrendo até +' + 5 + ' · Morte Direta em +' + 6;
-    else text.textContent = 'Limite ' + max + ' · pontos permanentes ocupam o fim da barra';
+    else text.textContent = 'Limite ' + max + ' · Enlouquecendo ao ultrapassar · pontos permanentes ocupam o fim da barra';
   }
 
   function currentCorruptionStage(){
@@ -609,17 +700,19 @@
     renderCorruption();
   }
 
-  function addPC(amount){
-    amount = Math.max(0, parseInt(amount,10) || 0);
+  function changePC(amount){
+    amount = parseInt(amount,10) || 0;
     model.pc = clamp(model.pc + amount,0,100);
     renderPC();
     saveModel();
   }
 
+  function addPC(amount){ changePC(Math.max(0,parseInt(amount,10) || 0)); }
+
   function renderBloodVisibility(){
     var isNew = model.fields.sangue === 'novo';
     $('#new-blood-meta').classList.toggle('hidden', !isNew);
-    $('#old-blood-meta').classList.toggle('hidden', isNew);
+    if($('#old-blood-meta')) $('#old-blood-meta').classList.toggle('hidden', isNew);
     $('#new-blood-panel').classList.toggle('hidden', !isNew);
     $('#old-blood-panel').classList.toggle('hidden', isNew);
   }
@@ -660,6 +753,7 @@
     model.originSkills.forEach(function(skill){ model.skills[skill] = 5; });
     model.originPowers = [];
     renderOrigin();
+    renderRest();
     renderAttributes();
     renderEquipment();
     saveModel();
@@ -681,7 +775,10 @@
     $('#occupation-hint').textContent = occupation.bonus || '';
     $('#occupation-hint').classList.toggle('hint-warning', warning);
     detail.innerHTML = '<div class="occupation-title"><strong>'+escapeHtml(name)+'</strong>'+(warning ? '<span class="warning-chip">Requer Sangue Novo</span>' : '')+'</div>'+
-      '<p>'+escapeHtml(occupation.bonus || '')+'</p><div class="occupation-powers">'+occupation.powers.map(function(power){ return '<span>'+escapeHtml(power)+'</span>'; }).join('')+'</div>'+occupationChoiceControls(name);
+      '<p>'+escapeHtml(occupation.bonus || '')+'</p><div class="occupation-powers">'+occupation.powers.map(function(power){
+        var item = typeof power === 'string' ? {name:power,description:''} : power;
+        return '<details class="occupation-power"><summary>'+escapeHtml(item.name)+'</summary><p>'+escapeHtml(item.description || 'Descrição preservada para compatibilidade; consulte o livro para a redação integral.')+'</p></details>';
+      }).join('')+'</div>'+occupationChoiceControls(name);
   }
 
   function occupationChoiceControls(name){
@@ -708,6 +805,25 @@
     };
     $$('#reputacao-select option').forEach(function(option){
       option.disabled = !!requiredGroup && !!option.value && allowed[requiredGroup].indexOf(option.value) < 0;
+    });
+    renderParadigmStyle();
+  }
+
+  function paradigmGroup(value){
+    if(['Guardião','Justo','Messias'].indexOf(value) >= 0) return 'sublime';
+    if(['Peregrino','Sobrevivente','Imperfeito'].indexOf(value) >= 0) return 'sintese';
+    if(['Ceifador','Mercenário','Inquisidor'].indexOf(value) >= 0) return 'abissal';
+    return '';
+  }
+
+  function renderParadigmStyle(){
+    var select = $('#reputacao-select');
+    if(!select) return;
+    var group = paradigmGroup(select.value || model.fields['reputacao-select']);
+    select.classList.remove('paradigm-selected-sublime','paradigm-selected-sintese','paradigm-selected-abissal');
+    if(group) select.classList.add('paradigm-selected-' + group);
+    $$('#paradigm-legend [data-paradigm-group]').forEach(function(label){
+      label.classList.toggle('active',label.dataset.paradigmGroup === group);
     });
   }
 
@@ -736,8 +852,55 @@
     var stage = currentCorruptionStage();
     $('#corruption-overview').innerHTML = '<div><strong>'+stage.name+'</strong><span>'+model.pc+' PC</span></div><p>'+escapeHtml(stage.summary)+'</p>';
     $('#plague-threshold-tag').textContent = stage.name === 'Corrompido' ? 'ENRAIZAMENTO' : 'DADO DA PRAGA: 1–' + stage.plagueThreshold;
+    var currentIndex = DATA.corruptionStages.indexOf(stage);
+    $('#corruption-effects').innerHTML = DATA.corruptionStages.map(function(level,index){
+      var filteredCount = level.effects.filter(function(effect){ return model.corruptionFilters.indexOf(effect.key) >= 0; }).length;
+      var effects = level.effects.length ? level.effects.map(function(effect){
+        var filtered = model.corruptionFilters.indexOf(effect.key) >= 0;
+        return '<li class="'+(filtered ? 'effect-filtered' : '')+'"><strong>'+escapeHtml(effect.name)+'</strong><span>'+escapeHtml(effect.description)+'</span>'+(filtered ? '<em>Anulado pela Pulseira</em>' : '')+'</li>';
+      }).join('') : '<li class="effect-empty">Sem efeitos negativos neste nível.</li>';
+      return '<details class="corruption-level '+(index === currentIndex ? 'current' : '')+' '+(index <= currentIndex ? 'reached' : 'future')+'" '+(index === currentIndex ? 'open' : '')+'><summary><span>'+escapeHtml(level.name)+'</span><small>'+level.min+(level.max === level.min ? '' : '–'+level.max)+' PC'+(filteredCount ? ' · '+filteredCount+' anulado'+(filteredCount === 1 ? '' : 's') : '')+'</small></summary><ul>'+effects+'</ul></details>';
+    }).join('');
     renderBloodVisibility();
     renderFlower();
+    renderCorruptionFilters();
+    renderFilterMode();
+  }
+
+  function renderCorruptionFilters(){
+    var picker = $('#corruption-filter-picker');
+    if(!picker) return;
+    if(model.fields.sangue !== 'velho'){
+      picker.innerHTML = '';
+      return;
+    }
+    var stage = currentCorruptionStage();
+    var selectable = stage.effects || [];
+    var activeEffects = [];
+    DATA.corruptionStages.forEach(function(level){
+      level.effects.forEach(function(effect){ if(model.corruptionFilters.indexOf(effect.key) >= 0) activeEffects.push({stage:level.name,effect:effect}); });
+    });
+    var choices = selectable.length ? selectable.map(function(effect){
+      var checked = model.corruptionFilters.indexOf(effect.key) >= 0;
+      return '<label class="corruption-filter-option '+(checked ? 'selected' : '')+'"><input type="checkbox" class="corruption-filter-check" data-effect-key="'+effect.key+'" '+(checked ? 'checked' : '')+'><span><strong>'+escapeHtml(effect.name)+'</strong><small>'+escapeHtml(effect.description)+'</small></span></label>';
+    }).join('') : '<p class="empty-state">Este nível não oferece efeitos mecânicos para anular.</p>';
+    var active = activeEffects.length ? activeEffects.map(function(item){
+      return '<span class="active-effect-chip"><b>'+escapeHtml(item.stage)+'</b> · '+escapeHtml(item.effect.name)+'</span>';
+    }).join('') : '<span class="empty-state">Nenhum efeito anulado pela Pulseira.</span>';
+    picker.innerHTML = '<div class="filter-effect-header"><div><strong>Efeitos anulados permanentemente</strong><p>Ao alcançar um novo nível de Corrupção, Sangue Velho escolhe até 3 efeitos mecânicos daquele nível para anular.</p></div><button type="button" class="notes-btn small danger" id="clear-corruption-filters" '+(activeEffects.length ? '' : 'disabled')+'>Limpar efeitos anulados</button></div><div class="active-effect-list">'+active+'</div><div class="filter-effect-choices"><strong>Escolhas de '+escapeHtml(stage.name)+'</strong>'+choices+'</div>';
+  }
+
+  function renderFilterMode(){
+    var labels = {fixed:'Redução fixa',variable:'Redução variável',overload:'Sobrecarga'};
+    $$('.filter-mode').forEach(function(card){ card.classList.toggle('active',card.dataset.filterMode === model.ui.filterMode); });
+    var readout = $('#active-filter-mode');
+    if(readout) readout.textContent = model.ui.filterMode ? 'Modo selecionado: '+labels[model.ui.filterMode]+'.' : 'Nenhum modo selecionado.';
+  }
+
+  function selectFilterMode(mode){
+    model.ui.filterMode = mode || '';
+    renderFilterMode();
+    saveModel();
   }
 
   function renderFlower(){
@@ -776,18 +939,78 @@
     if(model.fields['ocupacao-select'] === 'Estudioso') renderSkills();
   }
 
+  function recoveryActionLimit(){
+    return model.originPowers.indexOf('Acampamento Fortificado') >= 0 ? 3 : 2;
+  }
+
+  function recoveryActionOptions(selected){
+    var options = [
+      ['','— Escolher ação —'],
+      ['pf','Recuperar PF'],
+      ['pe','Recuperar PE'],
+      ['condition','Tratar uma Condição'],
+      ['bond','Fortalecer um Laço'],
+      ['insight','Receber um Vislumbre'],
+      ['other','Outro benefício definido pelo MP']
+    ];
+    return options.map(function(option){ return '<option value="'+option[0]+'" '+(selected === option[0] ? 'selected' : '')+'>'+option[1]+'</option>'; }).join('');
+  }
+
+  function renderRest(){
+    if(!$('#rest-scenes-pips')) return;
+    var limit = recoveryActionLimit();
+    while(model.rest.actions.length < limit) model.rest.actions.push({type:'',note:''});
+    renderPips($('#rest-scenes-pips'),model.rest.scenes,8);
+    $('#rest-scenes-readout').textContent = model.rest.scenes+'/8';
+    $('#rest-actions').innerHTML = model.rest.actions.slice(0,limit).map(function(action,index){
+      return '<article class="rest-action-card" data-rest-action-index="'+index+'"><span>Ação '+(index+1)+(index === 2 ? ' · Acampamento Fortificado' : '')+'</span><select class="rest-action-type">'+recoveryActionOptions(action.type)+'</select><textarea class="rest-action-note" placeholder="Resultado, valor recuperado ou observação...">'+escapeHtml(action.note)+'</textarea></article>';
+    }).join('');
+    var chosen = model.rest.actions.slice(0,limit).map(function(action){ return action.type; }).filter(Boolean);
+    var duplicate = chosen.some(function(type,index){ return chosen.indexOf(type) !== index; });
+    var warning = $('#rest-warning');
+    warning.textContent = duplicate ? 'A mesma categoria de benefício não pode ser escolhida duas vezes no mesmo descanso.' : (model.rest.scenes < 8 ? 'Faltam '+(8-model.rest.scenes)+' cenas para completar o descanso do Ciclo.' : 'Descanso completo: registre as '+limit+' ações de recuperação.');
+    warning.className = 'inline-feedback '+(duplicate ? 'over' : (model.rest.scenes === 8 ? 'budget-ok' : ''));
+  }
+
   function inventoryCapacity(){ return 2 + model.attributes.Físico; }
   function initialItemLimit(){ var occ = getOccupation(); return occ && occ.initialItems || 3; }
+  function isInventoryWeapon(item){ return !!(item && item.kind === 'weapon' && item.weapon); }
+  function inventoryEntryUsed(item){ return isInventoryWeapon(item) || !!String(item && item.name || '').trim(); }
+  function emptyInventoryItem(){ return {id:uid('item'),kind:'item',name:'',uses:''}; }
+  function inventoryWeaponOptions(selected){
+    var categories = ['Leves','Versáteis','Pesadas','De Fogo'];
+    var html = '<option value="custom" '+(selected === 'custom' ? 'selected' : '')+'>Arma personalizada</option>';
+    categories.forEach(function(category){
+      html += '<optgroup label="'+category+'">'+DATA.weapons.filter(function(weapon){ return weapon.category === category; }).map(function(weapon){
+        return '<option value="'+weapon.id+'" '+(selected === weapon.id ? 'selected' : '')+'>'+escapeHtml(weapon.name)+'</option>';
+      }).join('')+'</optgroup>';
+    });
+    return html;
+  }
+
+  function inventoryWeaponEditor(item, state, weapon){
+    var max = weaponMax(state);
+    var modLimit = weapon ? (weapon.maxMods || 2) : 0;
+    var mods = weapon ? applicableMods(weapon) : [];
+    var modHtml = '';
+    for(var modIndex=0; modIndex<modLimit; modIndex++){
+      var selected = state.mods[modIndex] || '';
+      modHtml += '<label>Modificação '+(modIndex+1)+'<select class="inventory-weapon-mod-select" data-mod-index="'+modIndex+'"><option value="">— Nenhuma —</option>'+mods.map(function(mod){ return '<option value="'+mod.id+'" '+(selected === mod.id ? 'selected' : '')+'>'+escapeHtml(mod.name)+' · '+mod.cost+' Partes</option>'; }).join('')+'</select></label>';
+    }
+    var custom = state.weaponId === 'custom' ? '<div class="custom-weapon-fields"><input class="inventory-custom-weapon-name" value="'+escapeHtml(state.customName)+'" placeholder="Nome"><input class="inventory-custom-weapon-damage" value="'+escapeHtml(state.customDamage)+'" placeholder="Ferimento / munição"><input class="inventory-custom-weapon-range" value="'+escapeHtml(state.customRange)+'" placeholder="Distância / recuo"><input class="inventory-custom-weapon-max" type="number" min="0" value="'+state.customMax+'" placeholder="Usos"></div>' : '';
+    var track = max ? '<div class="weapon-track"><span>'+(weapon && weapon.durability ? 'Durabilidade' : 'Munição')+' <b>'+state.current+'/'+max+'</b></span><div class="pips weapon-pips inventory-weapon-pips" data-item-id="'+item.id+'">'+pipButtons(max)+'</div></div>' : '<div class="weapon-track muted">Munição controlada pelo Inventário.</div>';
+    return '<div class="inventory-weapon-editor" data-editor-item-id="'+item.id+'"><div class="inventory-editor-heading"><strong>Editando arma guardada</strong><span>Os ajustes não movem nem duplicam a arma.</span></div><label class="inventory-editor-field">Arma<select class="inventory-weapon-select">'+inventoryWeaponOptions(state.weaponId)+'</select></label>'+custom+weaponPowerDetails(weapon)+track+'<div class="weapon-mods">'+modHtml+'</div><textarea class="inventory-weapon-notes" placeholder="Anotações, munição, reparos...">'+escapeHtml(state.notes)+'</textarea><div class="inventory-editor-footer"><button type="button" class="notes-btn small inventory-weapon-equip">Equipar em espaço livre</button></div></div>';
+  }
   function ensureInventorySlots(){
     var capacity = inventoryCapacity();
-    while(model.inventory.length < capacity) model.inventory.push({ id:uid('item'), name:'', uses:'' });
-    while(model.inventory.length > capacity && !model.inventory[model.inventory.length-1].name && !model.inventory[model.inventory.length-1].uses){ model.inventory.pop(); }
+    while(model.inventory.length < capacity) model.inventory.push(emptyInventoryItem());
+    while(model.inventory.length > capacity && !inventoryEntryUsed(model.inventory[model.inventory.length-1]) && !String(model.inventory[model.inventory.length-1].uses || '').trim()){ model.inventory.pop(); }
   }
 
   function renderInventory(){
     if(!$('#inv-grid')) return;
     ensureInventorySlots();
-    var used = model.inventory.filter(function(item){ return String(item.name || '').trim(); }).length;
+    var used = model.inventory.filter(inventoryEntryUsed).length;
     var capacity = inventoryCapacity();
     $('#inventory-capacity-tag').textContent = 'MÁX. = ' + capacity + ' (2 + FÍSICO)';
     var excess = Math.max(0,used-capacity);
@@ -795,8 +1018,23 @@
     $('#inventory-status').className = used > capacity ? 'over' : '';
     $('#initial-items-status').textContent = 'Criação: até ' + initialItemLimit() + ' itens';
     $('#inv-grid').innerHTML = model.inventory.map(function(item,index){
+      if(isInventoryWeapon(item)){
+        var state = item.weapon;
+        var weapon = weaponData(state.weaponId);
+        var max = weaponMax(state);
+        state.current = clamp(state.current,0,max || 99);
+        var name = weapon ? weapon.name : (state.customName || 'Arma personalizada');
+        var broken = max > 0 && state.current === 0;
+        var stats = weapon ? [weapon.category,weapon.damage,weapon.severity,weapon.range].filter(Boolean).join(' · ') : [state.customDamage,state.customRange].filter(Boolean).join(' · ');
+        var editing = model.ui.editingInventoryWeaponId === item.id;
+        return '<article class="inv-slot inventory-weapon '+(index >= capacity ? 'overloaded-slot ' : '')+(broken ? 'broken ' : '')+(editing ? 'editing' : '')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div class="inventory-weapon-body"><div class="weapon-card-header"><strong>'+escapeHtml(name)+'</strong>'+(broken ? '<span class="broken-chip">QUEBRADA</span>' : '')+'</div><span>'+escapeHtml(stats)+'</span>'+(max ? '<small>'+(weapon && weapon.durability ? 'Durabilidade' : 'Munição')+': '+state.current+'/'+max+'</small>' : '')+weaponPowerDetails(weapon)+'</div><div class="inventory-weapon-actions"><button type="button" class="notes-btn small inventory-weapon-edit '+(editing ? 'active' : '')+'" aria-expanded="'+(editing ? 'true' : 'false')+'">Editar</button><button type="button" class="list-row-remove inventory-remove" title="Excluir arma">×</button></div>'+(editing ? inventoryWeaponEditor(item,state,weapon) : '')+'</article>';
+      }
       return '<div class="inv-slot '+(index >= capacity ? 'overloaded-slot' : '')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div class="inventory-fields"><input type="text" class="inventory-name" value="'+escapeHtml(item.name)+'" placeholder="Item..."><input type="text" class="inventory-uses" value="'+escapeHtml(item.uses)+'" placeholder="Usos"></div><button type="button" class="list-row-remove inventory-remove" title="Excluir">×</button></div>';
     }).join('');
+    $$('.inventory-weapon-pips').forEach(function(group){
+      var item = model.inventory.filter(function(entry){ return entry.id === group.dataset.itemId; })[0];
+      if(item && isInventoryWeapon(item)) renderPips(group,item.weapon.current,weaponMax(item.weapon));
+    });
   }
 
   function allowedWeaponSlots(){ var occ = getOccupation(); return occ && occ.weaponSlots || 2; }
@@ -811,6 +1049,13 @@
   }
 
   function weaponData(id){ return DATA.weapons.filter(function(item){ return item.id === id; })[0] || null; }
+  function weaponHasContent(state){ return !!(state && (state.weaponId || state.customName || state.notes || state.mods && state.mods.length)); }
+  function weaponStateFromId(id){
+    var state = emptyWeapon();
+    state.weaponId = id;
+    state.current = weaponMax(state);
+    return state;
+  }
   function weaponMax(weaponState){
     var data = weaponData(weaponState.weaponId);
     if(!data) return parseInt(weaponState.customMax,10) || 0;
@@ -832,6 +1077,66 @@
     return index === 0 ? !ranged : ranged;
   }
   function weaponSlotLabel(index){ return index === 0 ? 'Arma Branca' : (index === 1 ? 'Fogo / Disparo' : 'Livre'); }
+  function firstEmptyWeaponSlot(weapon){
+    ensureWeaponSlots();
+    for(var index=0; index<allowedWeaponSlots(); index++){
+      if(!weaponHasContent(model.weapons[index]) && (!weapon || weaponAllowedInSlot(weapon,index))) return index;
+    }
+    return -1;
+  }
+  function weaponPowerDetails(weapon){
+    if(!weapon || !Array.isArray(weapon.specials) || !weapon.specials.length) return '';
+    return '<details class="weapon-power-details"><summary>Poderes da arma ('+weapon.specials.length+')</summary><div>'+weapon.specials.map(function(power){
+      var item = typeof power === 'string' ? {name:power,description:''} : power;
+      return '<article><strong>'+escapeHtml(item.name)+'</strong><p>'+escapeHtml(item.description || '')+'</p></article>';
+    }).join('')+'</div></details>';
+  }
+  function addOfficialWeapon(id){
+    var weapon = weaponData(id);
+    if(!weapon) return;
+    var state = weaponStateFromId(id);
+    var slot = firstEmptyWeaponSlot(weapon);
+    var feedback = $('#weapon-add-feedback');
+    if(slot >= 0){
+      model.weapons[slot] = state;
+      feedback.textContent = weapon.name+' equipada no '+weaponSlotLabel(slot)+'.';
+      feedback.className = 'inline-feedback budget-ok';
+    } else {
+      model.inventory.push({id:uid('weapon-item'),kind:'weapon',weapon:state});
+      feedback.textContent = 'Espaços compatíveis ocupados: '+weapon.name+' foi guardada no Inventário.';
+      feedback.className = 'inline-feedback';
+    }
+    $('#new-weapon-select').value = '';
+    renderEquipment();
+    saveModel();
+  }
+  function moveWeaponToInventory(index){
+    var state = model.weapons[index];
+    if(!weaponHasContent(state)) return;
+    model.inventory.push({id:uid('weapon-item'),kind:'weapon',weapon:clone(state)});
+    model.weapons[index] = emptyWeapon();
+    renderEquipment();
+    saveModel();
+  }
+  function equipInventoryWeapon(itemId){
+    var itemIndex = model.inventory.findIndex(function(item){ return item.id === itemId; });
+    if(itemIndex < 0 || !isInventoryWeapon(model.inventory[itemIndex])) return;
+    var item = model.inventory[itemIndex];
+    var slot = firstEmptyWeaponSlot(weaponData(item.weapon.weaponId));
+    var feedback = $('#weapon-add-feedback');
+    if(slot < 0){
+      feedback.textContent = 'Nenhum espaço compatível está livre. Mova primeiro uma arma equipada para o Inventário.';
+      feedback.className = 'inline-feedback over';
+      return;
+    }
+    model.weapons[slot] = clone(item.weapon);
+    model.inventory.splice(itemIndex,1);
+    if(model.ui.editingInventoryWeaponId === itemId) model.ui.editingInventoryWeaponId = '';
+    feedback.textContent = 'Arma equipada sem criar cópias.';
+    feedback.className = 'inline-feedback budget-ok';
+    renderEquipment();
+    saveModel();
+  }
   function weaponOptions(selected,index){
     var groups = ['Leves','Versáteis','Pesadas','De Fogo'];
     var html = '<option value="">— Espaço vazio —</option><option value="custom" '+(selected === 'custom' ? 'selected' : '')+'>Arma personalizada</option>';
@@ -858,7 +1163,6 @@
       var max = weaponMax(state);
       state.current = clamp(state.current,0,max || 99);
       var stats = weapon ? [weapon.category,weapon.damage,weapon.severity,weapon.range,weapon.recoil ? 'Recuo: '+weapon.recoil : ''].filter(Boolean).join(' · ') : '';
-      var special = weapon ? weapon.specials.join(' · ') : '';
       var modLimit = weapon ? (weapon.maxMods || 2) : 0;
       var mods = weapon ? applicableMods(weapon) : [];
       var modHtml = '';
@@ -869,9 +1173,10 @@
       var custom = state.weaponId === 'custom' ? '<div class="custom-weapon-fields"><input class="custom-weapon-name" value="'+escapeHtml(state.customName)+'" placeholder="Nome"><input class="custom-weapon-damage" value="'+escapeHtml(state.customDamage)+'" placeholder="Ferimento / munição"><input class="custom-weapon-range" value="'+escapeHtml(state.customRange)+'" placeholder="Distância / recuo"><input class="custom-weapon-max" type="number" min="0" value="'+state.customMax+'" placeholder="Usos"></div>' : '';
       var track = max ? '<div class="weapon-track"><span>'+(weapon && weapon.durability ? 'Durabilidade' : 'Munição')+' <b>'+state.current+'/'+max+'</b></span><div class="pips weapon-pips" data-weapon-index="'+index+'">'+pipButtons(max)+'</div></div>' : '<div class="weapon-track muted">Munição carregada diretamente do Inventário.</div>';
       var invalidSlot = weapon && !weaponAllowedInSlot(weapon,index);
-      return '<article class="weapon-card '+(index >= allowed || invalidSlot ? 'overloaded-slot' : '')+'" data-weapon-index="'+index+'"><div class="weapon-card-header"><div class="weapon-card-title">Espaço '+(index+1)+' · '+weaponSlotLabel(index)+'</div>'+(invalidSlot ? '<span class="warning-chip">Espaço incompatível</span>' : '')+'</div><select class="weapon-select">'+weaponOptions(state.weaponId,index)+'</select>'+custom+'<div class="weapon-stats">'+escapeHtml(stats)+'</div><div class="weapon-specials">'+escapeHtml(special)+'</div>'+track+'<div class="weapon-mods">'+modHtml+'</div><textarea class="weapon-notes" placeholder="Anotações, munição no Inventário, reparos...">'+escapeHtml(state.notes)+'</textarea></article>';
+      var broken = weaponHasContent(state) && max > 0 && state.current === 0;
+      return '<article class="weapon-card '+(index >= allowed || invalidSlot ? 'overloaded-slot ' : '')+(broken ? 'broken' : '')+'" data-weapon-index="'+index+'"><div class="weapon-card-header"><div class="weapon-card-title">Espaço '+(index+1)+' · '+weaponSlotLabel(index)+'</div><div>'+(broken ? '<span class="broken-chip">QUEBRADA</span>' : '')+(invalidSlot ? '<span class="warning-chip">Espaço incompatível</span>' : '')+'</div></div><select class="weapon-select">'+weaponOptions(state.weaponId,index)+'</select>'+custom+'<div class="weapon-stats">'+escapeHtml(stats)+'</div>'+weaponPowerDetails(weapon)+track+'<div class="weapon-mods">'+modHtml+'</div><textarea class="weapon-notes" placeholder="Anotações, munição no Inventário, reparos...">'+escapeHtml(state.notes)+'</textarea>'+(weaponHasContent(state) ? '<button type="button" class="notes-btn small weapon-to-inventory">Mover para o Inventário</button>' : '')+'</article>';
     }).join('');
-    $$('.weapon-pips').forEach(function(group){
+    $$('#weapons-list .weapon-pips').forEach(function(group){
       var index = parseInt(group.dataset.weaponIndex,10);
       renderPips(group,model.weapons[index].current,weaponMax(model.weapons[index]));
     });
@@ -904,15 +1209,22 @@
   function findInventoryIngredient(name){
     var wanted = String(name || '').trim().toLocaleLowerCase('pt-BR');
     return model.inventory.filter(function(item){
+      if(isInventoryWeapon(item)) return false;
       var candidate = String(item.name || '').trim().toLocaleLowerCase('pt-BR').replace(/^\d+\s+/, '');
       return candidate === wanted || candidate === wanted + 's';
     })[0] || null;
   }
   function repairTarget(){
-    return model.weapons.filter(function(state){
+    var equipped = model.weapons.filter(function(state){
       var max = weaponMax(state);
       return max > 0 && state.current < max && (state.weaponId || state.customName);
-    })[0] || null;
+    })[0];
+    if(equipped) return equipped;
+    var stored = model.inventory.filter(isInventoryWeapon).map(function(item){ return item.weapon; }).filter(function(state){
+      var max = weaponMax(state);
+      return max > 0 && state.current < max && (state.weaponId || state.customName);
+    })[0];
+    return stored || null;
   }
   function canCraftRecipe(recipe){
     var resourcesReady = recipe.ingredients.every(function(name){ return model.resources[name] >= 4; });
@@ -926,7 +1238,7 @@
     if(!item) return;
     var uses = parseInt(item.uses,10);
     if(uses > 1) item.uses = String(uses-1);
-    else { item.name = ''; item.uses = ''; }
+    else { item.kind = 'item'; item.name = ''; item.uses = ''; }
   }
   function renderRecipes(){
     if(!$('#recipe-grid')) return;
@@ -1105,6 +1417,9 @@
     buildLists();
     renderWounds();
     renderGrowth();
+    renderRest();
+    setModifier('roll-bonus',0);
+    setModifier('roll-penalty',0);
     activatePage(model.ui.activePage || 'principal');
   }
 
@@ -1174,6 +1489,13 @@
     renderWeapons(); saveModel();
   }
 
+  function handleInventoryWeaponPip(group,index){
+    var item = model.inventory.filter(function(entry){ return entry.id === group.dataset.itemId; })[0];
+    if(!item || !isInventoryWeapon(item)) return;
+    item.weapon.current = item.weapon.current === index ? index-1 : index;
+    renderInventory(); renderRecipes(); saveModel();
+  }
+
   function rollDice(){
     var attribute = $('#roll-attribute').value;
     var skill = $('#roll-skill').value;
@@ -1235,9 +1557,9 @@
       renderEquipment(); saveModel(); return;
     }
     var label = recipe.id === 'flecha' ? 'Flechas' : recipe.name;
-    var empty = model.inventory.filter(function(item){ return !item.name; })[0];
+    var empty = model.inventory.filter(function(item){ return !isInventoryWeapon(item) && !item.name; })[0];
     if(empty){ empty.name = label; empty.uses = recipe.id === 'flecha' ? '2' : ''; }
-    else model.inventory.push({id:uid('item'),name:label,uses:recipe.id === 'flecha' ? '2' : ''});
+    else model.inventory.push({id:uid('item'),kind:'item',name:label,uses:recipe.id === 'flecha' ? '2' : ''});
     renderEquipment(); saveModel();
   }
 
@@ -1247,7 +1569,13 @@
     var url = URL.createObjectURL(blob);
     var link = document.createElement('a');
     link.href = url; link.download = 'roots-ficha-' + new Date().toISOString().slice(0,10) + '.json';
-    document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+    document.body.appendChild(link); link.click(); link.remove();
+    var backupButton = $('#btn-save-backup');
+    if(backupButton){
+      backupButton.textContent = 'Backup gerado';
+      setTimeout(function(){ backupButton.textContent = 'Salvar Backup'; },1600);
+    }
+    setTimeout(function(){ URL.revokeObjectURL(url); },1000);
   }
   function importBackup(file){
     if(!file) return;
@@ -1274,6 +1602,8 @@
   function onClick(event){
     var tab = event.target.closest('.sheet-tab');
     if(tab){ activatePage(tab.dataset.pageTarget); return; }
+    var modifier = event.target.closest('.modifier-option');
+    if(modifier){ setModifier(modifier.dataset.modifierInput,parseInt(modifier.dataset.value,10)); return; }
     var pip = event.target.closest('.pip');
     if(pip){
       var group = pip.closest('.pips'); var index = parseInt(pip.dataset.i,10);
@@ -1282,17 +1612,23 @@
       else if(group.id === 'pf-boxes' || group.id === 'pe-boxes') handleTrackClick(group,index);
       else if(group.classList.contains('res-pips')) handleResourceClick(group,index);
       else if(group.classList.contains('armor-pips')) handleArmorPip(group.closest('.armor-card'),index);
+      else if(group.classList.contains('inventory-weapon-pips')) handleInventoryWeaponPip(group,index);
       else if(group.classList.contains('weapon-pips')) handleWeaponPip(group,index);
+      else if(group.id === 'rest-scenes-pips'){
+        model.rest.scenes = model.rest.scenes === index ? index-1 : index;
+        renderRest(); saveModel();
+      }
       return;
     }
     var zone = event.target.closest('.zone'); if(zone){ openWoundModal(zone); return; }
     if(event.target.closest('#wound-save')){ applyWound(); return; }
     if(event.target.closest('#wound-cancel')){ closeWoundModal(); return; }
     if(event.target.closest('#roll-button')){ rollDice(); return; }
-    if(event.target.closest('.pc-control-btn[data-action="add"]')){
+    if(event.target.closest('#roll-reset-modifiers')){ setModifier('roll-bonus',0); setModifier('roll-penalty',0); return; }
+    var pcControl = event.target.closest('.pc-control-btn[data-action]');
+    if(pcControl){
       var pcGain = Math.max(0, parseInt($('#pc-gain-input').value,10) || 0);
-      addPC(pcGain);
-      $('#pc-gain-input').value = 1;
+      changePC(pcControl.dataset.action === 'subtract' ? -pcGain : pcGain);
       return;
     }
     if(event.target.closest('#condition-add-button')){
@@ -1303,9 +1639,16 @@
     }
     var conditionRemove = event.target.closest('[data-condition-index]');
     if(conditionRemove){ model.conditions.splice(parseInt(conditionRemove.dataset.conditionIndex,10),1); renderConditions(); saveModel(); return; }
-    if(event.target.closest('#add-inv-btn')){ model.inventory.push({id:uid('item'),name:'',uses:''}); renderInventory(); saveModel(); return; }
+    if(event.target.closest('#add-inv-btn')){ model.inventory.push(emptyInventoryItem()); renderInventory(); saveModel(); return; }
+    if(event.target.closest('#add-weapon-button')){ addOfficialWeapon($('#new-weapon-select').value); return; }
+    var moveWeapon = event.target.closest('.weapon-to-inventory');
+    if(moveWeapon){ moveWeaponToInventory(parseInt(moveWeapon.closest('.weapon-card').dataset.weaponIndex,10)); return; }
+    var editStoredWeapon = event.target.closest('.inventory-weapon-edit');
+    if(editStoredWeapon){var editRow=editStoredWeapon.closest('.inv-slot');model.ui.editingInventoryWeaponId=model.ui.editingInventoryWeaponId===editRow.dataset.itemId?'':editRow.dataset.itemId;renderInventory();saveModel();return;}
+    var equipStoredWeapon = event.target.closest('.inventory-weapon-equip');
+    if(equipStoredWeapon){ equipInventoryWeapon(equipStoredWeapon.closest('.inv-slot').dataset.itemId); return; }
     var inventoryRemove = event.target.closest('.inventory-remove');
-    if(inventoryRemove){ var itemRow=inventoryRemove.closest('.inv-slot'); model.inventory=model.inventory.filter(function(item){ return item.id!==itemRow.dataset.itemId; }); renderInventory(); saveModel(); return; }
+    if(inventoryRemove){ var itemRow=inventoryRemove.closest('.inv-slot');var removedItem=model.inventory.filter(function(item){return item.id===itemRow.dataset.itemId;})[0];if(isInventoryWeapon(removedItem)&&!confirm('Excluir esta arma do Inventário? Esta ação remove a arma e suas modificações.'))return;if(model.ui.editingInventoryWeaponId===itemRow.dataset.itemId)model.ui.editingInventoryWeaponId='';model.inventory=model.inventory.filter(function(item){ return item.id!==itemRow.dataset.itemId; }); renderInventory(); renderRecipes(); saveModel(); return; }
     var characterRemove = event.target.closest('.character-remove');
     if(characterRemove){ var charRow=characterRemove.closest('.list-input-row'); model.characteristics[charRow.dataset.characterType].splice(parseInt(charRow.dataset.characterIndex,10),1); renderCharacteristics(); saveModel(); return; }
     var addCharacter = event.target.closest('.add-char-btn');
@@ -1319,9 +1662,12 @@
     if(event.target.closest('.remove-notebook-btn')){ if(model.notes.notebooks.length<=1){alert('Mantenha pelo menos um caderno.');return;} if(confirm('Excluir este caderno e seus post-its?')){model.notes.notebooks=model.notes.notebooks.filter(function(nb){return nb.id!==model.notes.selectedNotebookId;});model.notes.selectedNotebookId=model.notes.notebooks[0].id;renderNotes();saveModel();} return; }
     var notebookTab=event.target.closest('.notes-tab'); if(notebookTab){model.notes.selectedNotebookId=notebookTab.dataset.notebookId;renderNotes();saveModel();return;}
     var noteRemove=event.target.closest('.note-remove-btn'); if(noteRemove){var noteCard=noteRemove.closest('.note-card');var selected=getSelectedNotebook();selected.notes=selected.notes.filter(function(note){return note.id!==noteCard.dataset.noteId;});renderNotes();saveModel();return;}
-    if(event.target.closest('#filter-fixed-button')){var gain=Math.max(0,parseInt($('#filter-fixed-input').value,10)||0);var net=Math.max(0,gain-4);addPC(net);$('#filter-result').textContent='Ganho fixo '+gain+' PC · Filtro reduziu 4 · recebido '+net+' PC.';return;}
-    if(event.target.closest('#filter-variable-button')){var diceCount=clamp($('#filter-dice-count').value,1,6);var rolls=[];for(var d=0;d<diceCount;d++)rolls.push(1+Math.floor(Math.random()*6));var discarded=diceCount>1?Math.max.apply(Math,rolls):0;var total=rolls.reduce(function(sum,value){return sum+value;},0)-discarded;addPC(total);$('#filter-result').textContent='Resultados: '+rolls.join(', ') + (discarded?' · maior descartado: '+discarded:'')+' · recebido '+total+' PC.';return;}
-    if(event.target.closest('#filter-overload-button')){model.health.permanentPf+=2;addCondition('Inconsciente');renderHealth();saveModel();$('#filter-result').textContent='Sobrecarga acionada: ganho anulado, +2 PF permanentes e Inconsciente.';return;}
+    if(event.target.closest('#filter-fixed-button')){selectFilterMode('fixed');var gain=Math.max(0,parseInt($('#filter-fixed-input').value,10)||0);var net=Math.max(0,gain-4);addPC(net);$('#filter-result').textContent='Redução fixa: '+gain+' PC antes do filtro, −4 PC, '+net+' PC recebidos.';return;}
+    if(event.target.closest('#filter-variable-button')){selectFilterMode('variable');var diceCount=clamp($('#filter-dice-count').value,1,6);var rolls=[];for(var d=0;d<diceCount;d++)rolls.push(1+Math.floor(Math.random()*6));var discarded=diceCount>1?Math.max.apply(Math,rolls):0;var total=rolls.reduce(function(sum,value){return sum+value;},0)-discarded;addPC(total);$('#filter-result').textContent='Redução variável: '+rolls.join(', ') + (discarded?' · maior descartado: '+discarded:'')+' · '+total+' PC recebidos.';return;}
+    if(event.target.closest('#filter-overload-button')){selectFilterMode('overload');model.health.permanentPf+=2;addCondition('Inconsciente');renderHealth();saveModel();$('#filter-result').textContent='Sobrecarga acionada: ganho anulado, +2 PF permanentes e Inconsciente.';return;}
+    if(event.target.closest('#clear-filter-mode')){selectFilterMode('');$('#filter-result').textContent='Seleção de modo limpa; nenhum valor da ficha foi alterado.';return;}
+    if(event.target.closest('#clear-corruption-filters')){if(confirm('Limpar todos os efeitos permanentemente anulados pela Pulseira?')){model.corruptionFilters=[];renderCorruption();saveModel();}return;}
+    if(event.target.closest('#rest-clear-button')){model.rest.scenes=0;model.rest.actions=model.rest.actions.map(function(){return {type:'',note:''};});renderRest();saveModel();return;}
     if(event.target.closest('#btn-save-backup')){exportBackup();return;}
     if(event.target.closest('#btn-load-backup')){$('#backup-file-input').click();return;}
     if(event.target.closest('#btn-print')){window.print();return;}
@@ -1330,6 +1676,7 @@
 
   function onInput(event){
     var target = event.target;
+    if(target.classList.contains('modifier-number')){ setModifier(target.id,target.value); return; }
     if(target.dataset.modelField){
       if(target.tagName === 'SELECT') return;
       model.fields[target.dataset.modelField] = target.value;
@@ -1340,16 +1687,38 @@
     if(target.id === 'pf-permanent'){ model.health.permanentPf=Math.max(0,parseInt(target.value,10)||0);renderHealth();saveModel();return; }
     if(target.id === 'pe-permanent'){ model.health.permanentPe=Math.max(0,parseInt(target.value,10)||0);renderHealth();saveModel();return; }
     if(target.id === 'parts-input'){ model.parts=Math.max(0,parseInt(target.value,10)||0);saveModel();return; }
-    var invRow=target.closest('.inv-slot'); if(invRow){var item=model.inventory.filter(function(entry){return entry.id===invRow.dataset.itemId;})[0];if(item){if(target.classList.contains('inventory-name'))item.name=target.value;if(target.classList.contains('inventory-uses'))item.uses=target.value;var used=model.inventory.filter(function(entry){return entry.name.trim();}).length;$('#inventory-status').textContent='Ocupados: '+used+'/'+inventoryCapacity();$('#inventory-status').className=used>inventoryCapacity()?'over':'';saveModel();}return;}
+    var invRow=target.closest('.inv-slot');
+    if(invRow){
+      var item=model.inventory.filter(function(entry){return entry.id===invRow.dataset.itemId;})[0];
+      if(item&&isInventoryWeapon(item)){
+        var storedState=item.weapon;
+        if(target.classList.contains('inventory-weapon-notes'))storedState.notes=target.value;
+        if(target.classList.contains('inventory-custom-weapon-name'))storedState.customName=target.value;
+        if(target.classList.contains('inventory-custom-weapon-damage'))storedState.customDamage=target.value;
+        if(target.classList.contains('inventory-custom-weapon-range'))storedState.customRange=target.value;
+        if(target.classList.contains('inventory-custom-weapon-max')){storedState.customMax=Math.max(0,parseInt(target.value,10)||0);storedState.current=Math.min(storedState.current,storedState.customMax);}
+        saveModel();
+      }else if(item){
+        if(target.classList.contains('inventory-name'))item.name=target.value;
+        if(target.classList.contains('inventory-uses'))item.uses=target.value;
+        var used=model.inventory.filter(inventoryEntryUsed).length;
+        $('#inventory-status').textContent='Ocupados: '+used+'/'+inventoryCapacity();
+        $('#inventory-status').className=used>inventoryCapacity()?'over':'';
+        saveModel();
+      }
+      return;
+    }
     var charRow=target.closest('.list-input-row'); if(charRow&&target.tagName==='INPUT'){model.characteristics[charRow.dataset.characterType][parseInt(charRow.dataset.characterIndex,10)]=target.value;saveModel();return;}
     var painRow=target.closest('.dor-row'); if(painRow&&target.tagName==='INPUT'){model.pains[parseInt(painRow.dataset.painIndex,10)].text=target.value;saveModel();return;}
     var weaponCard=target.closest('.weapon-card'); if(weaponCard){var weaponState=model.weapons[parseInt(weaponCard.dataset.weaponIndex,10)];if(target.classList.contains('weapon-notes'))weaponState.notes=target.value;if(target.classList.contains('custom-weapon-name'))weaponState.customName=target.value;if(target.classList.contains('custom-weapon-damage'))weaponState.customDamage=target.value;if(target.classList.contains('custom-weapon-range'))weaponState.customRange=target.value;if(target.classList.contains('custom-weapon-max')){weaponState.customMax=Math.max(0,parseInt(target.value,10)||0);weaponState.current=Math.min(weaponState.current,weaponState.customMax);}saveModel();return;}
     var noteCard=target.closest('.note-card'); if(noteCard){var note=getSelectedNotebook().notes.filter(function(entry){return entry.id===noteCard.dataset.noteId;})[0];if(note){if(target.classList.contains('note-title-input'))note.title=target.value;if(target.classList.contains('note-content'))note.content=target.value;saveModel();}return;}
+    var restCard=target.closest('.rest-action-card');if(restCard&&target.classList.contains('rest-action-note')){var restIndex=parseInt(restCard.dataset.restActionIndex,10);model.rest.actions[restIndex].note=target.value;saveModel();return;}
     if(target.id==='notebook-title-input'){getSelectedNotebook().title=target.value;renderNotes();saveModel();return;}
   }
 
   function onChange(event){
     var target=event.target;
+    if(target.classList.contains('modifier-number')){setModifier(target.id,target.value);return;}
     if(target.id==='sangue'){
       if(model.fields['ocupacao-select']==='Devoto' && target.value!=='novo'){
         target.value='novo';
@@ -1375,13 +1744,21 @@
       model.fields['abutre-resource']=target.value;
       renderOccupation();renderResources();renderRecipes();saveModel();return;
     }
-    if(target.dataset.modelField){model.fields[target.dataset.modelField]=target.value;if(target.id==='growth-stage')renderGrowth();saveModel();return;}
+    if(target.dataset.modelField){model.fields[target.dataset.modelField]=target.value;if(target.id==='growth-stage')renderGrowth();if(target.id==='reputacao-select')renderParadigmStyle();saveModel();return;}
     if(target.classList.contains('origin-power-check')){
-      var origin=getOrigin();if(!origin)return;var power=origin.powers.filter(function(item){return item.name===target.dataset.power;})[0];var index=model.originPowers.indexOf(power.name);if(target.checked&&index<0){var occ=getOccupation();var total=7+(occ&&occ.originPointsBonus||0);var spent=origin.powers.reduce(function(sum,item){return sum+(model.originPowers.indexOf(item.name)>=0?item.cost:0);},0);if(spent+power.cost>total){target.checked=false;alert('Pontos de Origem insuficientes.');return;}model.originPowers.push(power.name);}else if(!target.checked&&index>=0)model.originPowers.splice(index,1);renderOrigin();saveModel();return;
+      var origin=getOrigin();if(!origin)return;var power=origin.powers.filter(function(item){return item.name===target.dataset.power;})[0];var index=model.originPowers.indexOf(power.name);if(target.checked&&index<0){var occ=getOccupation();var total=7+(occ&&occ.originPointsBonus||0);var spent=origin.powers.reduce(function(sum,item){return sum+(model.originPowers.indexOf(item.name)>=0?item.cost:0);},0);if(spent+power.cost>total){target.checked=false;alert('Pontos de Origem insuficientes.');return;}model.originPowers.push(power.name);}else if(!target.checked&&index>=0)model.originPowers.splice(index,1);renderOrigin();renderRest();saveModel();return;
     }
+    if(target.classList.contains('inventory-weapon-select')){var storedCard=target.closest('.inv-slot');var storedItem=model.inventory.filter(function(item){return item.id===storedCard.dataset.itemId;})[0];if(!storedItem||!isInventoryWeapon(storedItem))return;var storedWeaponState=storedItem.weapon;storedWeaponState.weaponId=target.value;storedWeaponState.mods=[];storedWeaponState.current=weaponMax(storedWeaponState);if(target.value!=='custom'){storedWeaponState.customName='';storedWeaponState.customDamage='';storedWeaponState.customRange='';storedWeaponState.customMax=0;}renderInventory();renderRecipes();saveModel();return;}
+    if(target.classList.contains('inventory-weapon-mod-select')){var storedModCard=target.closest('.inv-slot');var storedModItem=model.inventory.filter(function(item){return item.id===storedModCard.dataset.itemId;})[0];if(!storedModItem||!isInventoryWeapon(storedModItem))return;var storedModState=storedModItem.weapon;var storedModIndex=parseInt(target.dataset.modIndex,10);var storedOldMod=storedModState.mods[storedModIndex]||'';var storedNextMod=target.value;if(storedOldMod&&storedNextMod!==storedOldMod){alert('Modificações são permanentes. Apenas poderes específicos permitem removê-las.');renderInventory();return;}if(storedNextMod){var storedMod=DATA.modifications.filter(function(item){return item.id===storedNextMod;})[0];if(model.parts<storedMod.cost){alert('Partes insuficientes para instalar esta modificação.');renderInventory();return;}model.parts-=storedMod.cost;storedModState.mods[storedModIndex]=storedNextMod;storedModState.current=Math.min(storedModState.current,weaponMax(storedModState));renderEquipment();saveModel();}return;}
     if(target.classList.contains('weapon-select')){var card=target.closest('.weapon-card');var state=model.weapons[parseInt(card.dataset.weaponIndex,10)];state.weaponId=target.value;state.mods=[];state.current=weaponMax(state);if(target.value!=='custom'){state.customName='';state.customDamage='';state.customRange='';state.customMax=0;}renderWeapons();saveModel();return;}
     if(target.classList.contains('weapon-mod-select')){var modCard=target.closest('.weapon-card');var weaponState=model.weapons[parseInt(modCard.dataset.weaponIndex,10)];var modIndex=parseInt(target.dataset.modIndex,10);var old=weaponState.mods[modIndex]||'';var next=target.value;if(old&&next!==old){alert('Modificações são permanentes. Apenas poderes específicos permitem removê-las.');renderWeapons();return;}if(next){var mod=DATA.modifications.filter(function(item){return item.id===next;})[0];if(model.parts<mod.cost){alert('Partes insuficientes para instalar esta modificação.');renderWeapons();return;}model.parts-=mod.cost;weaponState.mods[modIndex]=next;renderEquipment();saveModel();}return;}
     if(target.classList.contains('armor-equipped')){var armorCard=target.closest('.armor-card');var armorItem=DATA.armors.filter(function(item){return item.id===armorCard.dataset.armorId;})[0];var armorState=model.armor[armorItem.id];armorState.equipped=target.checked;if(target.checked&&armorState.remaining===0)armorState.remaining=armorItem.maxUses;renderArmor();saveModel();return;}
+    if(target.classList.contains('corruption-filter-check')){
+      var stage=currentCorruptionStage();var stageKeys=stage.effects.map(function(effect){return effect.key;});var effectKey=target.dataset.effectKey;var filterIndex=model.corruptionFilters.indexOf(effectKey);
+      if(target.checked&&filterIndex<0){var selectedAtStage=model.corruptionFilters.filter(function(key){return stageKeys.indexOf(key)>=0;}).length;if(selectedAtStage>=3){target.checked=false;alert('A Pulseira pode anular no máximo 3 efeitos mecânicos por nível de Corrupção.');return;}model.corruptionFilters.push(effectKey);}else if(!target.checked&&filterIndex>=0)model.corruptionFilters.splice(filterIndex,1);
+      renderCorruption();saveModel();return;
+    }
+    if(target.classList.contains('rest-action-type')){var restActionCard=target.closest('.rest-action-card');var actionIndex=parseInt(restActionCard.dataset.restActionIndex,10);model.rest.actions[actionIndex].type=target.value;renderRest();saveModel();return;}
     if(target.classList.contains('recipe-known')){var recipeId=target.dataset.recipeId;var recipeIndex=model.knownRecipes.indexOf(recipeId);if(target.checked&&recipeIndex<0){if(!model.allowCampaignRecipes&&model.knownRecipes.length>=recipeLimit()){target.checked=false;alert('O limite de Receitas conhecidas na criação é igual ao Intelecto.');return;}model.knownRecipes.push(recipeId);}else if(!target.checked&&recipeIndex>=0)model.knownRecipes.splice(recipeIndex,1);renderRecipes();saveModel();return;}
     if(target.id==='allow-campaign-recipes'){model.allowCampaignRecipes=target.checked;renderRecipes();saveModel();return;}
     if(target.id==='backup-file-input'){if(target.files&&target.files[0])importBackup(target.files[0]);target.value='';return;}

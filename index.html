@@ -49,19 +49,24 @@
           </select>
           <span class="origin-hint" id="occupation-hint"></span>
         </div>
-        <div class="meta-field"><label>Reputação / Paradigma</label>
+        <div class="meta-field"><label>Paradigma</label>
           <select id="reputacao-select">
             <option value="">— Selecionar —</option>
-            <optgroup label="Sublime">
-              <option>Guardião</option><option>Justo</option><option>Messias</option>
+            <optgroup label="Sublime" class="paradigm-group-sublime">
+              <option class="paradigm-option-sublime">Guardião</option><option class="paradigm-option-sublime">Justo</option><option class="paradigm-option-sublime">Messias</option>
             </optgroup>
-            <optgroup label="Síntese">
-              <option>Peregrino</option><option>Sobrevivente</option><option>Imperfeito</option>
+            <optgroup label="Síntese" class="paradigm-group-sintese">
+              <option class="paradigm-option-sintese">Peregrino</option><option class="paradigm-option-sintese">Sobrevivente</option><option class="paradigm-option-sintese">Imperfeito</option>
             </optgroup>
-            <optgroup label="Abissal">
-              <option>Ceifador</option><option>Mercenário</option><option>Inquisidor</option>
+            <optgroup label="Abissal" class="paradigm-group-abissal">
+              <option class="paradigm-option-abissal">Ceifador</option><option class="paradigm-option-abissal">Mercenário</option><option class="paradigm-option-abissal">Inquisidor</option>
             </optgroup>
           </select>
+          <div class="paradigm-legend" id="paradigm-legend" aria-label="Grupos de Paradigma">
+            <span data-paradigm-group="sublime">Sublime</span>
+            <span data-paradigm-group="sintese">Síntese</span>
+            <span data-paradigm-group="abissal">Abissal</span>
+          </div>
         </div>
         <div class="meta-field blood-meta blood-new" id="new-blood-meta"><label>Flor da Corrupção</label>
           <select id="flor-select">
@@ -72,14 +77,7 @@
             <option>Rosa</option><option>Girassol</option><option>Dente-de-Leão</option>
           </select>
         </div>
-        <div class="meta-field blood-meta blood-old" id="old-blood-meta"><label>Sensor da Pulseira</label>
-          <select id="pulseira-select">
-            <option>Verde</option><option>Amarelo</option><option>Vermelho</option><option>Preto</option>
-          </select>
-        </div>
         <div class="meta-field"><label>Arquétipo</label><input type="text" id="arquetipo-readout" readonly placeholder="Definido pela Origem"></div>
-        <div class="meta-field"><label>Ponto de Partida</label><input id="ponto-partida" type="text" placeholder="Abrigo / Comunidade"></div>
-        <div class="meta-field"><label>Grupo / Estrada</label><input id="grupo-estrada" type="text" placeholder="—"></div>
       </div>
     </div>
   </div>
@@ -187,9 +185,10 @@
             <div class="track-header">
               <span>Pontos de Corrupção (PC)</span>
               <div class="pc-controls">
+                <button type="button" class="pc-control-btn pc-remove-btn" data-action="subtract" title="Diminuir Corrupção" aria-label="Diminuir Corrupção">−</button>
                 <input type="number" id="pc-input" min="0" max="100" value="0" readonly aria-label="Corrupção atual">
-                <input type="number" id="pc-gain-input" min="1" max="100" value="1" aria-label="Ganho de Corrupção">
-                <button type="button" class="pc-control-btn" data-action="add" title="Adicionar Corrupção">+ PC</button>
+                <input type="number" id="pc-gain-input" min="1" max="100" value="1" aria-label="Quantidade de ajuste da Corrupção">
+                <button type="button" class="pc-control-btn" data-action="add" title="Adicionar Corrupção" aria-label="Adicionar Corrupção">+</button>
               </div>
             </div>
             <div class="pc-bar" id="pc-bar">
@@ -260,12 +259,6 @@
               <option value="Corte">Corte</option>
               <option value="Impacto">Impacto</option>
               <option value="Perfuração">Perfuração</option>
-              <option value="Explosão">Explosão</option>
-              <option value="Corrosão">Corrosão</option>
-              <option value="Fogo">Fogo</option>
-              <option value="Veneno">Veneno</option>
-              <option value="Clima">Clima</option>
-              <option value="Outro">Outro</option>
             </select>
 
             <label>Gravidade</label>
@@ -422,6 +415,7 @@
 </div>
 
 <script src="rules-data.js"></script>
+<script src="weapon-details.js"></script>
 <script src="script.js"></script>
 
 </body>

@@ -13,19 +13,71 @@
     resources: ["Pano","Álcool","Recipiente","Sucata","Explosivo","Fita"],
 
     occupations: {
-      "Estudioso": { powers:["Inteligência Expandida","Eu Sempre Tenho um Plano","Nada é em Vão"], bonus:"+4 PP e +1 PP por etapa de Crescimento.", ppBonus:4 },
-      "Arsenalista": { powers:["Gêmeas de Guerra","Coldre Especial","Sempre Tem Mais Uma"], bonus:"3 Espaços de Arma em vez de 2.", weaponSlots:3 },
-      "Preparado": { powers:["Nunca é Demais","Instinto de Sobrevivência","Eu Sei Usar Isso"], bonus:"Até 5 itens iniciais em vez de 3.", initialItems:5 },
-      "Herdeiro": { powers:["Genética Aprimorada","Sangue Real","Vozes Ancestrais"], bonus:"+2 PO e +1 PA.", originPointsBonus:2, attributeBonus:1 },
-      "Determinado": { powers:["Valente","Vai Dar Tudo Certo","Corpo Adaptado"], bonus:"Rola 5D6 em Crises de Estresse.", crisisDice:5 },
-      "Prodígio": { powers:["Vantagem de Largada","Aprendizado Rápido","Dom Superior"], bonus:"Não escolhe Desvantagens na criação." },
-      "Engenhoqueiro": { powers:["Minha Melhor Criação","Efeito Explosivo","Solução de Emergência"], bonus:"Aprimora e conserta criações próprias." },
-      "Masoquista": { powers:["Carne Voluntária","Florescer na Dor","Você Não Gosta de Dor?"], bonus:"Transforma dor física em resistência mental." },
-      "Espectro": { powers:["Sem Nome","Momento Certo","Eu Vejo o que Você Faz"], bonus:"Reputação neutra; apenas Paradigmas Síntese.", paradigm:"Síntese" },
-      "Abutre": { powers:["Bolso Extra","Olho de Urubu","Acumulador"], bonus:"Até 2 unidades do mesmo Recurso.", resourceMax:8 },
-      "Verdugo": { powers:["Sinta Medo de Mim","Não Amado, Temido","Coração de Pedra"], bonus:"Apenas Paradigmas Abissais.", paradigm:"Abissal" },
-      "Âncora": { powers:["Primeiro em Mim","Enquanto Eu Respirar","Não se Vá"], bonus:"Proteção e estabilização de Aliados." },
-      "Devoto": { powers:["Escolhido","Ouça Minha Prece","Ela Joga Comigo"], bonus:"Obrigatoriamente Sangue Novo.", requiresBlood:"novo" }
+      "Estudioso": { powers:[
+        {name:"Inteligência Expandida",description:"Ganhe +4 PP. Além disso, para cada Etapa na Trilha de Crescimento, receba +1 PP."},
+        {name:"Eu Sempre Tenho um Plano",description:"Antes de iniciar um Conflito, role um teste de Planejar. Se obtiver ao menos 1 sucesso, ganhe Bônus no primeiro teste da cena para você ou um Aliado de sua escolha."},
+        {name:"Nada é em Vão",description:"Quando falhar em um teste de Perícia e isso te custar algo, marque essa experiência negativa. Na próxima Cena de Recuperação, transforme a falha em aprendizado e receba +1 PP na perícia testada (máx. 1 vez por perícia)."}
+      ], bonus:"+4 PP e +1 PP por etapa de Crescimento.", ppBonus:4 },
+      "Arsenalista": { powers:[
+        {name:"Gêmeas de Guerra",description:"Você pode ter +1 Arma à sua escolha no Inventário Inicial, da mesma Categoria de Origem."},
+        {name:"Coldre Especial",description:"Você pode sacar Armas que estão no seu Espaço de Arma sem usar Ações."},
+        {name:"Sempre Tem Mais Uma",description:"Você possui 3 Espaços de Arma, em vez de 2: um para Brancas, um para Fogo/Disparo e o último de sua escolha."}
+      ], bonus:"3 Espaços de Arma em vez de 2.", weaponSlots:3 },
+      "Preparado": { powers:[
+        {name:"Nunca é Demais",description:"Você pode possuir até 5 Itens no começo da vida em vez de 3."},
+        {name:"Instinto de Sobrevivência",description:"Uma vez por Cena, evite automaticamente um perigo ambiental que perceberia tarde demais, como uma armadilha ou deslizamento."},
+        {name:"Eu Sei Usar Isso",description:"Receba 2 Bônus em testes auxiliados por itens, como usar uma corda para escalar."}
+      ], bonus:"Até 5 itens iniciais em vez de 3.", initialItems:5 },
+      "Herdeiro": { powers:[
+        {name:"Genética Aprimorada",description:"Receba +2 Pontos de Origem."},
+        {name:"Sangue Real",description:"Ganhe +1 Ponto de Atributo em um Atributo de sua escolha."},
+        {name:"Vozes Ancestrais",description:"Uma vez por sessão, conjure uma dica de seus Antepassados; o MP deve dar uma dica sobre a situação interpretando alguém de sua linhagem."}
+      ], bonus:"+2 PO e +1 PA.", originPointsBonus:2, attributeBonus:1 },
+      "Determinado": { powers:[
+        {name:"Valente",description:"Role 5D6 em Crises de Estresse. Além disso, nunca receba mais que 4 PE em uma só Rolagem de Determinação."},
+        {name:"Vai Dar Tudo Certo",description:"Você não recebe PE por Crises de Estresse de outros Aliados nem por vê-los Feridos ou Enlouquecendo."},
+        {name:"Corpo Adaptado",description:"Sua Cicatriz Inicial não impõe mais sua penalidade, mas você mantém o benefício que ela concede."}
+      ], bonus:"Rola 5D6 em Crises de Estresse.", crisisDice:5 },
+      "Prodígio": { powers:[
+        {name:"Vantagem de Largada",description:"Você não precisa escolher Desvantagens na criação."},
+        {name:"Aprendizado Rápido",description:"Após falhar em um teste, ganhe Bônus no próximo teste igual."},
+        {name:"Dom Superior",description:"Escolha duas Perícias. Sempre que realizar um Teste com uma delas, ganhe Bônus."}
+      ], bonus:"Não escolhe Desvantagens na criação." },
+      "Engenhoqueiro": { powers:[
+        {name:"Minha Melhor Criação",description:"Gaste uma Ação Principal ou uma Cena para aprimorar uma Arma Branca do seu Inventário. Quem a empunhar ganha Bônus em ataques. Só uma arma pode permanecer aprimorada por vez."},
+        {name:"Efeito Explosivo",description:"Ao usar um item ou arma que criou ou aprimorou, cada resultado 1 permite rolar um dado adicional, até o máximo de 3."},
+        {name:"Solução de Emergência",description:"Uma vez por Conflito, conserte temporariamente algo quebrado para durar até o fim da Cena."}
+      ], bonus:"Aprimora e conserta criações próprias." },
+      "Masoquista": { powers:[
+        {name:"Carne Voluntária",description:"Uma vez por Ciclo, aceite +1 PC voluntariamente para ganhar Bônus em todos os testes até o fim da Cena."},
+        {name:"Florescer na Dor",description:"Sempre que sofrer PF, reduza seus PE pela metade dos PF recebidos, arredondando para cima. Se reduzir 5 ou mais, ganhe Bônus em todos os testes até o fim da Cena."},
+        {name:"Você Não Gosta de Dor?",description:"Em Cenas de Recuperação, sempre que recuperar PF, Aliados presentes reduzem 2 PE."}
+      ], bonus:"Transforma dor física em resistência mental." },
+      "Espectro": { powers:[
+        {name:"Sem Nome",description:"Sua Reputação nunca é positiva nem negativa. Suas ações geram apenas consequências narrativas; você só pode trilhar Paradigmas Síntese."},
+        {name:"Momento Certo",description:"Você não rola Iniciativa. Após ver a ordem, declare em qual posição age; essa escolha pode mudar no início de cada Rodada."},
+        {name:"Eu Vejo o que Você Faz",description:"Uma vez por Conflito, quando errarem um ataque em você, marque esse método. O Alvo não pode acertá-lo novamente com esse método até o fim do Conflito. Máximo de 3 Alvos."}
+      ], bonus:"Reputação neutra; apenas Paradigmas Síntese.", paradigm:"Síntese" },
+      "Abutre": { powers:[
+        {name:"Bolso Extra",description:"Você pode carregar até 2 unidades completas do mesmo Recurso, quebrando o limite padrão da Bolsa."},
+        {name:"Olho de Urubu",description:"Ao vasculhar uma Ameaça abatida, encontre Espólios Extras como se tivesse rolado 1, sem rolar. Uma Ameaça morta por Conflito."},
+        {name:"Acumulador",description:"Escolha um Recurso; você sempre tem uma Unidade dele na Bolsa de Recursos."}
+      ], bonus:"Até 2 unidades do mesmo Recurso.", resourceMax:8 },
+      "Verdugo": { powers:[
+        {name:"Sinta Medo de Mim",description:"Sempre que causar um Ferimento Grave em uma Ameaça Humana, ela recebe Aterrorizado."},
+        {name:"Não Amado, Temido",description:"Em territórios onde seu Paradigma é conhecido, PNJs oferecem descontos, comida, passagem ou informações e não se recusam abertamente. Só pode trilhar Paradigmas Abissais."},
+        {name:"Coração de Pedra",description:"Você não ganha PE por culpa ao ferir alguém, mas também não reduz PE por vínculos, conexões ou afeto."}
+      ], bonus:"Apenas Paradigmas Abissais.", paradigm:"Abissal" },
+      "Âncora": { powers:[
+        {name:"Primeiro em Mim",description:"No início do Conflito, declare um Aliado Protegido sem gastar Ação. Ataques contra ele são redirecionados para você enquanto estiver Perto. Troque-o com uma Ação Secundária."},
+        {name:"Enquanto Eu Respirar",description:"Enquanto estiver vivo e Perto de um Aliado em Teste de Morte, o valor mínimo dele trava em 1. Após 6 Rodadas ele ainda morre. Funciona para um Aliado por vez."},
+        {name:"Não se Vá",description:"Uma vez por Sobrevivente, aumente em +4 o limite de PF para Morte Direta. Após escapar, o limite volta ao normal."}
+      ], bonus:"Proteção e estabilização de Aliados." },
+      "Devoto": { powers:[
+        {name:"Escolhido",description:"As Dádivas da Flor funcionam como se estivessem um estágio acima. Você deve ser Sangue Novo."},
+        {name:"Ouça Minha Prece",description:"Uma vez por Ciclo, ao sofrer +5 PC voluntariamente ou avançar de estágio, faça um pedido à Praga; o MP deve atendê-lo de forma útil, mesmo que torta."},
+        {name:"Ela Joga Comigo",description:"Dados da Praga rolados contra o Devoto contam como sucessos adicionais. Sintomas só se manifestam ao fim da Cena."}
+      ], bonus:"Obrigatoriamente Sangue Novo.", requiresBlood:"novo" }
     },
 
     archetypes: {
@@ -36,12 +88,40 @@
     },
 
     corruptionStages: [
-      { name:"Imaculada", min:0, max:19, plagueThreshold:1, summary:"Mente clara e corpo intacto." },
-      { name:"Incipiente", min:20, max:39, plagueThreshold:2, summary:"Penalidade social, descanso mental dobrado e Chamado da Terra." },
-      { name:"Alarmante", min:40, max:59, plagueThreshold:3, summary:"Sensibilidade, dieta corrompida, duas Penalidades sociais e Corpo Estranho." },
-      { name:"Severa", min:60, max:79, plagueThreshold:4, summary:"Dieta alterada, instabilidade, Quebra de Controle e perda de 10 PP." },
-      { name:"Crítica", min:80, max:99, plagueThreshold:5, summary:"Mobilidade reduzida, colapso mental, contágio passivo e Ruína Orgânica." },
-      { name:"Corrompido", min:100, max:100, plagueThreshold:6, summary:"Enraizamento: o Sobrevivente passa ao controle da Sententia." }
+      { name:"Imaculada", min:0, max:19, plagueThreshold:1, summary:"Mente clara e corpo intacto.", effects:[] },
+      { name:"Incipiente", min:20, max:39, plagueThreshold:2, summary:"Pesadelos, marcas discretas e os primeiros impulsos da Sententia.", effects:[
+        {key:"incipiente-social",name:"Testes Sociais",description:"Penalidade em interações que envolvam confiança ou aparência."},
+        {key:"incipiente-descanso",name:"Descanso Demorado",description:"Recuperar Estresse custa o dobro de tempo devido aos pesadelos."},
+        {key:"incipiente-chamado",name:"Chamado da Terra",description:"Uma vez por Ciclo, surge a compulsão de se aproximar de raízes, áreas corrompidas ou Ameaças Enraizadas."}
+      ]},
+      { name:"Alarmante", min:40, max:59, plagueThreshold:3, summary:"A Corrupção altera pele, fluidos, dieta e convivência.", effects:[
+        {key:"alarmante-sensibilidade",name:"Sensibilidade",description:"Penalidade em testes que envolvam dor ou contato físico."},
+        {key:"alarmante-dieta",name:"Dieta Esquisita",description:"Alimentos comuns saciam apenas metade; somente alimentos corrompidos saciam normalmente."},
+        {key:"alarmante-cheiro",name:"Cheiro Estranho",description:"Duas Penalidades em interações que envolvam confiança ou aparência."},
+        {key:"alarmante-olhar",name:"Olhar Vazio",description:"Ao rolar 6 em qualquer dado de um teste social, o teste falha."},
+        {key:"alarmante-corpo",name:"Corpo Estranho",description:"Ao receber PF, role 1D6; com resultado 1, receba +1 PF."}
+      ]},
+      { name:"Severa", min:60, max:79, plagueThreshold:4, summary:"Vozes, deformidades e perda de controle passam a dominar a rotina.", effects:[
+        {key:"severa-sensibilidade",name:"Sensibilidade Extrema",description:"Penalidade em ambientes externos ou climas extremos."},
+        {key:"severa-dieta",name:"Dieta Alterada",description:"Apenas carne crua, vísceras, minerais ou substâncias brutas saciam a fome."},
+        {key:"severa-instabilidade",name:"Instabilidade",description:"Sempre que acumular Estresse, role 1D6; com 6, sofra uma Crise de Estresse imediata."},
+        {key:"severa-desejo",name:"Desejo Voraz",description:"Ao ver carne crua, sangue fresco ou minerais, teste Determinação (Dilacerante); em falha, consuma compulsivamente."},
+        {key:"severa-controle",name:"Quebra de Controle",description:"Ao acumular +3 PE de uma vez, entre em Enlouquecendo por uma Cena ou Rodada."},
+        {key:"severa-mente",name:"Mente Fechada",description:"Você não recebe Bônus vindos de Aliados em Cena."},
+        {key:"severa-memoria",name:"Perda de Memória",description:"Reduza 10 PP entre quaisquer Perícias."}
+      ]},
+      { name:"Crítica", min:80, max:99, plagueThreshold:5, summary:"A forma humana entra em colapso e a Sententia transborda para os outros.", effects:[
+        {key:"critica-mobilidade",name:"Mobilidade Comprometida",description:"Deslocamento reduzido em 50% e Penalidade em qualquer ação física."},
+        {key:"critica-dieta",name:"Dieta Específica",description:"Sem dieta corrompida diária, perca 1 PF permanente por Ciclo."},
+        {key:"critica-colapso",name:"Colapso Mental",description:"Sempre que acumular Estresse, sofra +1 PE adicional."},
+        {key:"critica-aura",name:"Aura de Sententia",description:"Criaturas corrompidas não o atacam, mas você também não pode atacá-las."},
+        {key:"critica-contagio",name:"Contágio Passivo",description:"Aliados Perto rolam 1D6; com 5–6, recebem 1D6 PC."},
+        {key:"critica-ruina",name:"Ruína Orgânica",description:"Ao sofrer Ferimento Grave, role 1D6; com 4–6, reduza 1 Ponto de Atributo."},
+        {key:"critica-receptaculo",name:"Receptáculo",description:"Todos os Aliados até Perto recebem Dados da Praga."}
+      ]},
+      { name:"Corrompido", min:100, max:100, plagueThreshold:6, summary:"Humanidade perdida; corpo e mente pertencem à Sententia.", effects:[
+        {key:"corrompido-enraizamento",name:"Enraizamento",description:"O Sobrevivente é tomado e passa ao controle da Sententia."}
+      ]}
     ],
 
     woundTable: {
