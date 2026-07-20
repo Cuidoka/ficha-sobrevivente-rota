@@ -664,11 +664,12 @@
   }
 
   function bloodLimits(){
-    if(model.fields.sangue === 'novo') return { pf:15, pe:15, pfSegments:[5,10,15], peSegments:[5,10,15] };
-    return { pf:20, pe:20, pfSegments:[8,15,20], peSegments:[7,14,20] };
+    if(model.fields.sangue === 'novo') return { pf:15, pe:20, pfSegments:[5,10,15], peSegments:[8,15,20] };
+    return { pf:20, pe:15, pfSegments:[8,15,20], peSegments:[5,10,15] };
   }
 
   function buildTrackPips(group, max){
+    group.dataset.max = max;
     if($$('.pip',group).length === max) return;
     group.innerHTML = pipButtons(max);
   }
@@ -703,6 +704,8 @@
     $('#pe-max-label').textContent = '/' + limits.pe + (peTotal > limits.pe ? ' (+1)' : '');
     $('#pf-readout').childNodes[0].nodeValue = String(pfTotal).padStart(2,'0');
     $('#pe-readout').childNodes[0].nodeValue = String(peTotal).padStart(2,'0');
+    $('#pf-permanent').max = limits.pf;
+    $('#pe-permanent').max = limits.pe;
     $('#pf-permanent').value = model.health.permanentPf;
     $('#pe-permanent').value = model.health.permanentPe;
     renderTrackZones('pf', limits.pfSegments, limits.pf);
@@ -724,7 +727,7 @@
         alertText = 'MORRENDO — o personagem ultrapassou o limite de PF e precisa ser estabilizado antes de alcançar Morte Direta.';
         alertClass = 'dying';
       } else if(peStage === 'Enlouquecendo'){
-        alertText = 'ENLOUQUECENDO — o personagem ultrapassou o limite de PE ('+(model.fields.sangue === 'novo' ? '16+' : '21+')+').';
+        alertText = 'ENLOUQUECENDO — o personagem ultrapassou o limite de PE ('+(limits.pe + 1)+'+).';
         alertClass = 'insanity';
       }
       alertBox.textContent = alertText;
