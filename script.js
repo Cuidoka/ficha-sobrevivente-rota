@@ -17,6 +17,120 @@
     {id:'z-perna-d',key:'perna-d',label:'Perna Direita'},
     {id:'z-perna-e',key:'perna-e',label:'Perna Esquerda'}
   ];
+  var BODY_WOUND_GROUPS = {
+    'z-cabeca':['z-cabeca'],
+    'z-tronco':['z-tronco'],
+    'z-braco-d':['z-braco-d','z-antebraco-d','z-mao-d'],
+    'z-braco-e':['z-braco-e','z-antebraco-e','z-mao-e'],
+    'z-perna-d':['z-perna-d','z-coxa-d','z-panturrilha-d','z-pe-d'],
+    'z-perna-e':['z-perna-e','z-coxa-e','z-panturrilha-e','z-pe-e']
+  };
+  var NEED_RULES = {
+    hunger:{
+      label:'Fome', action:'Comer', max:4,
+      levels:[
+        {name:'Atendida',effect:'Sem penalidades.'},
+        {name:'1º dia',effect:'Penalidade em Intelecto e Físico.'},
+        {name:'2º dia',effect:'2 Penalidades em Intelecto e Físico; Penalidade em Espírito.'},
+        {name:'3º dia',effect:'3 Penalidades em Intelecto e Físico; Penalidade em Espírito e Destreza; perca 1 PF por Cena.'},
+        {name:'4º dia',effect:'Entre em Estado de Morrendo.'}
+      ]
+    },
+    thirst:{
+      label:'Sede', action:'Beber', max:3,
+      levels:[
+        {name:'Atendida',effect:'Sem penalidades.'},
+        {name:'1º dia',effect:'Penalidade em Físico e Destreza.'},
+        {name:'2º dia',effect:'2 Penalidades em Físico e Destreza; Penalidade em Espírito; perca 1 PF por Cena.'},
+        {name:'3º dia',effect:'Entre em Estado de Morrendo.'}
+      ]
+    },
+    sleep:{
+      label:'Sono', action:'Dormir', max:4,
+      levels:[
+        {name:'Atendido',effect:'Sem penalidades.'},
+        {name:'1º dia',effect:'Penalidade em Intelecto e Destreza.'},
+        {name:'2º dia',effect:'2 Penalidades em Intelecto; Penalidade em Destreza e Instinto.'},
+        {name:'3º dia',effect:'2 Penalidades em Intelecto; Penalidade em Destreza, Instinto e Espírito; perca 1 PE por Cena.'},
+        {name:'4º dia',effect:'Caia Inconsciente por 2D6+6 Cenas.'}
+      ]
+    }
+  };
+  var RELATIONSHIP_LEVELS = {
+    '-5':{name:'Ameaça',description:'Busca a destruição do Sobrevivente a qualquer custo.'},
+    '-4':{name:'Hostil',description:'Evita os Sobreviventes e age contra eles quando possível.'},
+    '-3':{name:'Indesejado',description:'Desconfia abertamente e pode difamá-los.'},
+    '-2':{name:'Desconfiado',description:'Mantém cautela e reluta em ajudar.'},
+    '-1':{name:'Reservado',description:'Indiferente, mas aberto à persuasão.'},
+    '0':{name:'Neutro',description:'Sem opinião formada; reage conforme as ações iniciais.'},
+    '1':{name:'Cordial',description:'Mostra disposição amigável e abertura ao diálogo.'},
+    '2':{name:'Amigável',description:'Oferece ajuda simples e compartilha informações.'},
+    '3':{name:'Leal',description:'Confia nos Sobreviventes e aceita arriscar-se por eles.'},
+    '4':{name:'Aliado',description:'Considera os Sobreviventes amigos valiosos e oferece apoio significativo.'},
+    '5':{name:'Irmão',description:'Demonstra lealdade absoluta e aceita grandes sacrifícios.'}
+  };
+  var CONDITION_CATEGORIES = [
+    {id:'mental',label:'Mentais',description:'Afetam percepção, raciocínio e emoções.'},
+    {id:'physical',label:'Físicas',description:'Afetam diretamente corpo, músculos e órgãos.'},
+    {id:'treated',label:'Tratadas',description:'Sequelas de uma condição física estancada ou curada.'},
+    {id:'disease',label:'Doenças',description:'Enfermidades, infecções e contaminações.'},
+    {id:'terrain',label:'Terreno',description:'Originam-se da superfície onde o Sobrevivente pisa.'},
+    {id:'environment',label:'Ambiente',description:'Originam-se do clima, atmosfera ou espaço ao redor.'}
+  ];
+  var CONDITION_LIBRARY = [
+    {name:'Atordoado',category:'mental',duration:'Temporária',summary:'Não pode realizar Reações.'},
+    {name:'Desorientado',category:'mental',duration:'Temporária',summary:'Após cada ação, role 1D6; em 1–3, a ação falha.'},
+    {name:'Aterrorizado',category:'mental',duration:'Persistente',summary:'Não pode se aproximar da fonte do medo e sofre Penalidade enquanto estiver Perto dela.'},
+    {name:'Pânico',category:'mental',duration:'Sem duração indicada',summary:'Sofre uma Crise de Estresse.'},
+    {name:'Atraído',category:'mental',duration:'Vinculada / Persistente',summary:'Deve mover-se até a fonte e não pode realizar outras ações durante o efeito.'},
+    {name:'Enraivecido',category:'mental',duration:'Persistente',summary:'Deve aproximar-se e atacar a fonte; Bônus em ações agressivas e Penalidade nas defensivas.'},
+
+    {name:'Envenenado',category:'physical',duration:'Contínua',summary:'Sofre 2 PF no início de cada turno.'},
+    {name:'Cego',category:'physical',duration:'Persistente',summary:'Penalidade em todas as rolagens que dependam da visão.'},
+    {name:'Imune',category:'physical',duration:'Temporária',summary:'Ignora os Ferimentos ou Condições especificados pelo efeito.'},
+    {name:'Caído',category:'physical',duration:'Persistente',summary:'Não pode se mover nem atacar Corpo a Corpo; ataques Corpo a Corpo contra o Alvo recebem Bônus.'},
+    {name:'Surdo',category:'physical',duration:'Persistente',summary:'Penalidade em todas as rolagens que dependam da audição.'},
+    {name:'Exaustão',category:'physical',duration:'Contínua',summary:'Penalidade em todas as rolagens de Físico e impede ações de grande esforço físico.'},
+    {name:'Clima Extremo',category:'physical',duration:'Vinculada',summary:'Penalidade em todos os testes de Destreza e Físico.'},
+    {name:'Corrosão',category:'physical',duration:'Contínua → Tratado',summary:'Sofre 1 PF por turno; a cada turno, 1–2 em 1D6 faz a arma perder 1 de Durabilidade.'},
+    {name:'Paralisado',category:'physical',duration:'Persistente',summary:'Não pode realizar qualquer ação.'},
+    {name:'Em Chamas',category:'physical',duration:'Contínua → Tratado',summary:'Sofre 2 PF por turno e Penalidade em Intelecto, Instinto e Espírito; pode incendiar quem estiver Em Contato.'},
+    {name:'Inconsciente',category:'physical',duration:'Persistente',summary:'Não pode realizar Ações nem Reações.'},
+    {name:'Preso',category:'physical',duration:'Persistente / Vinculada',summary:'Não pode se mover nem realizar Reações.'},
+    {name:'Irritação',category:'physical',duration:'Vinculada',summary:'Perde Ação Principal e Secundária tossindo; nas rodadas seguintes, sofre 1 PF por turno.'},
+    {name:'Vulnerável',category:'physical',duration:'Contínua',summary:'Todas as ações para atacar o Alvo recebem Bônus.'},
+    {name:'Necrose',category:'physical',duration:'Permanente',summary:'A cada 4 Ciclos perde 1 PF Permanente; usar a área afetada sofre Penalidade e pode evoluir para Desmembramento.'},
+    {name:'Insolação',category:'physical',duration:'Contínua',summary:'Sofre 1 PF no início de cada Cena, além de tontura, náusea e confusão; deve esfriar-se para tratar.'},
+    {name:'Sangrando',category:'physical',duration:'Contínua → Tratado',summary:'Sofre 1 PF no início do turno e Penalidade em Espírito; após 4 Cenas/Rodadas, Tolerância (Dilacerante) ou fica Inconsciente.'},
+    {name:'Ferida Profunda',category:'physical',duration:'Contínua → Estabilizado',summary:'Sofre 2 PF no início do turno e Penalidade em Físico, Destreza e Espírito; após 3 Cenas/Rodadas, Tolerância (Dilacerante) ou fica Inconsciente.'},
+    {name:'Ferida Severa',category:'physical',duration:'Contínua → Quebrado',summary:'Sofre 3 PF no início do turno e Penalidade em Destreza, Físico, Intelecto e Espírito; após 2 Cenas/Rodadas, Tolerância (Dilacerante) ou fica Inconsciente.'},
+    {name:'Desmembramento',category:'physical',duration:'Contínua / Permanente',summary:'Perde a função do membro, sofre Penalidade pela dor, perde 4 PF Permanentes e sofre 3 PF por turno até tratar o sangramento.'},
+
+    {name:'Tratado',category:'treated',duration:'Permanente',summary:'Testes que usem a área afetada sofrem Penalidade.'},
+    {name:'Estabilizado',category:'treated',duration:'Permanente',summary:'Testes que usem a área afetada sofrem 2 Penalidades.'},
+    {name:'Quebrado',category:'treated',duration:'Permanente',summary:'Testes que usem a área afetada falham automaticamente; na cabeça, estresse súbito também exige Determinação.'},
+
+    {name:'Gripe',category:'disease',duration:'Contínua',summary:'Penalidade em Instinto e Destreza; Furtividade recebe uma Penalidade extra por tosse e espirros.'},
+    {name:'Virose',category:'disease',duration:'Contínua',summary:'Vomita aleatoriamente durante o Ciclo; em Conflito, perde o turno.'},
+    {name:'Cólera',category:'disease',duration:'Contínua',summary:'Precisa do dobro de Água para saciar-se; fontes de Água contam pela metade.'},
+    {name:'Kuru',category:'disease',duration:'Permanente',summary:'Penalidade em Intelecto e Instinto; no início de cada Ciclo, role 1D6 para os sintomas.'},
+    {name:'Radiação',category:'disease',duration:'Permanente',summary:'Reduz Físico, Destreza e Instinto pela metade; vomita aleatoriamente e, em Conflito, perde o turno.'},
+    {name:'Infecção',category:'disease',duration:'Contínua',summary:'Penalidade em Físico; a recuperação de PF após a cura é reduzida pela metade.'},
+    {name:'Tétano',category:'disease',duration:'Contínua',summary:'Ao realizar ação física intensa, role 1D6; em 1–3, sofre espasmos e Penalidade.'},
+    {name:'Diabetes',category:'disease',duration:'Permanente',summary:'Sofre episódios aleatórios de tontura, tremores, visão embaçada e fraqueza súbita.'},
+
+    {name:'Irregular',category:'terrain',duration:'Vinculada',summary:'Ações que envolvam movimento recebem Penalidade.'},
+    {name:'Alagado',category:'terrain',duration:'Vinculada',summary:'Movimento reduzido pela metade.'},
+    {name:'Cortante',category:'terrain',duration:'Vinculada',summary:'Movimentar-se causa 1 PF.'},
+    {name:'Instável',category:'terrain',duration:'Vinculada',summary:'Cada ação exige Acrobacia (Sofrido) para evitar queda, afundamento ou colapso.'},
+    {name:'Escorregadio',category:'terrain',duration:'Vinculada',summary:'Ao mover-se, teste Acrobacia; em falha, perde o turno e fica Caído.'},
+
+    {name:'Ar Impróprio',category:'environment',duration:'Vinculada',summary:'A cada Rodada, Respiração (Gangrenado); em falha, sofre Irritação.'},
+    {name:'Escuro',category:'environment',duration:'Vinculada',summary:'Penalidade em todas as ações que dependam da visão.'},
+    {name:'Chuvoso',category:'environment',duration:'Vinculada',summary:'Penalidade em Percepção e movimentos rápidos; itens sem proteção ficam inutilizados até secarem.'},
+    {name:'Ventania',category:'environment',duration:'Vinculada',summary:'Ao fim de cada Rodada, role 1D6 para determinar o efeito da rajada.'},
+    {name:'Raízes Vivas',category:'environment',duration:'Vinculada',summary:'Ao movimentar-se, role 1D6 para determinar a reação das raízes.'}
+  ];
   var BODY_MAPS = {
     feminino:{
       label:'Feminino',image:'assets/corpos/feminino.png',zones:{
@@ -110,9 +224,11 @@
       originPowers:[],
       health:{ pf:0, pe:0, permanentPf:0, permanentPe:0 },
       pc:0,
+      needs:{ hunger:0, thirst:0, sleep:0 },
       corruptionFilters:[],
       wounds:{},
       conditions:[],
+      relationships:[],
       characteristics:{ vantagens:['',''], desvantagens:[''], cicatrizes:[''] },
       pains:[{checked:false,text:''},{checked:false,text:''},{checked:false,text:''}],
       inventory:[],
@@ -122,7 +238,6 @@
       parts:0,
       knownRecipes:[],
       allowCampaignRecipes:false,
-      rest:{ scenes:0, actions:[{type:'',note:''},{type:'',note:''}] },
       notes:defaultNotes(),
       ui:{ activePage:'principal', lastRoll:null, filterMode:'', editingInventoryWeaponId:'' }
     };
@@ -159,15 +274,28 @@
     if(!Array.isArray(base.originPowers)) base.originPowers = [];
     if(!Array.isArray(base.knownRecipes)) base.knownRecipes = [];
     if(!Array.isArray(base.conditions)) base.conditions = [];
+    base.conditions = base.conditions.map(function(condition){
+      return String(condition && condition.name || condition || '').trim();
+    }).filter(Boolean);
+    if(!base.needs) base.needs = {hunger:0,thirst:0,sleep:0};
+    Object.keys(NEED_RULES).forEach(function(key){
+      base.needs[key] = clamp(base.needs[key],0,NEED_RULES[key].max);
+    });
+    base.wounds = normalizeWounds(base.wounds);
+    if(!Array.isArray(base.relationships)) base.relationships = [];
+    base.relationships = base.relationships.map(function(entry){
+      return {
+        id:String(entry && entry.id || uid('relationship')),
+        name:String(entry && entry.name || ''),
+        role:String(entry && entry.role || ''),
+        score:clampRelationship(entry && entry.score),
+        note:String(entry && entry.note || '')
+      };
+    });
     if(!Array.isArray(base.corruptionFilters)) base.corruptionFilters = [];
     base.corruptionFilters = base.corruptionFilters.filter(function(key){ return typeof key === 'string'; });
     if(!BODY_MAPS[base.fields['genero-select']]) base.fields['genero-select'] = 'masculino';
-    if(!base.rest || !Array.isArray(base.rest.actions)) base.rest = {scenes:0,actions:[{type:'',note:''},{type:'',note:''}]};
-    base.rest.scenes = clamp(base.rest.scenes,0,8);
-    while(base.rest.actions.length < 2) base.rest.actions.push({type:'',note:''});
-    base.rest.actions = base.rest.actions.map(function(action){
-      return { type:String(action && action.type || ''), note:String(action && action.note || '') };
-    });
+    delete base.rest;
     if(!base.ui) base.ui = {activePage:'principal',lastRoll:null,filterMode:'',editingInventoryWeaponId:''};
     if(typeof base.ui.filterMode !== 'string') base.ui.filterMode = '';
     if(typeof base.ui.editingInventoryWeaponId !== 'string') base.ui.editingInventoryWeaponId = '';
@@ -181,6 +309,38 @@
       if(!base.armor[item.id]) base.armor[item.id] = { equipped:false, remaining:0 };
     });
     return base;
+  }
+
+  function clampRelationship(value){
+    return Math.max(-5,Math.min(5,parseInt(value,10) || 0));
+  }
+
+  function canonicalBodyZone(zoneId){
+    var canonical = Object.keys(BODY_WOUND_GROUPS).filter(function(key){
+      return BODY_WOUND_GROUPS[key].indexOf(zoneId) >= 0;
+    })[0];
+    return canonical || zoneId;
+  }
+
+  function normalizeWounds(wounds){
+    var normalized = {};
+    if(!wounds || typeof wounds !== 'object') return normalized;
+    Object.keys(wounds).forEach(function(zoneId){
+      var target = canonicalBodyZone(zoneId);
+      var entries = Array.isArray(wounds[zoneId]) ? wounds[zoneId] : [wounds[zoneId]];
+      entries.forEach(function(detail){
+        if(!detail || !Number(detail.severity)) return;
+        if(!normalized[target]) normalized[target] = [];
+        normalized[target].push({
+          id:String(detail.id || uid('wound')),
+          type:String(detail.type || ''),
+          severity:clamp(detail.severity,1,3),
+          note:String(detail.note || ''),
+          pf:Math.max(0,parseInt(detail.pf,10) || 0)
+        });
+      });
+    });
+    return normalized;
   }
 
   function migrateLegacy(snapshot, base){
@@ -347,12 +507,14 @@
 
     var conditionSection = document.createElement('div');
     conditionSection.className = 'section';
-    conditionSection.innerHTML = '<div class="section-title">Condições Ativas <span class="tag">CORPO · MENTE · AMBIENTE</span></div>'+
+    conditionSection.innerHTML = '<div class="section-title">Condições Ativas <span class="tag">CATEGORIAS E EFEITOS DO LIVRO</span></div>'+
       '<div class="section-body condition-shell"><div class="condition-add">'+
-      '<select id="condition-select"><option value="">— Selecionar —</option></select>'+
+      '<select id="condition-category" aria-label="Categoria da condição"></select>'+
+      '<select id="condition-select" aria-label="Condição"><option value="">— Selecionar —</option></select>'+
       '<input id="condition-custom" type="text" placeholder="Condição personalizada">'+
       '<button type="button" class="notes-btn" id="condition-add-button">Adicionar</button></div>'+
-      '<div class="condition-list" id="condition-list"></div></div>';
+      '<div class="condition-reference" id="condition-reference">Selecione uma condição para consultar seu resumo e duração.</div>'+
+      '<div class="condition-groups" id="condition-list"></div></div>';
     var diagram = $('.diagram-section', page);
     if(diagram && diagram.nextSibling) page.insertBefore(conditionSection, diagram.nextSibling);
     else page.appendChild(conditionSection);
@@ -373,7 +535,14 @@
     criticalAlert.setAttribute('role','alert');
     criticalAlert.setAttribute('aria-live','assertive');
     var resourcesList = pfBlock.closest('.resources-list');
-    if(resourcesList) resourcesList.appendChild(criticalAlert);
+    if(resourcesList){
+      resourcesList.appendChild(criticalAlert);
+      var needsPanel = document.createElement('div');
+      needsPanel.className = 'needs-panel';
+      needsPanel.innerHTML = '<div class="needs-heading"><div><strong>Necessidades do Corpo</strong><span>1 CICLO = 24 CENAS</span></div><p>Sacie ao menos duas das três necessidades por Ciclo.</p></div>'+
+        '<div class="needs-grid" id="needs-grid"></div><div class="needs-cycle-alert" id="needs-cycle-alert" aria-live="polite"></div>';
+      resourcesList.insertBefore(needsPanel,criticalAlert);
+    }
   }
 
   function buildEquipmentPage(page){
@@ -414,17 +583,19 @@
     campaignMeta.innerHTML = '<div class="section-title">Contexto da História</div><div class="section-body history-meta-grid">'+
       '<label>Ponto de Partida<input id="ponto-partida" type="text" placeholder="Onde tudo começou..."></label>'+
       '<label>Grupo / Estrada<input id="grupo-estrada" type="text" placeholder="Companheiros, rota ou campanha..."></label></div>';
-    var rest = document.createElement('div');
-    rest.className = 'section';
-    rest.innerHTML = '<div class="section-title">Descanso & Recuperação <span class="tag">8 CENAS POR CICLO</span></div><div class="section-body rest-shell">'+
-      '<div class="rest-scenes"><div><strong>Cenas descansadas</strong><span id="rest-scenes-readout">0/8</span></div><div class="rest-pips pips" id="rest-scenes-pips">'+pipButtons(8)+'</div><button type="button" class="notes-btn small" id="rest-clear-button">Limpar descanso</button></div>'+
-      '<p class="rule-help">Ao completar 8 cenas de descanso no Ciclo, escolha duas ações de recuperação. O mesmo benefício não pode ser escolhido duas vezes; poderes podem conceder uma terceira ação.</p><div id="rest-actions" class="rest-actions"></div><div id="rest-warning" class="inline-feedback" aria-live="polite"></div></div>';
-    page.insertBefore(rest, page.firstChild);
-    page.insertBefore(background, page.firstChild);
-    page.insertBefore(campaignMeta, page.firstChild);
+    var relationships = document.createElement('div');
+    relationships.className = 'section';
+    relationships.innerHTML = '<div class="section-title">Relacionamentos <span class="tag">−5 AMEAÇA · 0 NEUTRO · +5 IRMÃO</span></div>'+
+      '<div class="section-body relationship-shell"><div class="relationship-toolbar"><p>Registre cada PNJ separadamente. Valores extremos são mais difíceis de alterar.</p>'+
+      '<button type="button" class="notes-btn" id="relationship-add-button">+ Adicionar pessoa</button></div>'+
+      '<div class="relationship-list" id="relationship-list"></div></div>';
     var heading = document.createElement('div');
     heading.innerHTML = pageHeading('História & Anotações','O que aconteceu, quem ficou e por que continuar.');
-    page.insertBefore(heading.firstChild, page.firstChild);
+    var firstLegacySection = page.firstChild;
+    page.insertBefore(heading.firstChild,firstLegacySection);
+    page.insertBefore(campaignMeta,firstLegacySection);
+    page.insertBefore(relationships,firstLegacySection);
+    page.insertBefore(background,firstLegacySection);
   }
 
   function historyField(id, label, placeholder){
@@ -678,10 +849,7 @@
     if(model.fields['ocupacao-select'] !== 'Masoquista' || pfReceived <= 0) return;
     var reduction = Math.ceil(pfReceived / 2);
     model.health.pe = Math.max(0,model.health.pe-reduction);
-    if(reduction >= 5 && model.conditions.indexOf('Florescer na Dor — Bônus') < 0){
-      model.conditions.push('Florescer na Dor — Bônus');
-      renderConditions();
-    }
+    if(reduction >= 5 && !hasCondition('Florescer na Dor — Bônus')) addCondition('Florescer na Dor — Bônus');
   }
 
   function renderHealth(){
@@ -732,6 +900,37 @@
       }
       alertBox.textContent = alertText;
       alertBox.className = 'critical-state-alert' + (alertText ? ' '+alertClass : ' hidden');
+    }
+  }
+
+  function renderNeeds(){
+    var grid = $('#needs-grid');
+    if(!grid) return;
+    grid.innerHTML = ['hunger','sleep','thirst'].map(function(key){
+      var rule = NEED_RULES[key];
+      var value = clamp(model.needs[key],0,rule.max);
+      var current = rule.levels[value];
+      var segments = '';
+      for(var level=1;level<=rule.max;level++){
+        segments += '<button type="button" class="need-segment '+(level <= value ? 'filled' : '')+' '+(level === value ? 'current' : '')+'" data-need-key="'+key+'" data-need-value="'+level+'" aria-label="'+escapeHtml(rule.label)+' — '+level+'º dia" aria-pressed="'+(level <= value ? 'true' : 'false')+'"><span>'+level+'</span></button>';
+      }
+      return '<article class="need-card need-'+key+' '+(value ? 'active' : 'satisfied')+(value === rule.max ? ' critical' : '')+'">'+
+        '<div class="need-card-header"><strong>'+rule.label+'</strong><span>'+current.name+'</span></div>'+
+        '<div class="need-bar" role="group" aria-label="Dias sem '+rule.label.toLowerCase()+'">'+segments+'</div>'+
+        '<p>'+current.effect+'</p><button type="button" class="need-reset" data-need-reset="'+key+'" '+(value ? '' : 'disabled')+'>'+rule.action+' · atender necessidade</button>'+
+        '</article>';
+    }).join('');
+    var ignored = Object.keys(NEED_RULES).filter(function(key){ return model.needs[key] > 0; }).length;
+    var warning = $('#needs-cycle-alert');
+    if(ignored === 3){
+      warning.textContent = 'Três necessidades ignoradas no mesmo Ciclo: o Sobrevivente cai Inconsciente por 2D6 Cenas e retorna com Exaustão.';
+      warning.className = 'needs-cycle-alert critical';
+    } else if(ignored === 2){
+      warning.textContent = 'Duas necessidades ignoradas: no próximo Ciclo, recebe Exaustão até atender ao menos uma delas.';
+      warning.className = 'needs-cycle-alert warning';
+    } else {
+      warning.textContent = ignored === 1 ? 'Uma necessidade pendente deve ser obrigatoriamente saciada no próximo Ciclo.' : 'Corpo estável: as três necessidades estão atendidas.';
+      warning.className = 'needs-cycle-alert';
     }
   }
 
@@ -819,7 +1018,6 @@
     model.originSkills.forEach(function(skill){ model.skills[skill] = 5; });
     model.originPowers = [];
     renderOrigin();
-    renderRest();
     renderAttributes();
     renderEquipment();
     saveModel();
@@ -1003,39 +1201,6 @@
     $('#growth-stage').value = String(stage);
     $('#growth-summary').textContent = growthSummary(stage);
     if(model.fields['ocupacao-select'] === 'Estudioso') renderSkills();
-  }
-
-  function recoveryActionLimit(){
-    return model.originPowers.indexOf('Acampamento Fortificado') >= 0 ? 3 : 2;
-  }
-
-  function recoveryActionOptions(selected){
-    var options = [
-      ['','— Escolher ação —'],
-      ['pf','Recuperar PF'],
-      ['pe','Recuperar PE'],
-      ['condition','Tratar uma Condição'],
-      ['bond','Fortalecer um Laço'],
-      ['insight','Receber um Vislumbre'],
-      ['other','Outro benefício definido pelo MP']
-    ];
-    return options.map(function(option){ return '<option value="'+option[0]+'" '+(selected === option[0] ? 'selected' : '')+'>'+option[1]+'</option>'; }).join('');
-  }
-
-  function renderRest(){
-    if(!$('#rest-scenes-pips')) return;
-    var limit = recoveryActionLimit();
-    while(model.rest.actions.length < limit) model.rest.actions.push({type:'',note:''});
-    renderPips($('#rest-scenes-pips'),model.rest.scenes,8);
-    $('#rest-scenes-readout').textContent = model.rest.scenes+'/8';
-    $('#rest-actions').innerHTML = model.rest.actions.slice(0,limit).map(function(action,index){
-      return '<article class="rest-action-card" data-rest-action-index="'+index+'"><span>Ação '+(index+1)+(index === 2 ? ' · Acampamento Fortificado' : '')+'</span><select class="rest-action-type">'+recoveryActionOptions(action.type)+'</select><textarea class="rest-action-note" placeholder="Resultado, valor recuperado ou observação...">'+escapeHtml(action.note)+'</textarea></article>';
-    }).join('');
-    var chosen = model.rest.actions.slice(0,limit).map(function(action){ return action.type; }).filter(Boolean);
-    var duplicate = chosen.some(function(type,index){ return chosen.indexOf(type) !== index; });
-    var warning = $('#rest-warning');
-    warning.textContent = duplicate ? 'A mesma categoria de benefício não pode ser escolhida duas vezes no mesmo descanso.' : (model.rest.scenes < 8 ? 'Faltam '+(8-model.rest.scenes)+' cenas para completar o descanso do Ciclo.' : 'Descanso completo: registre as '+limit+' ações de recuperação.');
-    warning.className = 'inline-feedback '+(duplicate ? 'over' : (model.rest.scenes === 8 ? 'budget-ok' : ''));
   }
 
   function inventoryCapacity(){ return 2 + model.attributes.Físico; }
@@ -1357,54 +1522,118 @@
     $('#dores-list').closest('.section').classList.toggle('pain-exhausted',checked >= 3);
   }
 
-  function conditionOptions(){
-    return ['Atordoado','Desorientado','Aterrorizado','Pânico','Atraído','Enraivecido','Envenenado','Cego','Caído','Surdo','Exaustão','Clima Extremo','Corrosão','Paralisado','Em Chamas','Inconsciente','Preso','Irritação','Vulnerável','Necrose','Insolação','Sangrando','Ferida Profunda','Ferida Severa','Desmembramento','Tratado','Estabilizado','Quebrado','Infecção','Tétano'];
+  function conditionCategory(categoryId){
+    return CONDITION_CATEGORIES.filter(function(category){ return category.id === categoryId; })[0] ||
+      {id:'other',label:'Outras',description:'Condições e efeitos personalizados.'};
+  }
+  function conditionDefinition(name){
+    return CONDITION_LIBRARY.filter(function(condition){ return condition.name === name; })[0] || null;
+  }
+  function hasCondition(name){
+    return model.conditions.indexOf(name) >= 0;
+  }
+  function conditionCategoryOptions(selected){
+    return '<option value="">Todas as categorias</option>'+CONDITION_CATEGORIES.map(function(category){
+      return '<option value="'+category.id+'" '+(selected === category.id ? 'selected' : '')+'>'+category.label+'</option>';
+    }).join('');
+  }
+  function renderConditionPicker(){
+    var categorySelect = $('#condition-category');
+    var conditionSelect = $('#condition-select');
+    if(!categorySelect || !conditionSelect) return;
+    var selectedCategory = categorySelect.value;
+    var selectedCondition = conditionSelect.value;
+    categorySelect.innerHTML = conditionCategoryOptions(selectedCategory);
+    var choices = CONDITION_LIBRARY.filter(function(condition){
+      return !selectedCategory || condition.category === selectedCategory;
+    });
+    if(selectedCategory){
+      conditionSelect.innerHTML = '<option value="">— Selecionar —</option>'+choices.map(function(condition){
+        return '<option value="'+escapeHtml(condition.name)+'">'+escapeHtml(condition.name)+'</option>';
+      }).join('');
+    } else {
+      conditionSelect.innerHTML = '<option value="">— Selecionar —</option>'+CONDITION_CATEGORIES.map(function(category){
+        var options = choices.filter(function(condition){ return condition.category === category.id; }).map(function(condition){
+          return '<option value="'+escapeHtml(condition.name)+'">'+escapeHtml(condition.name)+'</option>';
+        }).join('');
+        return '<optgroup label="'+category.label+'">'+options+'</optgroup>';
+      }).join('');
+    }
+    conditionSelect.value = choices.some(function(condition){ return condition.name === selectedCondition; }) ? selectedCondition : '';
+    renderConditionReference();
+  }
+  function renderConditionReference(){
+    var reference = $('#condition-reference');
+    if(!reference) return;
+    var definition = conditionDefinition($('#condition-select').value);
+    if(!definition){
+      var category = $('#condition-category').value ? conditionCategory($('#condition-category').value) : null;
+      reference.innerHTML = category ? '<strong>'+category.label+'</strong><span>'+category.description+'</span>' : 'Selecione uma condição para consultar seu resumo e duração.';
+      return;
+    }
+    var categoryInfo = conditionCategory(definition.category);
+    reference.innerHTML = '<div><strong>'+escapeHtml(definition.name)+'</strong><span>'+categoryInfo.label+' · '+escapeHtml(definition.duration)+'</span></div><p>'+escapeHtml(definition.summary)+'</p>';
   }
   function renderConditions(){
-    $('#condition-select').innerHTML = '<option value="">— Selecionar —</option>' + conditionOptions().map(function(name){ return '<option>'+name+'</option>'; }).join('');
-    $('#condition-list').innerHTML = model.conditions.length ? model.conditions.map(function(name,index){ return '<span class="condition-chip">'+escapeHtml(name)+'<button type="button" data-condition-index="'+index+'" title="Remover">×</button></span>'; }).join('') : '<span class="empty-state">Nenhuma condição ativa.</span>';
+    renderConditionPicker();
+    var list = $('#condition-list');
+    if(!list) return;
+    if(!model.conditions.length){
+      list.innerHTML = '<span class="empty-state">Nenhuma condição ativa.</span>';
+      return;
+    }
+    var categoryIds = CONDITION_CATEGORIES.map(function(category){ return category.id; }).concat(['other']);
+    list.innerHTML = categoryIds.map(function(categoryId){
+      var entries = model.conditions.map(function(name,index){
+        return {name:name,index:index,definition:conditionDefinition(name)};
+      }).filter(function(entry){
+        return (entry.definition ? entry.definition.category : 'other') === categoryId;
+      });
+      if(!entries.length) return '';
+      var category = conditionCategory(categoryId);
+      return '<section class="condition-category-group"><div class="condition-category-heading"><div><strong>'+category.label+'</strong><span>'+category.description+'</span></div><b>'+entries.length+'</b></div>'+
+        '<div class="condition-card-list">'+entries.map(function(entry){
+          var duration = entry.definition ? entry.definition.duration : 'Personalizada';
+          var summary = entry.definition ? entry.definition.summary : 'Efeito definido pelo grupo.';
+          return '<article class="condition-card"><div><strong>'+escapeHtml(entry.name)+'</strong><span>'+escapeHtml(duration)+'</span></div><p>'+escapeHtml(summary)+'</p><button type="button" data-condition-index="'+entry.index+'" title="Remover '+escapeHtml(entry.name)+'" aria-label="Remover '+escapeHtml(entry.name)+'">×</button></article>';
+        }).join('')+'</div></section>';
+    }).join('');
   }
   function addCondition(name){
     name = String(name || '').trim();
-    if(name && model.conditions.indexOf(name) < 0) model.conditions.push(name);
+    if(name && !hasCondition(name)) model.conditions.push(name);
     renderConditions();
     saveModel();
   }
 
-  var BODY_WOUND_GROUPS = {
-    'z-cabeca':['z-cabeca'],
-    'z-tronco':['z-tronco'],
-    'z-braco-d':['z-braco-d','z-antebraco-d','z-mao-d'],
-    'z-braco-e':['z-braco-e','z-antebraco-e','z-mao-e'],
-    'z-perna-d':['z-perna-d','z-coxa-d','z-panturrilha-d','z-pe-d'],
-    'z-perna-e':['z-perna-e','z-coxa-e','z-panturrilha-e','z-pe-e']
-  };
-  function woundIdsForBodyZone(zoneId){ return BODY_WOUND_GROUPS[zoneId] || [zoneId]; }
-  function woundForBodyZone(zoneId){
-    var entries = woundIdsForBodyZone(zoneId).map(function(id){ return {id:id,detail:model.wounds[id]}; })
-      .filter(function(entry){ return entry.detail && Number(entry.detail.severity); });
+  function woundsForBodyZone(zoneId){
+    var canonical = canonicalBodyZone(zoneId);
+    return Array.isArray(model.wounds[canonical]) ? model.wounds[canonical] : [];
+  }
+  function highestWoundForBodyZone(zoneId){
+    var entries = woundsForBodyZone(zoneId).slice();
     if(!entries.length) return null;
-    return entries.sort(function(a,b){
-      var difference = (Number(b.detail.severity) || 0) - (Number(a.detail.severity) || 0);
-      if(difference) return difference;
-      if(a.id === zoneId) return -1;
-      if(b.id === zoneId) return 1;
-      return 0;
-    })[0].detail;
+    return entries.sort(function(a,b){ return Number(b.severity) - Number(a.severity); })[0];
   }
   function renderWounds(){
     $$('.zone').forEach(function(zone){
-      var detail = woundForBodyZone(zone.id);
+      var detail = highestWoundForBodyZone(zone.id);
       var severity = detail ? Number(detail.severity) || 0 : 0;
       zone.classList.remove('w-none','w-light','w-medium','w-severe');
       zone.classList.add(severity === 1 ? 'w-light' : (severity === 2 ? 'w-medium' : (severity === 3 ? 'w-severe' : 'w-none')));
+      var count = woundsForBodyZone(zone.id).length;
+      zone.setAttribute('aria-label',(count ? count+' ferimento'+(count === 1 ? '' : 's')+' em ' : 'Marcar ferimento em ')+zone.dataset.part);
     });
     var lines = [];
     $$('.zone').forEach(function(zone){
-      var detail = woundForBodyZone(zone.id);
-      if(detail && detail.severity){
+      var wounds = woundsForBodyZone(zone.id);
+      if(wounds.length){
+        var ordered = wounds.slice().sort(function(a,b){ return Number(b.severity)-Number(a.severity); });
+        var items = ordered.map(function(detail){
         var label = detail.severity === 1 ? 'Leve' : (detail.severity === 2 ? 'Moderado' : 'Grave');
-        lines.push('<div><strong>'+escapeHtml(zone.dataset.part)+'</strong> · '+label+(detail.type ? ' · '+escapeHtml(detail.type) : '')+(detail.pf != null ? ' · '+detail.pf+' PF' : '')+(detail.condition ? ' · '+escapeHtml(detail.condition) : '')+(detail.note ? '<span>'+escapeHtml(detail.note)+'</span>' : '')+'</div>');
+          return '<div class="wound-summary-entry severity-'+detail.severity+'"><span>'+label+(detail.type ? ' · '+escapeHtml(detail.type) : '')+(detail.pf != null ? ' · '+detail.pf+' PF' : '')+'</span>'+(detail.note ? '<small>'+escapeHtml(detail.note)+'</small>' : '')+'</div>';
+        }).join('');
+        lines.push('<section class="wound-region-summary"><div><strong>'+escapeHtml(zone.dataset.part)+'</strong><b>'+wounds.length+'</b></div>'+items+'</section>');
       }
     });
     $('#wound-summary').innerHTML = lines.length ? lines.join('') : 'Nenhum ferimento registrado.';
@@ -1417,15 +1646,15 @@
     return 'Pernas';
   }
   function woundRule(type, severity, zoneId){
-    if(!type || !severity) return {pf:0,condition:''};
+    if(!type || !severity) return {pf:0};
     var region = woundRegion(zoneId);
-    if(DATA.woundTable[type] && DATA.woundTable[type][region]) return clone(DATA.woundTable[type][region][severity-1]);
+    if(DATA.woundTable[type] && DATA.woundTable[type][region]){
+      return {pf:Math.max(0,parseInt(DATA.woundTable[type][region][severity-1].pf,10) || 0)};
+    }
     var environment = {
-      'Explosão':{pf:10,condition:'Caído'}, 'Corrosão':{pf:8,condition:'Corrosão'},
-      'Fogo':{pf:6,condition:'Em Chamas'}, 'Veneno':{pf:4,condition:'Envenenado'},
-      'Clima':{pf:0,condition:'Clima Extremo'}
+      'Explosão':{pf:10}, 'Corrosão':{pf:8}, 'Fogo':{pf:6}, 'Veneno':{pf:4}, 'Clima':{pf:0}
     };
-    return environment[type] || {pf:0,condition:''};
+    return environment[type] || {pf:0};
   }
   function armorForRegion(region){
     var item = DATA.armors.filter(function(entry){ return entry.location === region; })[0];
@@ -1435,21 +1664,59 @@
   }
 
   var editingZoneId = null;
-  var editingZoneIds = [];
-  function openWoundModal(zone){
-    editingZoneId = zone.id;
-    editingZoneIds = woundIdsForBodyZone(zone.id);
-    var detail = model.wounds[zone.id] || woundForBodyZone(zone.id) || {type:'',condition:'',note:'',severity:0};
-    $('#wound-zone-name').textContent = zone.dataset.part;
+  var editingWoundId = '';
+  function woundById(zoneId,woundId){
+    return woundsForBodyZone(zoneId).filter(function(detail){ return detail.id === woundId; })[0] || null;
+  }
+  function renderWoundModalList(){
+    if(!editingZoneId || !$('#wound-existing-list')) return;
+    var wounds = woundsForBodyZone(editingZoneId);
+    $('#wound-existing-list').innerHTML = wounds.length ? wounds.map(function(detail,index){
+      var severity = ['','Leve','Moderado','Grave'][detail.severity] || '';
+      return '<article class="wound-existing-card '+(detail.id === editingWoundId ? 'editing' : '')+'"><div><strong>Ferimento '+(index+1)+' · '+severity+'</strong><span>'+escapeHtml(detail.type || 'Sem tipo')+' · '+detail.pf+' PF</span></div>'+
+        '<div><button type="button" class="wound-edit-button" data-wound-edit="'+escapeHtml(detail.id)+'">Editar</button><button type="button" class="wound-remove-button" data-wound-remove="'+escapeHtml(detail.id)+'">Remover</button></div></article>';
+    }).join('') : '<span class="empty-state">Nenhum ferimento nesta região.</span>';
+    $('#wound-existing-count').textContent = wounds.length+' registrado'+(wounds.length === 1 ? '' : 's');
+  }
+  function setWoundForm(detail){
+    detail = detail || {type:'',note:'',severity:0};
+    $('#wound-rule-preview').classList.remove('error');
     $('#wound-type').value = detail.type || '';
-    $('#wound-condition').value = detail.condition || '';
     $('#wound-note').value = detail.note || '';
     $$('input[name="wound-severity"]').forEach(function(radio){ radio.checked = Number(radio.value) === Number(detail.severity || 0); });
-    $('#wound-apply-pf').checked = !detail.severity;
+    $('#wound-apply-pf').checked = !detail.id;
+    $('#wound-save').textContent = detail.id ? 'Atualizar ferimento' : 'Adicionar ferimento';
+    $('#wound-new').classList.toggle('hidden',!detail.id);
     updateWoundPreview();
+  }
+  function startNewWound(){
+    editingWoundId = '';
+    setWoundForm(null);
+    renderWoundModalList();
+  }
+  function openWoundModal(zone){
+    editingZoneId = canonicalBodyZone(zone.id);
+    $('#wound-zone-name').textContent = zone.dataset.part;
+    startNewWound();
     $('#wound-modal').style.display = 'flex';
   }
-  function closeWoundModal(){ editingZoneId = null; editingZoneIds = []; $('#wound-modal').style.display = 'none'; }
+  function editWound(woundId){
+    var detail = woundById(editingZoneId,woundId);
+    if(!detail) return;
+    editingWoundId = woundId;
+    setWoundForm(detail);
+    renderWoundModalList();
+  }
+  function removeWound(woundId){
+    if(!editingZoneId) return;
+    model.wounds[editingZoneId] = woundsForBodyZone(editingZoneId).filter(function(detail){ return detail.id !== woundId; });
+    if(!model.wounds[editingZoneId].length) delete model.wounds[editingZoneId];
+    if(editingWoundId === woundId) startNewWound();
+    else renderWoundModalList();
+    renderWounds();
+    saveModel();
+  }
+  function closeWoundModal(){ editingZoneId = null; editingWoundId = ''; $('#wound-modal').style.display = 'none'; }
   function selectedWoundSeverity(){
     var checked = $('input[name="wound-severity"]:checked');
     return checked ? parseInt(checked.value,10) : 0;
@@ -1457,28 +1724,36 @@
   function updateWoundPreview(){
     if(!editingZoneId) return;
     var rule = woundRule($('#wound-type').value,selectedWoundSeverity(),editingZoneId);
-    $('#wound-rule-preview').textContent = selectedWoundSeverity() ? ('Regra base: '+rule.pf+' PF'+(rule.condition ? ' · '+rule.condition : '')+'. Armadura equipada será aplicada automaticamente.') : 'Selecione tipo e gravidade para consultar a regra.';
-    if(rule.condition && !$('#wound-condition').value) $('#wound-condition').value = rule.condition;
+    $('#wound-rule-preview').textContent = selectedWoundSeverity() && $('#wound-type').value ? ('Regra base: '+rule.pf+' PF. Armadura equipada será aplicada automaticamente ao somar os PF.') : 'Selecione tipo e gravidade para consultar a regra.';
   }
 
   function applyWound(){
     if(!editingZoneId) return;
     var severity = selectedWoundSeverity();
-    if(!severity){ editingZoneIds.forEach(function(zoneId){ delete model.wounds[zoneId]; }); renderWounds(); saveModel(); closeWoundModal(); return; }
     var type = $('#wound-type').value;
+    if(!severity || !type){
+      $('#wound-rule-preview').textContent = 'Escolha o tipo e a gravidade antes de salvar.';
+      $('#wound-rule-preview').classList.add('error');
+      return;
+    }
+    $('#wound-rule-preview').classList.remove('error');
     var rule = woundRule(type,severity,editingZoneId);
-    var condition = $('#wound-condition').value || rule.condition || '';
     var pf = rule.pf;
     var armor = armorForRegion(woundRegion(editingZoneId));
     if(armor && $('#wound-apply-pf').checked){
       if(armor.item.reduction === 'todos') pf = 0;
       else pf = Math.max(0,pf-armor.item.reduction);
-      condition = '';
       armor.state.remaining = Math.max(0,armor.state.remaining-1);
     }
-    editingZoneIds.forEach(function(zoneId){ if(zoneId !== editingZoneId) delete model.wounds[zoneId]; });
-    model.wounds[editingZoneId] = { type:type, severity:severity, condition:condition, note:$('#wound-note').value, pf:pf };
-    if($('#wound-apply-pf').checked){ model.health.pf += pf; applyMasochistRelief(pf); if(condition) addCondition(condition); }
+    var detail = { id:editingWoundId || uid('wound'), type:type, severity:severity, note:$('#wound-note').value, pf:pf };
+    var wounds = woundsForBodyZone(editingZoneId).slice();
+    if(editingWoundId){
+      wounds = wounds.map(function(existing){ return existing.id === editingWoundId ? detail : existing; });
+    } else {
+      wounds.push(detail);
+    }
+    model.wounds[editingZoneId] = wounds;
+    if($('#wound-apply-pf').checked){ model.health.pf += pf; applyMasochistRelief(pf); }
     renderWounds(); renderHealth(); renderArmor(); saveModel(); closeWoundModal();
   }
 
@@ -1494,6 +1769,39 @@
     }).join('') : '<div class="empty-notebook"><p>Nenhum post-it aqui ainda.</p><span>Adicione um novo post-it para começar.</span></div>';
   }
 
+  function relationshipScoreLabel(score){
+    return (score > 0 ? '+' : '')+score;
+  }
+  function relationshipScale(entry){
+    var buttons = '';
+    for(var score=-5;score<=5;score++){
+      var level = RELATIONSHIP_LEVELS[String(score)];
+      buttons += '<button type="button" class="relationship-step '+(score === entry.score ? 'selected' : '')+' '+(score < 0 ? 'negative' : (score > 0 ? 'positive' : 'neutral'))+'" data-relationship-score="'+score+'" title="'+relationshipScoreLabel(score)+' · '+level.name+'" aria-label="'+relationshipScoreLabel(score)+' '+level.name+'" aria-pressed="'+(score === entry.score ? 'true' : 'false')+'">'+relationshipScoreLabel(score)+'</button>';
+    }
+    return buttons;
+  }
+  function renderRelationships(){
+    var list = $('#relationship-list');
+    if(!list) return;
+    if(!model.relationships.length){
+      list.innerHTML = '<div class="empty-state relationship-empty">Nenhuma pessoa registrada. Todo relacionamento começa em 0 (Neutro), salvo contexto anterior.</div>';
+      return;
+    }
+    list.innerHTML = model.relationships.map(function(entry){
+      var level = RELATIONSHIP_LEVELS[String(entry.score)];
+      return '<article class="relationship-card" data-relationship-id="'+escapeHtml(entry.id)+'">'+
+        '<div class="relationship-card-header"><input class="relationship-name" type="text" value="'+escapeHtml(entry.name)+'" placeholder="Nome da pessoa / PNJ">'+
+        '<input class="relationship-role" type="text" value="'+escapeHtml(entry.role)+'" placeholder="Laço, função ou comunidade">'+
+        '<button type="button" class="relationship-remove" title="Remover relacionamento" aria-label="Remover relacionamento">×</button></div>'+
+        '<div class="relationship-state '+(entry.score < 0 ? 'negative' : (entry.score > 0 ? 'positive' : 'neutral'))+'"><button type="button" class="relationship-delta" data-relationship-delta="-1" aria-label="Diminuir relacionamento">−</button>'+
+        '<div><strong>'+relationshipScoreLabel(entry.score)+' · '+level.name+'</strong><span>'+level.description+'</span></div>'+
+        '<button type="button" class="relationship-delta" data-relationship-delta="1" aria-label="Aumentar relacionamento">+</button></div>'+
+        '<div class="relationship-scale" role="group" aria-label="Escala de relacionamento de menos cinco a mais cinco">'+relationshipScale(entry)+'</div>'+
+        '<textarea class="relationship-note" placeholder="Ações, promessas, conflitos e mudanças neste vínculo...">'+escapeHtml(entry.note)+'</textarea>'+
+        '</article>';
+    }).join('');
+  }
+
   function buildLists(){ renderCharacteristics(); renderPains(); renderNotes(); renderConditions(); }
 
   function renderAll(){
@@ -1507,7 +1815,8 @@
     buildLists();
     renderWounds();
     renderGrowth();
-    renderRest();
+    renderNeeds();
+    renderRelationships();
     setModifier('roll-bonus',0);
     setModifier('roll-penalty',0);
     activatePage(model.ui.activePage || 'principal');
@@ -1704,13 +2013,23 @@
       else if(group.classList.contains('armor-pips')) handleArmorPip(group.closest('.armor-card'),index);
       else if(group.classList.contains('inventory-weapon-pips')) handleInventoryWeaponPip(group,index);
       else if(group.classList.contains('weapon-pips')) handleWeaponPip(group,index);
-      else if(group.id === 'rest-scenes-pips'){
-        model.rest.scenes = model.rest.scenes === index ? index-1 : index;
-        renderRest(); saveModel();
-      }
       return;
     }
+    var needSegment = event.target.closest('[data-need-value]');
+    if(needSegment){
+      var needKey = needSegment.dataset.needKey;
+      var needValue = parseInt(needSegment.dataset.needValue,10);
+      model.needs[needKey] = model.needs[needKey] === needValue ? Math.max(0,needValue-1) : needValue;
+      renderNeeds(); saveModel(); return;
+    }
+    var needReset = event.target.closest('[data-need-reset]');
+    if(needReset){ model.needs[needReset.dataset.needReset] = 0; renderNeeds(); saveModel(); return; }
     var zone = event.target.closest('.zone'); if(zone){ openWoundModal(zone); return; }
+    var woundEdit = event.target.closest('[data-wound-edit]');
+    if(woundEdit){ editWound(woundEdit.dataset.woundEdit); return; }
+    var woundRemove = event.target.closest('[data-wound-remove]');
+    if(woundRemove){ removeWound(woundRemove.dataset.woundRemove); return; }
+    if(event.target.closest('#wound-new')){ startNewWound(); return; }
     if(event.target.closest('#wound-save')){ applyWound(); return; }
     if(event.target.closest('#wound-cancel')){ closeWoundModal(); return; }
     if(event.target.closest('#roll-button')){ rollDice(); return; }
@@ -1729,6 +2048,29 @@
     }
     var conditionRemove = event.target.closest('[data-condition-index]');
     if(conditionRemove){ model.conditions.splice(parseInt(conditionRemove.dataset.conditionIndex,10),1); renderConditions(); saveModel(); return; }
+    if(event.target.closest('#relationship-add-button')){
+      model.relationships.push({id:uid('relationship'),name:'',role:'',score:0,note:''});
+      renderRelationships(); saveModel(); return;
+    }
+    var relationshipCard = event.target.closest('.relationship-card');
+    if(relationshipCard){
+      var relationship = model.relationships.filter(function(entry){ return entry.id === relationshipCard.dataset.relationshipId; })[0];
+      if(!relationship) return;
+      if(event.target.closest('.relationship-remove')){
+        model.relationships = model.relationships.filter(function(entry){ return entry.id !== relationship.id; });
+        renderRelationships(); saveModel(); return;
+      }
+      var relationshipDelta = event.target.closest('[data-relationship-delta]');
+      if(relationshipDelta){
+        relationship.score = clampRelationship(relationship.score+parseInt(relationshipDelta.dataset.relationshipDelta,10));
+        renderRelationships(); saveModel(); return;
+      }
+      var relationshipScore = event.target.closest('[data-relationship-score]');
+      if(relationshipScore){
+        relationship.score = clampRelationship(relationshipScore.dataset.relationshipScore);
+        renderRelationships(); saveModel(); return;
+      }
+    }
     if(event.target.closest('#add-inv-btn')){ model.inventory.push(emptyInventoryItem()); renderInventory(); saveModel(); return; }
     if(event.target.closest('#add-weapon-button')){ addOfficialWeapon($('#new-weapon-select').value); return; }
     var moveWeapon = event.target.closest('.weapon-to-inventory');
@@ -1757,7 +2099,6 @@
     if(event.target.closest('#filter-overload-button')){selectFilterMode('overload');model.health.permanentPf+=2;addCondition('Inconsciente');renderHealth();saveModel();$('#filter-result').textContent='Sobrecarga acionada: ganho anulado, +2 PF permanentes e Inconsciente.';return;}
     if(event.target.closest('#clear-filter-mode')){selectFilterMode('');$('#filter-result').textContent='Seleção de modo limpa; nenhum valor da ficha foi alterado.';return;}
     if(event.target.closest('#clear-corruption-filters')){if(confirm('Limpar todos os efeitos permanentemente anulados pela Pulseira?')){model.corruptionFilters=[];renderCorruption();saveModel();}return;}
-    if(event.target.closest('#rest-clear-button')){model.rest.scenes=0;model.rest.actions=model.rest.actions.map(function(){return {type:'',note:''};});renderRest();saveModel();return;}
     if(event.target.closest('#btn-save-backup')){exportBackup();return;}
     if(event.target.closest('#btn-load-backup')){$('#backup-file-input').click();return;}
     if(event.target.closest('#btn-print')){window.print();return;}
@@ -1802,13 +2143,25 @@
     var painRow=target.closest('.dor-row'); if(painRow&&target.tagName==='INPUT'){model.pains[parseInt(painRow.dataset.painIndex,10)].text=target.value;saveModel();return;}
     var weaponCard=target.closest('.weapon-card'); if(weaponCard){var weaponState=model.weapons[parseInt(weaponCard.dataset.weaponIndex,10)];if(target.classList.contains('weapon-notes'))weaponState.notes=target.value;if(target.classList.contains('custom-weapon-name'))weaponState.customName=target.value;if(target.classList.contains('custom-weapon-damage'))weaponState.customDamage=target.value;if(target.classList.contains('custom-weapon-range'))weaponState.customRange=target.value;if(target.classList.contains('custom-weapon-max')){weaponState.customMax=Math.max(0,parseInt(target.value,10)||0);weaponState.current=Math.min(weaponState.current,weaponState.customMax);}saveModel();return;}
     var noteCard=target.closest('.note-card'); if(noteCard){var note=getSelectedNotebook().notes.filter(function(entry){return entry.id===noteCard.dataset.noteId;})[0];if(note){if(target.classList.contains('note-title-input'))note.title=target.value;if(target.classList.contains('note-content'))note.content=target.value;saveModel();}return;}
-    var restCard=target.closest('.rest-action-card');if(restCard&&target.classList.contains('rest-action-note')){var restIndex=parseInt(restCard.dataset.restActionIndex,10);model.rest.actions[restIndex].note=target.value;saveModel();return;}
+    var relationshipCard=target.closest('.relationship-card');
+    if(relationshipCard){
+      var relationship=model.relationships.filter(function(entry){return entry.id===relationshipCard.dataset.relationshipId;})[0];
+      if(relationship){
+        if(target.classList.contains('relationship-name'))relationship.name=target.value;
+        if(target.classList.contains('relationship-role'))relationship.role=target.value;
+        if(target.classList.contains('relationship-note'))relationship.note=target.value;
+        saveModel();
+      }
+      return;
+    }
     if(target.id==='notebook-title-input'){getSelectedNotebook().title=target.value;renderNotes();saveModel();return;}
   }
 
   function onChange(event){
     var target=event.target;
     if(target.classList.contains('modifier-number')){setModifier(target.id,target.value);return;}
+    if(target.id==='condition-category'){renderConditionPicker();return;}
+    if(target.id==='condition-select'){renderConditionReference();return;}
     if(target.id==='sangue'){
       if(model.fields['ocupacao-select']==='Devoto' && target.value!=='novo'){
         target.value='novo';
@@ -1836,7 +2189,7 @@
     }
     if(target.dataset.modelField){model.fields[target.dataset.modelField]=target.value;if(target.id==='growth-stage')renderGrowth();if(target.id==='reputacao-select')renderParadigmStyle();if(target.id==='genero-select')renderBodyMap();saveModel();return;}
     if(target.classList.contains('origin-power-check')){
-      var origin=getOrigin();if(!origin)return;var power=origin.powers.filter(function(item){return item.name===target.dataset.power;})[0];var index=model.originPowers.indexOf(power.name);if(target.checked&&index<0){var occ=getOccupation();var total=7+(occ&&occ.originPointsBonus||0);var spent=origin.powers.reduce(function(sum,item){return sum+(model.originPowers.indexOf(item.name)>=0?item.cost:0);},0);if(spent+power.cost>total){target.checked=false;alert('Pontos de Origem insuficientes.');return;}model.originPowers.push(power.name);}else if(!target.checked&&index>=0)model.originPowers.splice(index,1);renderOrigin();renderRest();saveModel();return;
+      var origin=getOrigin();if(!origin)return;var power=origin.powers.filter(function(item){return item.name===target.dataset.power;})[0];var index=model.originPowers.indexOf(power.name);if(target.checked&&index<0){var occ=getOccupation();var total=7+(occ&&occ.originPointsBonus||0);var spent=origin.powers.reduce(function(sum,item){return sum+(model.originPowers.indexOf(item.name)>=0?item.cost:0);},0);if(spent+power.cost>total){target.checked=false;alert('Pontos de Origem insuficientes.');return;}model.originPowers.push(power.name);}else if(!target.checked&&index>=0)model.originPowers.splice(index,1);renderOrigin();saveModel();return;
     }
     if(target.classList.contains('inventory-weapon-select')){var storedCard=target.closest('.inv-slot');var storedItem=model.inventory.filter(function(item){return item.id===storedCard.dataset.itemId;})[0];if(!storedItem||!isInventoryWeapon(storedItem))return;var storedWeaponState=storedItem.weapon;storedWeaponState.weaponId=target.value;storedWeaponState.mods=[];storedWeaponState.current=weaponMax(storedWeaponState);if(target.value!=='custom'){storedWeaponState.customName='';storedWeaponState.customDamage='';storedWeaponState.customRange='';storedWeaponState.customMax=0;}renderInventory();renderRecipes();saveModel();return;}
     if(target.classList.contains('inventory-weapon-mod-select')){var storedModCard=target.closest('.inv-slot');var storedModItem=model.inventory.filter(function(item){return item.id===storedModCard.dataset.itemId;})[0];if(!storedModItem||!isInventoryWeapon(storedModItem))return;var storedModState=storedModItem.weapon;var storedModIndex=parseInt(target.dataset.modIndex,10);var storedOldMod=storedModState.mods[storedModIndex]||'';var storedNextMod=target.value;if(storedOldMod&&storedNextMod!==storedOldMod){alert('Modificações são permanentes. Apenas poderes específicos permitem removê-las.');renderInventory();return;}if(storedNextMod){var storedMod=DATA.modifications.filter(function(item){return item.id===storedNextMod;})[0];if(model.parts<storedMod.cost){alert('Partes insuficientes para instalar esta modificação.');renderInventory();return;}model.parts-=storedMod.cost;storedModState.mods[storedModIndex]=storedNextMod;storedModState.current=Math.min(storedModState.current,weaponMax(storedModState));renderEquipment();saveModel();}return;}
@@ -1848,11 +2201,10 @@
       if(target.checked&&filterIndex<0){var selectedAtStage=model.corruptionFilters.filter(function(key){return stageKeys.indexOf(key)>=0;}).length;if(selectedAtStage>=3){target.checked=false;alert('A Pulseira pode anular no máximo 3 efeitos mecânicos por nível de Corrupção.');return;}model.corruptionFilters.push(effectKey);}else if(!target.checked&&filterIndex>=0)model.corruptionFilters.splice(filterIndex,1);
       renderCorruption();saveModel();return;
     }
-    if(target.classList.contains('rest-action-type')){var restActionCard=target.closest('.rest-action-card');var actionIndex=parseInt(restActionCard.dataset.restActionIndex,10);model.rest.actions[actionIndex].type=target.value;renderRest();saveModel();return;}
     if(target.classList.contains('recipe-known')){var recipeId=target.dataset.recipeId;var recipeIndex=model.knownRecipes.indexOf(recipeId);if(target.checked&&recipeIndex<0){if(!model.allowCampaignRecipes&&model.knownRecipes.length>=recipeLimit()){target.checked=false;alert('O limite de Receitas conhecidas na criação é igual ao Intelecto.');return;}model.knownRecipes.push(recipeId);}else if(!target.checked&&recipeIndex>=0)model.knownRecipes.splice(recipeIndex,1);renderRecipes();saveModel();return;}
     if(target.id==='allow-campaign-recipes'){model.allowCampaignRecipes=target.checked;renderRecipes();saveModel();return;}
     if(target.id==='backup-file-input'){if(target.files&&target.files[0])importBackup(target.files[0]);target.value='';return;}
-    if(target.id==='wound-type'||target.name==='wound-severity'){updateWoundPreview();return;}
+    if(target.id==='wound-type'||target.name==='wound-severity'){$('#wound-rule-preview').classList.remove('error');updateWoundPreview();return;}
   }
 
   function onKeyDown(event){

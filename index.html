@@ -242,6 +242,13 @@
         <div class="modal">
           <div class="modal-header">Especificar Ferimento — <span id="wound-zone-name"></span></div>
           <div class="modal-body">
+            <div class="wound-existing-header">
+              <span>Ferimentos nesta região</span>
+              <b id="wound-existing-count">0 registrados</b>
+            </div>
+            <div class="wound-existing-list" id="wound-existing-list"></div>
+            <button type="button" class="notes-btn small hidden" id="wound-new">+ Registrar outro ferimento</button>
+
             <label>Tipo de Ferimento</label>
             <select id="wound-type">
               <option value="">— Selecionar —</option>
@@ -252,21 +259,10 @@
 
             <label>Gravidade</label>
             <div class="wound-sev">
-              <label><input type="radio" name="wound-severity" value="0"> Nenhum</label>
               <label><input type="radio" name="wound-severity" value="1"> Leve</label>
               <label><input type="radio" name="wound-severity" value="2"> Moderado</label>
               <label><input type="radio" name="wound-severity" value="3"> Grave</label>
             </div>
-
-            <label>Condição automática (se aplicável)</label>
-            <select id="wound-condition">
-              <option value="">— Nenhuma —</option>
-              <option value="Caído">Caído (condição)</option>
-              <option value="Corrosão">Corrosão (condição)</option>
-              <option value="Em Chamas">Em Chamas (condição)</option>
-              <option value="Envenenado">Envenenado (condição)</option>
-              <option value="Clima Extremo">Clima Extremo (condição)</option>
-            </select>
 
             <label>Descrição / Observações</label>
             <textarea id="wound-note" placeholder="Descreva o ferimento, efeitos, causa, etc."></textarea>
@@ -274,8 +270,8 @@
             <label class="check-line"><input type="checkbox" id="wound-apply-pf" checked> Somar os PF deste ferimento ao total</label>
           </div>
           <div class="modal-footer">
-            <button type="button" id="wound-save">Salvar</button>
-            <button type="button" id="wound-cancel">Cancelar</button>
+            <button type="button" id="wound-save">Adicionar ferimento</button>
+            <button type="button" id="wound-cancel">Fechar</button>
           </div>
         </div>
       </div>
