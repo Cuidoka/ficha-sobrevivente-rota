@@ -736,11 +736,23 @@
     options = options || {};
     group.dataset.value = String(value);
     group.dataset.max = String(max);
+    var stages = options.stages || [];
     $$('.pip', group).forEach(function(pip){
       var index = parseInt(pip.dataset.i,10);
+      var stageClass = stages.length ? (index <= stages[0] ? 'stage-ok' : (index <= stages[1] ? 'stage-warn' : 'stage-crit')) : '';
       pip.classList.toggle('filled', index <= value);
       pip.classList.toggle('permanent', !!options.permanentFrom && index >= options.permanentFrom && index <= options.permanentTo);
       pip.classList.toggle('overflow', !!options.safeMax && index > options.safeMax);
+      pip.classList.toggle('stage-ok', stageClass === 'stage-ok');
+      pip.classList.toggle('stage-warn', stageClass === 'stage-warn');
+      pip.classList.toggle('stage-crit', stageClass === 'stage-crit');
+      pip.classList.toggle('overflow-start', !!options.separateOverflow && index === options.safeMax + 1);
+      pip.classList.toggle('death-direct', !!options.separateOverflow && index === options.safeMax + 6);
+      if(options.separateOverflow && index > options.safeMax){
+        var overflowValue = index - options.safeMax;
+        pip.title = overflowValue <= 5 ? 'Morrendo +' + overflowValue : 'Morte Direta +' + overflowValue;
+        pip.setAttribute('aria-label',pip.title);
+      }
     });
   }
 
@@ -866,8 +878,8 @@
     buildTrackPips(peGroup, limits.pe + 1);
     var permanentPfFrom = model.health.permanentPf ? limits.pf - model.health.permanentPf + 1 : 0;
     var permanentPeFrom = model.health.permanentPe ? limits.pe - model.health.permanentPe + 1 : 0;
-    renderPips(pfGroup,pfTotal,limits.pf+6,{ safeMax:limits.pf, permanentFrom:permanentPfFrom, permanentTo:limits.pf });
-    renderPips(peGroup,peTotal,limits.pe+1,{ safeMax:limits.pe, permanentFrom:permanentPeFrom, permanentTo:limits.pe });
+    renderPips(pfGroup,pfTotal,limits.pf+6,{ safeMax:limits.pf, stages:limits.pfSegments, separateOverflow:true, permanentFrom:permanentPfFrom, permanentTo:limits.pf });
+    renderPips(peGroup,peTotal,limits.pe+1,{ safeMax:limits.pe, stages:limits.peSegments, permanentFrom:permanentPeFrom, permanentTo:limits.pe });
     $('#pf-max-label').textContent = '/' + limits.pf + ' (+' + Math.max(0,pfTotal-limits.pf) + ')';
     $('#pe-max-label').textContent = '/' + limits.pe + (peTotal > limits.pe ? ' (+1)' : '');
     $('#pf-readout').childNodes[0].nodeValue = String(pfTotal).padStart(2,'0');
