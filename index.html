@@ -6,14 +6,14 @@
 <title>Ficha de Sobrevivente — Roots of the Abyss</title>
 <link rel="preload" as="image" href="assets/corpos/masculino.png">
 <link rel="preload" as="image" href="assets/corpos/feminino.png">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
 <div class="sheet" id="sheet">
 
   <!-- ===================== HEADER ===================== -->
-  <div class="doc-header">
+  <div class="doc-header" data-section="main-header">
     <div class="stamp">SOBREVIVENTE<br>REGISTRADO</div>
     <div class="title-block">
       <div class="eyebrow">
@@ -91,7 +91,7 @@
   </div>
 
   <!-- ===================== ATRIBUTOS + RECURSOS ===================== -->
-  <div class="row-2">
+  <div class="row-2" data-section="core-stats">
 
     <div class="section">
       <div class="section-title">Atributos <span class="tag">8 + 2 POR 0 · MÁX. 5</span></div>
@@ -221,7 +221,7 @@
   </div>
 
   <!-- ===================== DIAGRAMA DE FERIMENTOS ===================== -->
-  <div class="section diagram-section">
+  <div class="section diagram-section" data-section="body-map">
     <div class="section-title">Mapeamento Somático <span class="tag">FIG. 01 — CLIQUE PARA MARCAR</span></div>
     <div class="section-body">
 
@@ -267,7 +267,8 @@
             <label>Descrição / Observações</label>
             <textarea id="wound-note" placeholder="Descreva o ferimento, efeitos, causa, etc."></textarea>
             <div class="rule-preview" id="wound-rule-preview">Selecione tipo e gravidade para consultar a regra.</div>
-            <label class="check-line"><input type="checkbox" id="wound-apply-pf" checked> Somar os PF deste ferimento ao total</label>
+            <label class="check-line"><input type="checkbox" id="wound-apply-pf" checked> Aplicar os PF e a Condição deste ferimento</label>
+            <label class="check-line hidden" id="wound-first-defense-option"><input type="checkbox" id="wound-ignore-first-defense"> Cães de Guerra I · primeira Defesa do Conflito (ignorar PF e Condição)</label>
           </div>
           <div class="modal-footer">
             <button type="button" id="wound-save">Adicionar ferimento</button>
@@ -293,7 +294,7 @@
   </div>
 
   <!-- ===================== PERÍCIAS HEADER ===================== -->
-  <div class="section">
+  <div class="section" data-section="skills">
     <div class="section-title">Perícias <span class="tag">28 PP BASE · ORIGEM = +5 FIXO</span></div>
     <div class="section-body">
       <div class="pp-bar">
@@ -310,7 +311,7 @@
   </div>
 
   <!-- ===================== CARACTERÍSTICAS ===================== -->
-  <div class="section">
+  <div class="section" data-section="characteristics">
     <div class="section-title">Características</div>
     <div class="section-body">
       <div class="chars-grid">
@@ -334,7 +335,7 @@
   </div>
 
   <!-- ===================== INVENTÁRIO / ARMAS / RECURSOS ===================== -->
-  <div class="row-2">
+  <div class="row-2" data-section="legacy-equipment">
     <div class="section">
       <div class="section-title">Inventário <span class="tag" id="inventory-capacity-tag">MÁX. = 2 + FÍSICO</span></div>
       <div class="section-body">
@@ -358,13 +359,13 @@
   </div>
 
   <!-- ===================== DORES ===================== -->
-  <div class="section">
+  <div class="section" data-section="pains">
     <div class="section-title">Dores <span class="tag">3 DORES = ESGOTAMENTO</span></div>
     <div class="section-body" id="dores-list"></div>
   </div>
 
   <!-- ===================== CADERNOS / POST-ITS ===================== -->
-  <div class="section">
+  <div class="section" data-section="notes">
     <div class="section-title">Cadernos &amp; Post-its</div>
     <div class="section-body">
       <div class="notes-shell">
@@ -399,9 +400,10 @@
   <input type="file" id="backup-file-input" accept=".json" style="display:none;">
 </div>
 
-<script src="rules-data.js"></script>
-<script src="weapon-details.js"></script>
-<script src="script.js"></script>
+<script src="rules-data.js?v=6"></script>
+<script src="weapon-details.js?v=6"></script>
+<script src="automation-engine.js?v=6"></script>
+<script src="script.js?v=6"></script>
 
 </body>
 </html>

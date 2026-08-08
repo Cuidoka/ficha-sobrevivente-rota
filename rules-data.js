@@ -12,6 +12,349 @@
 
     resources: ["Pano","Álcool","Recipiente","Sucata","Explosivo","Fita"],
 
+    commonItems: [
+      {
+        id: "mochila-resistente",
+        name: "Mochila Resistente",
+        description: "Bolsa reforçada, feita de couro grosso ou tecido tratado, projetada para aguentar peso e proteger o conteúdo.",
+        effects: [
+          { name: "Carga Extra", description: "Permite carregar +2 Itens além do limite sem causar Sobrecarga." },
+          { name: "Proteção Parcial", description: "Reduz o risco de itens frágeis serem destruídos em quedas ou explosões." }
+        ],
+        inventoryCapacityBonus: 2,
+        uses: { max: null, label: "Ilimitado, até ser rasgada." }
+      },
+      {
+        id: "algemas",
+        name: "Algemas",
+        description: "Par de algemas de metal reforçado com mecanismo de travamento resistente.",
+        effects: [
+          { name: "Imobilização", description: "Restringe movimento, impedindo ataques e fuga; exige testes de Fuga para tentar sair." },
+          { name: "Vínculo", description: "Prende objetos ou pessoas em locais seguros e causa a Condição Preso." }
+        ],
+        appliesCondition: "Preso",
+        uses: { max: null, label: "Ilimitado, até serem quebradas ou arrombadas." }
+      },
+      {
+        id: "gancho-escalada",
+        name: "Gancho de Escalada",
+        description: "Gancho de metal resistente atrelado a uma corda de fibra capaz de suportar grande peso e tensão.",
+        effects: [
+          { name: "Fixação Segura", description: "Permite escalada em terrenos difíceis." },
+          { name: "Escalar", description: "Facilita a subida em locais altos, reduzindo a dificuldade dos testes." },
+          { name: "Prender ou Amarrar", description: "Pode capturar alguém, criar armadilhas ou reforçar estruturas." }
+        ],
+        uses: { max: null, label: "Ilimitado." }
+      },
+      {
+        id: "lanterna",
+        name: "Lanterna",
+        description: "Dispositivo portátil de iluminação alimentado por baterias.",
+        effects: [
+          { name: "Iluminação", description: "Anula Penalidades de ambiente escuro enquanto estiver empunhada e ligada." },
+          { name: "Cegueira Temporária", description: "Pode cegar uma Ameaça se apontada diretamente para seus olhos." },
+          { name: "Sinalização", description: "Pode enviar sinais luminosos a Aliados." }
+        ],
+        uses: { max: 5, unit: "Cenas", label: "5 Cenas até descarregar.", rechargeableWith: "Baterias" }
+      },
+      {
+        id: "mascara-gas",
+        name: "Máscara de Gás",
+        description: "Equipamento de proteção respiratória com filtros removíveis que purificam o ar.",
+        effects: [
+          { name: "Proteção", description: "Bloqueia efeitos de gás, fumaça ou substâncias nocivas." },
+          { name: "Resistência ao Ambiente", description: "Evita Penalidades em locais com ar impróprio." }
+        ],
+        uses: { max: null, label: "Ilimitado." }
+      },
+      {
+        id: "walkie-talkie",
+        name: "Walkie-Talkie",
+        description: "Dispositivo que permite comunicação entre grupos a longas distâncias.",
+        effects: [
+          { name: "Comunicação Silenciosa", description: "Coordena ações sem revelar a posição com pessoas que também possuam Walkie-Talkie." },
+          { name: "Sinal de Emergência", description: "Pode enviar pedidos de socorro." }
+        ],
+        uses: { max: 7, unit: "Cenas", label: "7 Cenas até descarregar.", rechargeableWith: "Baterias" }
+      },
+      {
+        id: "isqueiro",
+        name: "Isqueiro",
+        description: "Pequeno dispositivo à base de gás ou fluido inflamável.",
+        effects: [
+          { name: "Iluminação Rápida", description: "Gera uma chama temporária para iluminação." },
+          { name: "Queima Controlada", description: "Pode iniciar incêndios em materiais inflamáveis." }
+        ],
+        uses: { max: 10, unit: "Usos", label: "10 usos antes de acabar." }
+      },
+      {
+        id: "kit-primeiros-socorros",
+        name: "Kit de Primeiros Socorros",
+        aliases: ["Kit Médico"],
+        description: "Estojo com gazes, ataduras, álcool e ferramentas básicas médicas.",
+        effects: [
+          { name: "Feridas Leves ou Moderadas", description: "Gaste 1 Carga, recupere 4 PF e remova ou substitua todas as Condições e Penalidades da Ferida após um teste de Medicina bem-sucedido." },
+          { name: "Feridas Graves", description: "Gaste 2 Cargas, recupere 5 PF e remova ou substitua todas as Condições e Penalidades da Ferida após um teste de Medicina bem-sucedido." }
+        ],
+        uses: { max: 5, unit: "Cargas", label: "5 Cargas." }
+      },
+      {
+        id: "bandagem",
+        name: "Bandagem",
+        description: "Gaze velha, trapos ou pedaços de roupas usados para tratar ferimentos.",
+        effects: [{ name: "Curando Feridas", description: "Gaste 1 Carga, recupere 3 PF e remova ou substitua todas as Condições e Penalidades de Ferimentos de Perfuração ou Corte após um teste de Medicina bem-sucedido." }],
+        uses: { max: 3, unit: "Cargas", label: "3 Cargas." }
+      },
+      {
+        id: "remedios",
+        name: "Remédios",
+        description: "Estojo contendo frascos de medicamentos variados.",
+        effects: [
+          { name: "Tratamento Intensivo", description: "Remove Condições Tratadas no Ciclo seguinte à ingestão." },
+          { name: "Limpeza Interior", description: "Remove Condições de Doenças no Ciclo seguinte à ingestão." },
+          { name: "Recuperação Avançada", description: "Recupere 3 PF no próximo Sono." }
+        ],
+        uses: { max: 3, unit: "Doses", label: "3 Doses." }
+      },
+      {
+        id: "fumaca-sinalizacao",
+        name: "Fumaça de Sinalização",
+        description: "Saco ou lata que libera uma nuvem colorida.",
+        effects: [
+          { name: "Sinalizar", description: "Indica uma posição a longa distância." },
+          { name: "Cobertura", description: "Impõe Penalidades em ataques à distância contra quem estiver na fumaça." }
+        ],
+        uses: { max: 2, unit: "Cargas", label: "2 cargas antes de acabar." }
+      },
+      {
+        id: "binoculos",
+        name: "Binóculos",
+        description: "Equipamento óptico para ampliar a visão de longas distâncias.",
+        effects: [
+          { name: "Observação Detalhada", description: "Permite identificar detalhes distantes." },
+          { name: "Detecção de Movimento", description: "Facilita a observação de movimentos sutis no ambiente." }
+        ],
+        uses: { max: null, label: "Ilimitado." }
+      },
+      {
+        id: "megafone",
+        name: "Megafone",
+        description: "Dispositivo amplificador de voz.",
+        effects: [
+          { name: "Chamada de Atenção", description: "Atrai a atenção de grupos ou indivíduos." },
+          { name: "Intimidação", description: "Pode ameaçar ou dispersar multidões." }
+        ],
+        uses: { max: 6, unit: "Cenas", label: "6 Cenas até descarregar.", rechargeableWith: "Baterias" }
+      },
+      {
+        id: "energetico",
+        name: "Energético",
+        description: "Lata de bebida com alta dosagem de cafeína e outros estimulantes.",
+        effects: [
+          { name: "Surto de Energia", description: "Remove Exaustão ou concede Bônus no próximo teste de Físico ou Destreza realizado na mesma Cena." },
+          { name: "Resistir à Exaustão", description: "Permite ignorar Penalidades por falta de sono na Cena em que for bebido." }
+        ],
+        uses: { max: 3, unit: "Usos", label: "3 usos." }
+      },
+      {
+        id: "apito",
+        name: "Apito",
+        description: "Pequeno apito metálico ou plástico para sinalização sonora.",
+        effects: [
+          { name: "Sinal de Emergência", description: "Atrai Aliados ou assusta Ameaças." },
+          { name: "Direcionamento de Equipe", description: "Pode coordenar Aliados sem palavras." }
+        ],
+        uses: { max: null, label: "Ilimitado." }
+      },
+      {
+        id: "lata-tinta",
+        name: "Lata de Tinta",
+        description: "Lata de tinta em aerossol disponível em diferentes cores.",
+        effects: [
+          { name: "Borrifar Mensagem", description: "Deixa frases, símbolos ou avisos que podem influenciar comportamentos e, com o tempo, mudar como a região age ou reage." },
+          { name: "Distração Rápida", description: "Pode cegar temporariamente um Alvo se borrifada no rosto." }
+        ],
+        uses: { max: 5, unit: "Borrifadas", label: "5 borrifadas antes de esgotar." }
+      },
+      {
+        id: "espelho-pequeno",
+        name: "Espelho Pequeno",
+        description: "Pequeno espelho de bolso útil para sinalização e observação.",
+        effects: [
+          { name: "Sinalização de Luz", description: "Reflete luz para enviar sinais à distância." },
+          { name: "Espionagem Discreta", description: "Permite visualizar cantos sem ser visto diretamente." }
+        ],
+        uses: { max: null, label: "Ilimitado, até quebrar." }
+      },
+      {
+        id: "bastao-luminoso",
+        name: "Bastão Luminoso",
+        description: "Tubo químico que emite luz contínua por um período quando quebrado.",
+        effects: [
+          { name: "Iluminação de Emergência", description: "Ilumina uma área Afastada e remove Penalidade de Ambientes Escuros." },
+          { name: "Sinalização Noturna", description: "Marca caminhos ou posições para Aliados." },
+          { name: "Distração", description: "Pode ser arremessado para atrair Ameaças para outra direção." }
+        ],
+        uses: { max: 6, unit: "Cenas", label: "Dura 6 Cenas antes de apagar." }
+      },
+      {
+        id: "relogio-pulso",
+        name: "Relógio de Pulso",
+        description: "Dispositivo simples de marcação de tempo.",
+        effects: [
+          { name: "Coordenação", description: "Concede Bônus em testes conjuntos que dependam de sincronia." },
+          { name: "Cronometrar", description: "Permite medir intervalos com precisão." }
+        ],
+        uses: { max: null, label: "Ilimitado, até quebrar." }
+      },
+      {
+        id: "cigarros",
+        name: "Cigarros",
+        description: "Pequeno maço contendo cigarros de tabaco ou ervas.",
+        effects: [
+          { name: "Redução de Estresse", description: "Reduz 2 PE ao ser usado." },
+          { name: "Troca de Valor", description: "Pode servir como moeda de troca em comunidades." }
+        ],
+        stressRecovery: 2,
+        uses: { max: 6, unit: "Cigarros", label: "6 cigarros antes de esgotar." }
+      },
+      {
+        id: "baterias",
+        name: "Baterias",
+        description: "Fonte de energia portátil usada para alimentar dispositivos eletrônicos.",
+        effects: [{ name: "Carregar Equipamento", description: "Restaura o tempo de uso de lanternas, Walkie-Talkies, megafones e outros itens eletrônicos." }],
+        uses: { max: 1, unit: "Bateria", label: "Cada bateria recarrega um Equipamento que a use." }
+      },
+      {
+        id: "cantil",
+        name: "Cantil",
+        description: "Garrafa metálica com alça e tampa hermética para transportar água.",
+        effects: [
+          { name: "Reserva de Água", description: "Permite carregar 1 Porção de Água." },
+          { name: "Fervura", description: "Pode ser colocado diretamente sobre fogo para esterilizar água suja ou infectada." }
+        ],
+        waterPortions: 1,
+        uses: { max: null, label: "Ilimitado." }
+      },
+      {
+        id: "seringas",
+        name: "Seringas",
+        description: "Conjunto de 2 seringas descartáveis com agulha fina e êmbolo funcional.",
+        effects: [
+          { name: "Sedativo", description: "Gaste sua Ação Principal para injetar um Alvo. Ele testa Tolerância (Dilacerante) e, se falhar, recebe Inconsciente." },
+          { name: "Adrenalina", description: "Gaste sua Ação Secundária em si ou em um Alvo para remover Inconsciente e Exaustão, ignorar PF provenientes de Condições e conceder Bônus em testes de Físico até o fim do próximo Turno." }
+        ],
+        quantity: 2,
+        uses: { max: 2, unit: "Seringas", perUnit: 1, label: "1 uso por seringa; o conjunto contém 2." }
+      },
+      {
+        id: "arame-farpado",
+        name: "Arame Farpado",
+        description: "Rolo de arame com espículas cortantes, originalmente usado em cercas.",
+        effects: [
+          { name: "Armadilha", description: "Pode ser estendido em corredores ou portas para causar Ferimento Leve de Corte." },
+          { name: "Alertar", description: "Espalhado no chão, produz ruído metálico quando pisado e avisa sobre aproximações." }
+        ],
+        uses: { max: null, label: "Ilimitado, até ser cortado ou desmontado." }
+      },
+      {
+        id: "mapa",
+        name: "Mapa",
+        description: "Folha de papel ou plástico com anotações da região antes do colapso.",
+        effects: [
+          { name: "Orientação", description: "Concede Bônus em testes de Sobrevivência para navegação." },
+          { name: "Registro de Perigos", description: "Registra armadilhas, ninhos ou recursos encontrados e pode ser compartilhado com Aliados." },
+          { name: "Planejamento de Rotas", description: "Revela caminhos alternativos que não são óbvios a olho nu." }
+        ],
+        uses: { max: null, label: "Ilimitado, mas pode ser danificado por água, fogo ou rasgos." }
+      },
+      {
+        id: "giz",
+        name: "Giz",
+        description: "Varas de giz branco ou colorido.",
+        effects: [{ name: "Marcação", description: "Marca portas, paredes ou árvores para evitar se perder ou alertar outros sobre perigos; chuva apaga as marcas." }],
+        uses: { max: 20, unit: "Marcações", label: "20 marcações antes de acabar." }
+      }
+    ],
+
+    ammunitionRules: {
+      weaponSpecific: true,
+      consumePerAttack: 1,
+      looseUnitsPerInventorySlot: 6,
+      containersPerInventorySlot: 1,
+      initialLooseUnits: 4,
+      initialContainerFill: 0.5,
+      initialRule: "No início da vida, receba 1 Pente ou Tanque pela metade, ou 4 Balas ou Flechas.",
+      generalReloadAction: "Ação Principal",
+      loadedAmmunitionOccupiesInventory: false
+    },
+
+    ammunitionTypes: [
+      {
+        id: "balas",
+        name: "Balas",
+        storage: "loose",
+        description: "Unidades individuais carregadas uma a uma.",
+        compatibleWeapons: ["Revólver", "Fuzil de Precisão"],
+        maxPerInventorySlot: 6,
+        initialAmount: 4,
+        reload: "Com uma Ação Principal, recarregue até 4 Balas por Turno."
+      },
+      {
+        id: "cartuchos",
+        name: "Cartuchos",
+        storage: "loose",
+        description: "Cargas encapsuladas que alimentam a arma uma a uma.",
+        compatibleWeapons: ["Escopeta"],
+        maxPerInventorySlot: 6,
+        initialAmount: 4,
+        initialAmountInferredFromLooseAmmunitionRule: true,
+        reload: "Com uma Ação Principal, recarregue até 4 Cartuchos por Turno, seguindo a regra de Balas da Escopeta."
+      },
+      {
+        id: "pentes",
+        name: "Pentes",
+        storage: "container",
+        description: "Contêm múltiplas balas e podem ser inseridos rapidamente.",
+        compatibleWeapons: ["Pistola", "Submetralhadora", "Fuzil de Assalto"],
+        maxPerInventorySlot: 1,
+        initialFill: 0.5,
+        reload: "Insira um Pente cheio ou usado com uma Ação Secundária. Com uma Ação Principal, coloque até 4 Balas por Turno em um Pente vazio."
+      },
+      {
+        id: "flechas",
+        name: "Flechas",
+        storage: "loose",
+        description: "Unidades usadas uma a uma por Besta e Arco, sem Ação de recarga entre disparos.",
+        compatibleWeapons: ["Besta", "Arco e Flecha"],
+        maxPerInventorySlot: 6,
+        initialAmount: 4,
+        reload: "Não exige Ação de recarga; basta possuir Flechas no Inventário.",
+        recovery: "Ao matar um Alvo, role 1D6: com 1-3 a Flecha quebra; com 4-6 fica presa no Alvo e pode ser recuperada."
+      },
+      {
+        id: "combustivel",
+        name: "Combustível",
+        storage: "container",
+        description: "Tanque pequeno de gasolina trocado integralmente como um Pente.",
+        compatibleWeapons: ["Lança-Chamas", "Motosserra"],
+        maxPerInventorySlot: 1,
+        initialFill: 0.5,
+        reload: "Troque o Tanque integralmente com uma Ação Principal. Reabastecer recupera até 4 doses por Turno."
+      },
+      {
+        id: "cargas",
+        name: "Cargas",
+        storage: "crafted-item",
+        description: "Explosivos fabricados usados como munição pelo Lança-Granadas Improvisado.",
+        compatibleWeapons: ["Lança-Granadas Improvisado"],
+        maxLoaded: 1,
+        initialAmount: 0,
+        reload: "O Lança-Granadas comporta 1 Carga; inserir usa Ação Secundária e retirar sem disparar usa Reação.",
+        compatibleRecipes: ["Molotov", "Carga Explosiva", "Bomba de Estilhaços", "Bomba de Atordoamento", "Bomba de Fumaça", "Mina de Estilhaços"]
+      }
+    ],
+
     occupations: {
       "Estudioso": { powers:[
         {name:"Inteligência Expandida",description:"Ganhe +4 PP. Além disso, para cada Etapa na Trilha de Crescimento, receba +1 PP."},
@@ -85,6 +428,371 @@
       "Renegado":"Cães de Guerra", "Bélico":"Cães de Guerra", "Corredor":"Cães de Guerra", "Lutador":"Cães de Guerra",
       "Acadêmico":"Donos da Razão", "Cronista":"Donos da Razão", "Curandeiro":"Donos da Razão", "Fundador":"Donos da Razão",
       "Líder":"Línguas de Ferro", "Camaleão":"Línguas de Ferro", "Gótico":"Línguas de Ferro", "Áspide":"Línguas de Ferro"
+    },
+
+    reputationRules: {
+      initialParadigm: "Sobrevivente",
+      regional: true,
+      consistentAction: "Uma ação pública que confirma claramente o Paradigma concede Bônus ao teste relacionado.",
+      inconsistentAction: "Uma ação pública contrária ao comportamento esperado pelo Paradigma impõe Penalidade ao teste relacionado.",
+      change: "A Reputação muda apenas quando ações públicas consistentes formam um novo padrão ao longo do tempo.",
+      paths: {
+        "Sublime": "Inspiração, proteção, transformação, heroísmo ou justiça.",
+        "Síntese": "Ambiguidade, humanidade e sobrevivência sem glória.",
+        "Abissal": "Temor, ruptura, violência, colapso ou punição."
+      }
+    },
+
+    paradigms: [
+      {
+        id: "guardiao",
+        name: "Guardião",
+        path: "Sublime",
+        row: 0,
+        column: 0,
+        focus: "Estruturas sociais, grupos, territórios e instituições.",
+        description: "É visto como alguém que assume responsabilidade por algo além de si e funciona como uma barreira contra o fim. Comunidades esperam proteção e firmeza, mas também cobram cada falha.",
+        positive: "Acolhido por comunidades; visto como confiável, firme e necessário.",
+        negative: "Alvo de cobrança constante; pode ser chamado de controlador, autoritário ou opressor."
+      },
+      {
+        id: "justo",
+        name: "Justo",
+        path: "Sublime",
+        row: 0,
+        column: 1,
+        focus: "Convicções pessoais, ética e escolhas morais.",
+        description: "É visto como alguém que ainda acredita em ética, justiça e escolhas difíceis com peso moral. Sua postura inspira alguns e irrita aqueles que consideram seus ideais ingênuos.",
+        positive: "Respeitado moralmente; ganha confiança onde outros seriam recusados.",
+        negative: "Alvo de vigilância, inveja ou frustração; rejeitado por quem não suporta ideais."
+      },
+      {
+        id: "messias",
+        name: "Messias",
+        path: "Sublime",
+        row: 0,
+        column: 2,
+        focus: "Crenças, dogmas, ciclos e transformação profunda.",
+        description: "É visto como uma resposta extraordinária para o mundo. Pessoas passam a seguir seus atos e palavras, transformando sua imagem em esperança coletiva, tenha ele pedido isso ou não.",
+        positive: "Atrai seguidores, lealdade e admiração intensa.",
+        negative: "Atrai fanatismo, desconfiança institucional e perseguição religiosa ou política."
+      },
+      {
+        id: "peregrino",
+        name: "Peregrino",
+        path: "Síntese",
+        row: 1,
+        column: 0,
+        focus: "Estruturas sociais, grupos, territórios e instituições.",
+        description: "É visto como alguém que não pertence a lugar algum e carrega notícias, histórias, comércio e, às vezes, perigos. Sua liberdade intriga, mas sua passagem também desperta cautela.",
+        positive: "Acesso a múltiplas comunidades; facilidade para negociar e vender.",
+        negative: "Desconfiança crônica; dificuldade em formar laços profundos."
+      },
+      {
+        id: "sobrevivente",
+        name: "Sobrevivente",
+        path: "Síntese",
+        row: 1,
+        column: 1,
+        focus: "Sobrevivência, convicções internas e necessidades imediatas.",
+        description: "É visto como uma pessoa comum que faz o necessário para chegar ao próximo dia. Não é ameaça nem salvador, mas alguém que sabe quando lutar, correr ou se calar.",
+        positive: "Lido como um dos nossos por quase qualquer grupo; acesso simples e baixo risco de rejeição imediata.",
+        negative: "Dificuldade para inspirar alianças ou devoção."
+      },
+      {
+        id: "imperfeito",
+        name: "Imperfeito",
+        path: "Síntese",
+        row: 1,
+        column: 2,
+        focus: "Crenças, dogmas, ciclos e transformação profunda.",
+        description: "É visto como alguém que já escolheu entre o ruim e o pior e segue um código próprio. Age quando os outros hesitam, mas sua imprevisibilidade torna a confiança difícil.",
+        positive: "Atrai quem busca ação, pragmatismo e força moral própria.",
+        negative: "Visto como instável, perigoso ou antiético pelos mais idealistas."
+      },
+      {
+        id: "ceifador",
+        name: "Ceifador",
+        path: "Abissal",
+        row: 2,
+        column: 0,
+        focus: "Estruturas sociais, grupos, territórios e instituições.",
+        description: "É visto como alguém que escolhe matar rapidamente quando há conflito. Mesmo que considere a violência apenas o método mais simples ou eficaz, portas se fecham e o medo o acompanha.",
+        positive: "Intimidação natural; poucos ousam confrontar ou enganar você.",
+        negative: "Conflitos ao redor escalam rápido; pessoas reagem primeiro contra você, e rendições ou negociações ficam mais difíceis."
+      },
+      {
+        id: "mercenario",
+        name: "Mercenário",
+        path: "Abissal",
+        row: 2,
+        column: 1,
+        focus: "Sobrevivência, convicções internas e necessidades imediatas.",
+        description: "É visto como alguém cuja lealdade depende do preço do dia. Pode ter feito grandes coisas, mas ninguém sabe se voltará suas armas contra os mesmos aliados no próximo contrato.",
+        positive: "Alta eficácia e versatilidade; acesso fácil a trabalhos e círculos perigosos.",
+        negative: "Profundamente desconfiado; facções raramente entregam informações, autoridade ou posições sensíveis, e aliados esperam que sua lealdade tenha prazo ou preço."
+      },
+      {
+        id: "inquisidor",
+        name: "Inquisidor",
+        path: "Abissal",
+        row: 2,
+        column: 2,
+        focus: "Crenças, dogmas, ciclos e transformação profunda.",
+        description: "É visto como uma ferramenta de opressão que resolve problemas sem limites aceitáveis aos olhos dos outros. Aceita que inocentes sofram ou morram como preço para eliminar uma ameaça maior.",
+        positive: "Inspira obediência forçada; possui poder político ou militar.",
+        negative: "Sua presença gera resistência, revolta ou paranoia; grupos independentes e civis evitam colaborar enquanto estiver envolvido."
+      }
+    ],
+
+    growthTracks: {
+      rules: {
+        totalStages: 10,
+        advanceTrigger: "Ao final de um Arco da História, quando um grande problema é resolvido, um objetivo crucial é alcançado ou um evento significativo muda o rumo dos acontecimentos.",
+        accumulatedOriginPoints: true,
+        originPointSpending: "PO acumulados só podem ser gastos ao Crescer novamente ou em uma Cena de Recuperação sem gastar uma Ação significativa.",
+        foreignOriginCost: 1,
+        foreignInitialPowerAllowed: false,
+        postCompletionRewards: { originPoints: 2, skillPoints: 2 },
+        postCompletionRule: "Depois de alcançar a Etapa X, cada Arco concede +2 PO e +2 PP, sem novo avanço de etapa."
+      },
+      "Terra Viva": {
+        origins: ["Cultivador", "Andarilho", "Ith'Na", "Caçador"],
+        stages: [
+          {
+            stage: 1, roman: "I", name: "Solo Fértil",
+            rewards: { originPoints: 2, skillPoints: 2 },
+            effects: ["Gaste uma Cena de Recuperação para plantar e cuidar de uma pequena semente; no Ciclo seguinte, nascerão 2 Lanches prontos para consumo."]
+          },
+          {
+            stage: 2, roman: "II", name: "Improvisadamente Fatal",
+            rewards: { originPoints: 2, attributePoints: 1 },
+            effects: ["No último ataque antes de uma Arma Improvisada quebrar, cause +4 PF."]
+          },
+          {
+            stage: 3, roman: "III", name: "Primeiras Raízes",
+            rewards: { originPoints: 3 },
+            unlockOrigin: { scope: "same-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de seu Arquétipo."]
+          },
+          {
+            stage: 4, roman: "IV", name: "Conhecimento Animal",
+            rewards: { originPoints: 2, skillPoints: 2, attributePoints: 1 },
+            effects: ["Você pode rastrear qualquer Ameaça em Terreno Natural ou Selvagem sem precisar de testes."]
+          },
+          {
+            stage: 5, roman: "V", name: "Mostre-me, Mãe",
+            rewards: { originPoints: 2, attributePoints: 1 },
+            effects: ["Uma vez por Ciclo, foque na Voz da Mãe e pergunte algo sobre qualquer coisa; ela responderá de forma verdadeira."]
+          },
+          {
+            stage: 6, roman: "VI", name: "Raízes no Chão",
+            rewards: { originPoints: 3 },
+            unlockOrigin: { scope: "any-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de qualquer Arquétipo."]
+          },
+          {
+            stage: 7, roman: "VII", name: "Resiliência Ecológica",
+            rewards: { originPoints: 2, skillPoints: 2 },
+            effects: ["Você é imune a Condições de Terreno ou Ambiente."]
+          },
+          {
+            stage: 8, roman: "VIII", name: "Ritidoma",
+            rewards: { originPoints: 2, attributePoints: 1 },
+            effects: ["Você não recebe Condições provenientes de Ferimentos Leves ou Moderados."]
+          },
+          {
+            stage: 9, roman: "IX", name: "Raízes Profundas",
+            rewards: { originPoints: 3 },
+            unlockOrigin: { scope: "any-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de qualquer Arquétipo."]
+          },
+          {
+            stage: 10, roman: "X", name: "Parte do Mundo", recurring: true,
+            rewards: {},
+            effects: ["Ignore as Penalidades por fome, sede e sono nos primeiros 2 dias; a partir do terceiro, a contagem considera esse dia como o primeiro e segue normalmente."]
+          }
+        ]
+      },
+      "Cães de Guerra": {
+        origins: ["Renegado", "Bélico", "Corredor", "Lutador"],
+        stages: [
+          {
+            stage: 1, roman: "I", name: "Primeiro Impacto",
+            rewards: { originPoints: 2, skillPoints: 1, attributePoints: 1 },
+            effects: ["Ao Defender pela primeira vez em um Conflito, ignore todo o Ferimento e as Condições atreladas a ele."]
+          },
+          {
+            stage: 2, roman: "II", name: "Corpo em Carga",
+            rewards: { originPoints: 2, attributePoints: 1 },
+            effects: ["Você pode usar Força ou Destreza no lugar de Instinto para a Iniciativa."]
+          },
+          {
+            stage: 3, roman: "III", name: "Instinto de Confronto",
+            rewards: { originPoints: 3 },
+            unlockOrigin: { scope: "same-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de seu Arquétipo."]
+          },
+          {
+            stage: 4, roman: "IV", name: "É Só um Cortezinho",
+            rewards: { originPoints: 2, skillPoints: 2, attributePoints: 1 },
+            effects: ["Sofra Penalidades de apenas 1 Condição Tratada por vez, à sua escolha."]
+          },
+          {
+            stage: 5, roman: "V", name: "Empunhadura de Ferro",
+            rewards: { originPoints: 2, attributePoints: 1 },
+            effects: ["Reduza em 1 o NS de Recuo de qualquer Arma de Fogo."]
+          },
+          {
+            stage: 6, roman: "VI", name: "Pressão Constante",
+            rewards: { originPoints: 3 },
+            unlockOrigin: { scope: "any-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de qualquer Arquétipo."]
+          },
+          {
+            stage: 7, roman: "VII", name: "Corpo Esguio",
+            rewards: { originPoints: 2, skillPoints: 2, attributePoints: 1 },
+            effects: ["Ao ser atacado por qualquer Arma, o Atacante recebe uma Penalidade."]
+          },
+          {
+            stage: 8, roman: "VIII", name: "Força Bruta",
+            rewards: { originPoints: 2, attributePoints: 1 },
+            effects: ["Você não pode ser manobrado em Conflito."]
+          },
+          {
+            stage: 9, roman: "IX", name: "Não Para",
+            rewards: { originPoints: 3 },
+            unlockOrigin: { scope: "any-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de qualquer Arquétipo."]
+          },
+          {
+            stage: 10, roman: "X", name: "Máquina de Guerra", recurring: true,
+            rewards: {},
+            effects: ["No início de todo Conflito, recupere 3 PF."]
+          }
+        ]
+      },
+      "Donos da Razão": {
+        origins: ["Acadêmico", "Cronista", "Curandeiro", "Fundador"],
+        stages: [
+          {
+            stage: 1, roman: "I", name: "Leitura Inicial",
+            rewards: { originPoints: 3, attributePoints: 1 },
+            effects: ["No início de um Conflito, pergunte uma vez ao MP qual é o maior ou o menor Atributo de uma Ameaça visível."]
+          },
+          {
+            stage: 2, roman: "II", name: "Padrões",
+            rewards: { originPoints: 3, skillPoints: 2, attributePoints: 1 },
+            effects: ["Gaste sua Ação Secundária para analisar uma Ameaça; até o fim do Conflito, ganhe Bônus ao Reagir a ela."]
+          },
+          {
+            stage: 3, roman: "III", name: "Primeira Expansão",
+            rewards: { originPoints: 4 },
+            unlockOrigin: { scope: "any-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de qualquer Arquétipo."]
+          },
+          {
+            stage: 4, roman: "IV", name: "Decisão Calculada",
+            rewards: { originPoints: 3, skillPoints: 2 },
+            effects: ["Ao Apostar Estresse, sofra apenas 1 PE."]
+          },
+          {
+            stage: 5, roman: "V", name: "O Dobro do Uso",
+            rewards: { originPoints: 3, skillPoints: 1 },
+            effects: ["Ao ter 4/4 de um Recurso, ele pode ser utilizado duas vezes antes de ser consumido."]
+          },
+          {
+            stage: 6, roman: "VI", name: "Expansão de Conhecimento",
+            rewards: { originPoints: 4 },
+            unlockOrigin: { scope: "any-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de qualquer Arquétipo."]
+          },
+          {
+            stage: 7, roman: "VII", name: "Filho de Higeia",
+            rewards: { originPoints: 2, skillPoints: 2 },
+            effects: ["Kits Médicos fabricados por você têm o dobro de Carga e curam 2 PF adicionais."]
+          },
+          {
+            stage: 8, roman: "VIII", name: "Armeiro Experiente",
+            rewards: { originPoints: 2, skillPoints: 1, attributePoints: 1 },
+            effects: ["Modificações de Armas feitas por você custam metade das Partes."]
+          },
+          {
+            stage: 9, roman: "IX", name: "Domínio",
+            rewards: { originPoints: 4 },
+            unlockOrigin: { scope: "any-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de qualquer Arquétipo."]
+          },
+          {
+            stage: 10, roman: "X", name: "Controle Total", recurring: true,
+            rewards: {},
+            effects: ["Uma vez por Ciclo, escolha duas Perícias e troque entre elas os PP já distribuídos."]
+          }
+        ]
+      },
+      "Línguas de Ferro": {
+        origins: ["Líder", "Camaleão", "Gótico", "Áspide"],
+        stages: [
+          {
+            stage: 1, roman: "I", name: "Sustentando Laços",
+            rewards: { originPoints: 2, skillPoints: 2 },
+            effects: ["Ações positivas aumentam seu Relacionamento com qualquer PNJ com mais facilidade; ações negativas precisam ser mais consistentes para causar queda."]
+          },
+          {
+            stage: 2, roman: "II", name: "Frase Marcada",
+            rewards: { originPoints: 2, skillPoints: 2, attributePoints: 1 },
+            effects: ["Envie uma mensagem curta para qualquer pessoa que já conheceu; ela chega por boatos, sonhos ou coincidências em 1D4 dias."]
+          },
+          {
+            stage: 3, roman: "III", name: "Primeiro Ato",
+            rewards: { originPoints: 3 },
+            unlockOrigin: { scope: "same-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de seu Arquétipo."]
+          },
+          {
+            stage: 4, roman: "IV", name: "Me Deem Forças",
+            rewards: { originPoints: 2, skillPoints: 1 },
+            effects: ["Uma vez por Conflito, Aliados Próximos podem gastar uma Reação para conceder +1 NS ao resultado da sua rolagem."]
+          },
+          {
+            stage: 5, roman: "V", name: "Pressão Social",
+            rewards: { originPoints: 2, attributePoints: 1 },
+            effects: ["Ao rolar testes de Espírito, receba um Bônus para cada Aliado ao seu lado."]
+          },
+          {
+            stage: 6, roman: "VI", name: "Segundo Ato",
+            rewards: { originPoints: 3 },
+            unlockOrigin: { scope: "any-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de qualquer Arquétipo."]
+          },
+          {
+            stage: 7, roman: "VII", name: "Minha Fama te Persegue",
+            rewards: { originPoints: 2, skillPoints: 2 },
+            effects: ["Uma vez por Cena e enquanto estiver presente, transfira temporariamente sua Escala de Relacionamento com um PNJ para um Aliado. O efeito dura até ser revogado ou aplicado a outro Alvo e Aliado."]
+          },
+          {
+            stage: 8, roman: "VIII", name: "Presença Inquietante",
+            rewards: { originPoints: 2, attributePoints: 1 },
+            effects: ["Quando pessoas podem vê-lo e ouvi-lo, você pode impor Penalidade em seus testes de Espírito; se for Abissal, imponha uma Penalidade Extra."]
+          },
+          {
+            stage: 9, roman: "IX", name: "Terceiro Ato",
+            rewards: { originPoints: 3 },
+            unlockOrigin: { scope: "any-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de qualquer Arquétipo."]
+          },
+          {
+            stage: 10, roman: "X", name: "O Poder das Massas", recurring: true,
+            rewards: {},
+            effects: [
+              "Uma vez por Arco, convoque um favor baseado em sua Reputação.",
+              "Sublime: uma comunidade inteira fornece abrigo, comida e informações por um tempo.",
+              "Síntese: um grupo de conhecidos ou simpatizantes realiza uma tarefa para você.",
+              "Abissal: intimide uma facção para que entregue recursos ou recue de um território por alguns dias."
+            ]
+          }
+        ]
+      }
     },
 
     corruptionStages: [
@@ -1288,6 +1996,16 @@ Object.assign(window.ROOTS_DATA.origins,
       "description": "Ferimentos que derrubariam outras pessoas são apenas arranhões para os Rebeldes. Uma vez por Conflito, eles podem reduzir um Ferimento Grave / Moderado a um Ferimento Leve de mesmo tipo."
     },
     "powers": [
+      {
+        "cost": 3,
+        "name": "Banho De Sangue",
+        "description": "Em Conflito, após matar 2 Ameaças, ative Banho de Sangue. No seu próximo Turno, receba +2 Bônus em todos os Testes; sempre que um ataque seu causar Ferimento Grave, pode atacar o mesmo Alvo novamente; ignore todas as Condições que estejam afetando você; e, se matar uma Ameaça nesse estado, ganhe uma Ação Principal Extra. Após esse Turno, o efeito se encerra."
+      },
+      {
+        "cost": 3,
+        "name": "Carnificina",
+        "description": "Uma vez por Conflito, use uma Reação para contar todos os Ferimentos que já causou e sofreu no Conflito, sejam Leves, Moderados ou Graves. Receba Bônus em todos os testes para cada Ferimento. Com 4 ou mais Ferimentos causados e sofridos, ganhe também 1 Ação Principal Extra por Turno. O Bônus e a ação extra persistem até o fim do Conflito."
+      },
       {
         "cost": 3,
         "name": "Voz Da Resistência",

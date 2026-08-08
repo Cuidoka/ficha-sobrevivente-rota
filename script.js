@@ -2,9 +2,12 @@
   'use strict';
 
   var DATA = window.ROOTS_DATA;
+  var ENGINE = window.ROOTS_ENGINE;
+  if(!ENGINE){ throw new Error('ROOTS_ENGINE nao foi carregado.'); }
   if(!DATA){ throw new Error('ROOTS_DATA não foi carregado.'); }
 
-  var STORAGE_KEY = 'roots-survivor-state-v3';
+  var STORAGE_KEY = 'roots-survivor-state-v4';
+  var PREVIOUS_STORAGE_KEY = 'roots-survivor-state-v3';
   var LEGACY_STORAGE_KEY = 'survivor-sheet-state-v2';
   var LEGACY_NOTES_KEY = 'survivor-notes-state-v2';
   var saveTimer = null;
@@ -207,7 +210,7 @@
     var armor = {};
     DATA.armors.forEach(function(item){ armor[item.id] = { equipped:false, remaining:0 }; });
     return {
-      version:3,
+      version:4,
       updatedAt:null,
       fields:{
         registro:'', 'nome-sobrevivente':'', jogador:'', idade:'', sangue:'velho', 'genero-select':'masculino',
@@ -223,11 +226,19 @@
       originSkills:[],
       originPowers:[],
       health:{ pf:0, pe:0, permanentPf:0, permanentPe:0 },
+      critical:{ status:'stable', enteredAt:null, tolerance:'pending', stabilizationWindow:true, deathRound:0, deathRolls:[], finalWound:'', postRecoveryRounds:0 },
+      stress:{ breaking:false, lastDetermination:null, pendingDetermination:null, pendingCrisis:null, crises:[], recoveryLog:[] },
       pc:0,
       needs:{ hunger:0, thirst:0, sleep:0 },
       corruptionFilters:[],
       wounds:{},
       conditions:[],
+      clock:{ round:1, scene:1, cycle:1, conflict:1, session:1, arc:1, survivor:1 },
+      effects:[],
+      powerUsage:{},
+      growth:{ stage:0, claimedStages:[], originPoints:0, skillPoints:0, attributePoints:0, postCapArcs:0, unlockedOrigins:[], powerSelections:{} },
+      paradigmNotes:'',
+      log:[],
       relationships:[],
       characteristics:{ vantagens:['',''], desvantagens:[''], cicatrizes:[''] },
       pains:[{checked:false,text:''},{checked:false,text:''},{checked:false,text:''}],
@@ -239,7 +250,7 @@
       knownRecipes:[],
       allowCampaignRecipes:false,
       notes:defaultNotes(),
-      ui:{ activePage:'principal', lastRoll:null, filterMode:'', editingInventoryWeaponId:'' }
+      ui:{ activePage:'principal', lastRoll:null, filterMode:'', editingInventoryWeaponId:'', activeModal:'', itemCatalogFilter:'', selectedPowerKey:'', powerFeedback:'' }
     };
   }
 
@@ -251,7 +262,9 @@
     var base = defaultModel();
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
-      if(raw){ return normalizeModel(mergeModel(base, JSON.parse(raw))); }
+      if(raw){ return normalizeModel(JSON.parse(raw)); }
+      var previousRaw = localStorage.getItem(PREVIOUS_STORAGE_KEY);
+      if(previousRaw){ return normalizeModel(JSON.parse(previousRaw)); }
       var legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
       if(legacyRaw){ return normalizeModel(migrateLegacy(JSON.parse(legacyRaw), base)); }
       var notesRaw = localStorage.getItem(LEGACY_NOTES_KEY);
@@ -261,14 +274,31 @@
   }
 
   function normalizeModel(value){
+    var hadGrowth = !!(value && isObject(value.growth));
+    var legacyGrowthStage = clamp(value && value.fields && value.fields['growth-stage'],0,10);
     var base = mergeModel(defaultModel(), value || {});
-    base.version = 3;
+    base.version = 4;
     if(!Array.isArray(base.weapons)) base.weapons = [emptyWeapon(), emptyWeapon()];
     while(base.weapons.length < 2) base.weapons.push(emptyWeapon());
     if(!Array.isArray(base.inventory)) base.inventory = [];
     base.inventory = base.inventory.map(function(entry){
       if(entry && entry.kind === 'weapon' && entry.weapon) return {id:entry.id || uid('weapon-item'),kind:'weapon',weapon:mergeModel(emptyWeapon(),entry.weapon)};
-      return { id:entry && entry.id || uid('item'), kind:'item', name:String(entry && entry.name || ''), uses:String(entry && entry.uses || '') };
+      var legacyAmmo = DATA.ammunitionTypes && DATA.ammunitionTypes.filter(function(ammo){ return ENGINE.normalizeAmmoName(ammo.name) === ENGINE.normalizeAmmoName(entry && entry.name); })[0];
+      if(entry && (entry.kind === 'ammo' || legacyAmmo)){
+        var ammoId = String(entry.ammoId || entry.catalogId || legacyAmmo && legacyAmmo.id || '');
+        var ammoData = DATA.ammunitionTypes.filter(function(ammo){ return ammo.id === ammoId; })[0];
+        var legacyAmount = parseInt(entry.quantity != null ? entry.quantity : entry.uses,10) || 0;
+        return {
+          id:entry.id || uid('ammo'), kind:'ammo', catalogId:ammoId, ammoId:ammoId,
+          name:String(entry.name || ammoData && ammoData.name || ''), weaponId:String(entry.weaponId || ''),
+          quantity:Math.max(0,legacyAmount), charges:Math.max(0,parseInt(entry.charges,10) || (ammoData && ammoData.storage === 'container' ? legacyAmount : 0)),
+          capacity:Math.max(0,parseInt(entry.capacity,10) || 0), uses:''
+        };
+      }
+      return {
+        id:entry && entry.id || uid('item'), kind:'item', catalogId:String(entry && entry.catalogId || ''),
+        name:String(entry && entry.name || ''), uses:String(entry && entry.uses || ''), quantity:Math.max(0,parseInt(entry && entry.quantity,10) || 0)
+      };
     });
     if(!Array.isArray(base.originSkills)) base.originSkills = [];
     if(!Array.isArray(base.originPowers)) base.originPowers = [];
@@ -277,9 +307,64 @@
     base.conditions = base.conditions.map(function(condition){
       return String(condition && condition.name || condition || '').trim();
     }).filter(Boolean);
+    if(!isObject(base.clock)) base.clock = clone(defaultModel().clock);
+    ['round','scene','cycle','conflict','session','arc','survivor'].forEach(function(scope){ base.clock[scope] = Math.max(1,parseInt(base.clock[scope],10) || 1); });
+    base.effects = Array.isArray(base.effects) ? base.effects.filter(isObject).map(function(effect){
+      return {
+        id:String(effect.id || uid('effect')),
+        sourceKey:String(effect.sourceKey || effect.name || uid('effect-source')),
+        name:String(effect.name || 'Efeito temporário'),
+        bonus:Math.max(0,parseInt(effect.bonus,10) || 0),
+        expires:String(effect.expires || 'use'),
+        allTests:effect.allTests !== false,
+        attribute:String(effect.attribute || ''),
+        skill:String(effect.skill || '')
+      };
+    }) : [];
+    if(!isObject(base.powerUsage)) base.powerUsage = {};
+    Object.keys(base.powerUsage).forEach(function(key){
+      var usage = base.powerUsage[key];
+      if(!isObject(usage)){ delete base.powerUsage[key]; return; }
+      base.powerUsage[key] = {
+        count:Math.max(0,parseInt(usage.count,10) || 0),
+        scope:String(usage.scope || 'manual'),
+        lastUsed:String(usage.lastUsed || ''),
+        notes:String(usage.notes || '')
+      };
+    });
+    if(!isObject(base.critical)) base.critical = clone(defaultModel().critical);
+    if(['stable','dying','stabilized','dead'].indexOf(base.critical.status) < 0) base.critical.status = 'stable';
+    if(['pending','success','failure'].indexOf(base.critical.tolerance) < 0) base.critical.tolerance = 'pending';
+    base.critical.deathRound = Math.max(0,parseInt(base.critical.deathRound,10) || 0);
+    base.critical.deathRolls = Array.isArray(base.critical.deathRolls) ? base.critical.deathRolls : [];
+    base.critical.finalWound = String(base.critical.finalWound || '');
+    base.critical.postRecoveryRounds = Math.max(0,parseInt(base.critical.postRecoveryRounds,10) || 0);
+    if(!isObject(base.stress)) base.stress = clone(defaultModel().stress);
+    base.stress.breaking = !!base.stress.breaking;
+    if(base.stress.pendingDetermination && !isObject(base.stress.pendingDetermination)) base.stress.pendingDetermination = null;
+    if(base.stress.pendingCrisis && !isObject(base.stress.pendingCrisis)) base.stress.pendingCrisis = null;
+    base.stress.crises = Array.isArray(base.stress.crises) ? base.stress.crises : [];
+    base.stress.recoveryLog = Array.isArray(base.stress.recoveryLog) ? base.stress.recoveryLog : [];
+    if(!isObject(base.growth)) base.growth = clone(defaultModel().growth);
+    base.growth.stage = clamp(base.growth.stage || legacyGrowthStage,0,10);
+    if(!Array.isArray(base.growth.claimedStages)) base.growth.claimedStages = [];
+    if(!hadGrowth && legacyGrowthStage){
+      base.growth.claimedStages = Array.from({length:legacyGrowthStage},function(_,index){ return index+1; });
+    }
+    base.growth.claimedStages = base.growth.claimedStages.map(function(stage){ return clamp(stage,1,10); }).filter(function(stage,index,list){ return list.indexOf(stage) === index; }).sort(function(a,b){ return a-b; });
+    base.growth.postCapArcs = Math.max(0,parseInt(base.growth.postCapArcs,10) || 0);
+    base.growth.unlockedOrigins = Array.isArray(base.growth.unlockedOrigins) ? base.growth.unlockedOrigins.map(String) : [];
+    if(!isObject(base.growth.powerSelections)) base.growth.powerSelections = {};
+    Object.keys(base.growth.powerSelections).forEach(function(originName){
+      base.growth.powerSelections[originName] = Array.isArray(base.growth.powerSelections[originName]) ? base.growth.powerSelections[originName].map(String) : [];
+    });
+    base.fields['growth-stage'] = base.growth.stage;
+    base.paradigmNotes = String(base.paradigmNotes || '');
+    base.log = Array.isArray(base.log) ? base.log.slice(-100) : [];
     if(!base.needs) base.needs = {hunger:0,thirst:0,sleep:0};
+    var terraGrowthDelay = DATA.archetypes[base.fields['origem-select']] === 'Terra Viva' && base.growth.claimedStages.indexOf(10) >= 0 ? 2 : 0;
     Object.keys(NEED_RULES).forEach(function(key){
-      base.needs[key] = clamp(base.needs[key],0,NEED_RULES[key].max);
+      base.needs[key] = clamp(base.needs[key],0,NEED_RULES[key].max+terraGrowthDelay);
     });
     base.wounds = normalizeWounds(base.wounds);
     if(!Array.isArray(base.relationships)) base.relationships = [];
@@ -296,9 +381,13 @@
     base.corruptionFilters = base.corruptionFilters.filter(function(key){ return typeof key === 'string'; });
     if(!BODY_MAPS[base.fields['genero-select']]) base.fields['genero-select'] = 'masculino';
     delete base.rest;
-    if(!base.ui) base.ui = {activePage:'principal',lastRoll:null,filterMode:'',editingInventoryWeaponId:''};
+    if(!base.ui) base.ui = clone(defaultModel().ui);
     if(typeof base.ui.filterMode !== 'string') base.ui.filterMode = '';
     if(typeof base.ui.editingInventoryWeaponId !== 'string') base.ui.editingInventoryWeaponId = '';
+    if(typeof base.ui.activeModal !== 'string') base.ui.activeModal = '';
+    if(typeof base.ui.itemCatalogFilter !== 'string') base.ui.itemCatalogFilter = '';
+    if(typeof base.ui.selectedPowerKey !== 'string') base.ui.selectedPowerKey = '';
+    if(typeof base.ui.powerFeedback !== 'string') base.ui.powerFeedback = '';
     if(base.ui.editingInventoryWeaponId && !base.inventory.some(function(item){ return item.id === base.ui.editingInventoryWeaponId && item.kind === 'weapon'; })) base.ui.editingInventoryWeaponId = '';
     if(!base.notes || !Array.isArray(base.notes.notebooks) || !base.notes.notebooks.length) base.notes = defaultNotes();
     if(!base.notes.selectedNotebookId || !base.notes.notebooks.some(function(nb){ return nb.id === base.notes.selectedNotebookId; })){
@@ -331,12 +420,22 @@
       entries.forEach(function(detail){
         if(!detail || !Number(detail.severity)) return;
         if(!normalized[target]) normalized[target] = [];
+        var region = target === 'z-cabeca' ? 'Cabeça' : (target === 'z-tronco' ? 'Tronco' : (/braco/.test(target) ? 'Braços' : 'Pernas'));
+        var derivedRule = ENGINE.woundOutcome(DATA.woundTable,String(detail.type || ''),region,detail.severity);
         normalized[target].push({
           id:String(detail.id || uid('wound')),
           type:String(detail.type || ''),
           severity:clamp(detail.severity,1,3),
           note:String(detail.note || ''),
-          pf:Math.max(0,parseInt(detail.pf,10) || 0)
+          pf:Math.max(0,parseInt(detail.pf,10) || 0),
+          basePf:Math.max(0,parseInt(detail.basePf,10) || derivedRule.pf || 0),
+          condition:String(detail.condition != null ? detail.condition : derivedRule.condition || ''),
+          conditionApplied:detail.conditionApplied == null ? !!derivedRule.condition : !!detail.conditionApplied,
+          armorBlocked:!!(detail.armorBlocked || detail.conditionPrevented),
+          rulesApplied:detail.rulesApplied == null ? true : !!detail.rulesApplied,
+          conditionTicks:Math.max(0,parseInt(detail.conditionTicks,10) || 0),
+          tolerancePending:!!detail.tolerancePending,
+          toleranceResolved:!!detail.toleranceResolved
         });
       });
     });
@@ -415,10 +514,10 @@
   function buildTabs(){
     var sheet = $('#sheet');
     var footer = $('.footer', sheet);
-    var mainNodes = [$('.doc-header'), $$('.row-2')[0], $('.diagram-section'), $('#skills-grid').closest('.section'), $('#vantagens-list').closest('.section')];
-    var equipmentLegacy = $('#inv-grid').closest('.row-2');
-    var painSection = $('#dores-list').closest('.section');
-    var notesSection = $('#notes-canvas').closest('.section');
+    var mainNodes = [$('[data-section="main-header"]'), $('[data-section="core-stats"]'), $('[data-section="body-map"]'), $('[data-section="skills"]'), $('[data-section="characteristics"]')];
+    var equipmentLegacy = $('[data-section="legacy-equipment"]');
+    var painSection = $('[data-section="pains"]');
+    var notesSection = $('[data-section="notes"]');
     var nav = document.createElement('nav');
     nav.className = 'sheet-tabs no-print';
     nav.setAttribute('role','tablist');
@@ -448,6 +547,7 @@
     buildEquipmentPage(pages.equipamentos);
     buildHistoryPage(pages.historia);
     buildOriginPage(pages.origem);
+    buildAutomationModal();
     activatePage(model.ui.activePage || 'principal');
   }
 
@@ -542,14 +642,66 @@
       needsPanel.innerHTML = '<div class="needs-heading"><div><strong>Necessidades do Corpo</strong><span>1 CICLO = 24 CENAS</span></div><p>Sacie ao menos duas das três necessidades por Ciclo.</p></div>'+
         '<div class="needs-grid" id="needs-grid"></div><div class="needs-cycle-alert" id="needs-cycle-alert" aria-live="polite"></div>';
       resourcesList.insertBefore(needsPanel,criticalAlert);
+      var ruleTools = document.createElement('div');
+      ruleTools.className = 'health-rule-tools no-print';
+      ruleTools.innerHTML = '<button type="button" class="rule-tool-card" id="open-dying-panel"><span>PF</span><strong>Morrendo & Morte</strong><small id="dying-tool-status">Estado estável</small></button>'+
+        '<button type="button" class="rule-tool-card" id="open-stress-panel"><span>PE</span><strong>Determinação & Crises</strong><small id="stress-tool-status">Sem crise pendente</small></button>';
+      resourcesList.appendChild(ruleTools);
     }
+    var paradigmField = $('#reputacao-select') && $('#reputacao-select').closest('.meta-field');
+    if(paradigmField){
+      var paradigmSummary = document.createElement('div');
+      paradigmSummary.id = 'paradigm-summary';
+      paradigmSummary.className = 'paradigm-summary';
+      paradigmSummary.innerHTML = '<span>Selecione um Paradigma para ver seus efeitos.</span><button type="button" class="text-action" id="paradigm-info-button">Ver todos</button>';
+      paradigmField.appendChild(paradigmSummary);
+    }
+  }
+
+  function buildAutomationModal(){
+    if($('#rule-action-modal')) return;
+    var overlay = document.createElement('div');
+    overlay.id = 'rule-action-modal';
+    overlay.className = 'modal-overlay rule-action-overlay no-print';
+    overlay.style.display = 'none';
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-labelledby','rule-action-title');
+    overlay.innerHTML = '<div class="modal rule-action-dialog" tabindex="-1"><div class="modal-header"><span id="rule-action-title">Central de Regras</span><button type="button" class="modal-close" data-close-rule-modal aria-label="Fechar">×</button></div><div class="modal-body" id="rule-action-content"></div><div class="modal-footer"><button type="button" id="rule-action-close" data-close-rule-modal>Fechar</button></div></div>';
+    document.body.appendChild(overlay);
+  }
+
+  var lastModalFocus = null;
+  function openRuleModal(title, content, modalName){
+    var overlay = $('#rule-action-modal');
+    if(!overlay) return;
+    lastModalFocus = document.activeElement;
+    $('#rule-action-title').textContent = title;
+    $('#rule-action-content').innerHTML = content;
+    overlay.dataset.modalName = modalName || '';
+    overlay.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    model.ui.activeModal = modalName || '';
+    $('.rule-action-dialog',overlay).focus();
+  }
+
+  function closeRuleModal(){
+    var overlay = $('#rule-action-modal');
+    if(!overlay) return;
+    overlay.style.display = 'none';
+    overlay.dataset.modalName = '';
+    document.body.classList.remove('modal-open');
+    model.ui.activeModal = '';
+    if(lastModalFocus && typeof lastModalFocus.focus === 'function') lastModalFocus.focus();
+    lastModalFocus = null;
+    saveModel();
   }
 
   function buildEquipmentPage(page){
     page.innerHTML = pageHeading('Equipamentos','Carga, armas, proteção e fabricação em uma página própria.')+
       '<div class="row-2 equipment-top">'+
         '<div class="section"><div class="section-title">Inventário <span class="tag" id="inventory-capacity-tag">MÁX. = 2 + FÍSICO</span></div><div class="section-body">'+
-          '<div class="status-line"><span id="inventory-status"></span><span id="initial-items-status"></span></div>'+
+          '<div class="status-line"><span id="inventory-status"></span><span id="initial-items-status"></span></div><div class="catalog-launch"><button type="button" class="notes-btn" id="open-item-catalog">+ Catálogo de itens e munições</button><small>Itens oficiais entram com usos e regras preenchidos.</small></div>'+
           '<div class="inv-grid" id="inv-grid"></div><button type="button" class="add-inv-btn" id="add-inv-btn">+ Adicionar espaço sobrecarregado</button>'+
         '</div></div>'+
         '<div class="section"><div class="section-title">Espaços de Arma <span class="tag" id="weapon-slots-tag">2 EXCLUSIVOS</span></div><div class="section-body">'+
@@ -615,8 +767,13 @@
         '<div class="blood-path" id="new-blood-panel"><div class="subsection-heading">Flor da Corrupção</div><div id="flower-overview"></div><div class="flower-stages" id="flower-stages"></div></div>'+
         '<div class="blood-path" id="old-blood-panel"><div class="subsection-heading">Filtro Corruptivo</div>'+filterControls()+'<div id="corruption-filter-picker"></div><div id="filter-result" class="rule-preview" aria-live="polite"></div></div>'+
       '</div></div>'+
+      '<div class="section no-print"><div class="section-title">Central de Poderes <span class="tag">USOS E RECARGAS</span></div><div class="section-body power-center-launch">'+
+        '<div><strong id="power-center-status">Nenhum poder selecionado</strong><p>Registre usos de Ocupação, Origem e Flor sem perder limites por Cena, Ciclo, Conflito ou Sessão.</p></div>'+
+        '<button type="button" class="primary-action" id="open-power-center">Abrir Central</button><div class="scope-clock" id="scope-clock"></div>'+
+      '</div></div>'+
       '<div class="section"><div class="section-title">Crescimento <span class="tag">TRILHA I–X</span></div><div class="section-body growth-row">'+
-        '<label>Arquétipo<input id="growth-archetype" type="text" readonly></label><label>Etapa<select id="growth-stage"><option value="0">Ainda não iniciou</option>'+growthOptions()+'</select></label><div id="growth-summary" class="rule-preview"></div>'+
+        '<label>Arquétipo<input id="growth-archetype" type="text" readonly></label><label>Próxima etapa<select id="growth-stage"><option value="0">Ainda não iniciou</option>'+growthOptions()+'</select></label><div id="growth-summary" class="rule-preview"></div>'+
+        '<div class="growth-ledger" id="growth-ledger"></div><div class="growth-track-list" id="growth-track-list"></div><div class="post-growth-controls no-print"><button type="button" class="notes-btn" id="growth-future-arc">Registrar Arco após a etapa X</button><span id="growth-future-status"></span></div>'+
       '</div></div>';
   }
 
@@ -762,6 +919,18 @@
 
   function getOccupation(){ return DATA.occupations[model.fields['ocupacao-select']] || null; }
   function getOrigin(){ return DATA.origins[model.fields['origem-select']] || null; }
+  function currentGrowthTrack(){
+    var archetype = DATA.archetypes[model.fields['origem-select']] || '';
+    return DATA.growthTracks && DATA.growthTracks[archetype] || null;
+  }
+  function currentGrowthTotals(){
+    var totals = ENGINE.growthTotals(currentGrowthTrack(),model.growth.claimedStages,model.growth.postCapArcs);
+    model.growth.originPoints = totals.originPoints;
+    model.growth.skillPoints = totals.skillPoints;
+    model.growth.attributePoints = totals.attributePoints;
+    return totals;
+  }
+  function hasGrowthStage(stage){ return model.growth.claimedStages.indexOf(Number(stage)) >= 0; }
   function attributeBudget(values){
     values = values || model.attributes;
     var spent = 0, zeroCount = 0;
@@ -771,7 +940,7 @@
     });
     var occupation = getOccupation();
     var manual = parseInt(model.fields['attr-bonus-manual'] || 0,10) || 0;
-    var max = 8 + (zeroCount ? 2 : 0) + (occupation && occupation.attributeBonus || 0) + manual;
+    var max = 8 + (zeroCount ? 2 : 0) + (occupation && occupation.attributeBonus || 0) + currentGrowthTotals().attributePoints + manual;
     return { spent:spent, zeroCount:zeroCount, max:max, remaining:max-spent };
   }
 
@@ -815,12 +984,13 @@
     var bonus = bonusMap[intellect] || 0;
     var blockedBonus = blockedOriginCount() * 3;
     var growthBonus = model.fields['ocupacao-select'] === 'Estudioso' ? clamp(model.fields['growth-stage'],0,10) : 0;
-    var total = 28 + bonus + blockedBonus + (occupation && occupation.ppBonus || 0) + growthBonus + manual;
+    var trackGrowthBonus = currentGrowthTotals().skillPoints;
+    var total = 28 + bonus + blockedBonus + (occupation && occupation.ppBonus || 0) + growthBonus + trackGrowthBonus + manual;
     var spent = 0;
     Object.keys(model.skills).forEach(function(skill){
       if(model.originSkills.indexOf(skill) < 0 && !isSkillLocked(skill)) spent += Math.max(0, model.skills[skill] - 1);
     });
-    return { bonus:bonus, blockedBonus:blockedBonus, growthBonus:growthBonus, total:total, spent:spent, remaining:total-spent };
+    return { bonus:bonus, blockedBonus:blockedBonus, growthBonus:growthBonus + trackGrowthBonus, total:total, spent:spent, remaining:total-spent };
   }
 
   function renderSkills(){
@@ -857,11 +1027,139 @@
     group.innerHTML = pipButtons(max);
   }
 
+  function addTemporaryEffect(config){
+    config = config || {};
+    var sourceKey = String(config.sourceKey || config.name || uid('effect'));
+    model.effects = model.effects.filter(function(effect){ return effect.sourceKey !== sourceKey; });
+    model.effects.push({
+      id:uid('effect'),
+      sourceKey:sourceKey,
+      name:String(config.name || 'Efeito temporário'),
+      bonus:Math.max(0,parseInt(config.bonus,10) || 0),
+      expires:String(config.expires || 'use'),
+      allTests:config.allTests !== false,
+      attribute:String(config.attribute || ''),
+      skill:String(config.skill || '')
+    });
+  }
+
+  function effectMatchesRoll(effect, attribute, skill){
+    if(!effect || !(parseInt(effect.bonus,10) > 0)) return false;
+    if(effect.allTests) return true;
+    return (!effect.attribute || effect.attribute === attribute) && (!effect.skill || effect.skill === skill);
+  }
+
+  function activeRollEffects(attribute, skill){
+    return model.effects.filter(function(effect){ return effectMatchesRoll(effect,attribute,skill); });
+  }
+
+  function consumeNextTestEffects(attribute, skill){
+    model.effects = model.effects.filter(function(effect){
+      return !(effect.expires === 'use' && effectMatchesRoll(effect,attribute,skill));
+    });
+  }
+
   function applyMasochistRelief(pfReceived){
     if(model.fields['ocupacao-select'] !== 'Masoquista' || pfReceived <= 0) return;
     var reduction = Math.ceil(pfReceived / 2);
-    model.health.pe = Math.max(0,model.health.pe-reduction);
-    if(reduction >= 5 && !hasCondition('Florescer na Dor — Bônus')) addCondition('Florescer na Dor — Bônus');
+    changePE(-reduction,{source:'Florescer na Dor'});
+    if(reduction >= 5){
+      addTemporaryEffect({sourceKey:'occupation:masoquista:florescer-na-dor',name:'Florescer na Dor',bonus:1,expires:'scene',allTests:true});
+      addRuleLog('poder','Florescer na Dor concedeu Bônus até o fim da Cena.',{reducedPe:reduction});
+      renderPowerCenterStatus();
+    }
+  }
+
+  function addRuleLog(kind, message, detail){
+    model.log.push({id:uid('log'),kind:String(kind || 'regra'),message:String(message || ''),detail:detail || null,at:new Date().toISOString()});
+    if(model.log.length > 100) model.log = model.log.slice(-100);
+  }
+
+  function pfTotal(){ return model.health.pf + model.health.permanentPf; }
+  function peTotal(){ return model.health.pe + model.health.permanentPe; }
+
+  function reconcileCriticalState(previousTotal, context){
+    var limits = bloodLimits();
+    var total = pfTotal();
+    var stage = ENGINE.pfStage(total,limits.pf,limits.pfSegments);
+    if(stage.key === 'dead'){
+      if(model.critical.status !== 'dead'){
+        model.critical.status = 'dead';
+        model.critical.stabilizationWindow = false;
+        addRuleLog('morte','Morte Direta atingida.',{total:total,limit:limits.pf,source:context && context.source || 'ajuste'});
+      }
+      return stage;
+    }
+    if(stage.key === 'dying'){
+      if(model.critical.status === 'stable'){
+        model.critical.status = 'dying';
+        model.critical.enteredAt = new Date().toISOString();
+        model.critical.tolerance = 'pending';
+        model.critical.stabilizationWindow = true;
+        model.critical.deathRound = 0;
+        model.critical.deathRolls = [];
+        addRuleLog('morrendo','Entrou em Morrendo.',{total:total,limit:limits.pf,previous:previousTotal,source:context && context.source || 'ajuste'});
+      }
+      return stage;
+    }
+    if((model.critical.status === 'dying' || model.critical.status === 'stabilized') && total <= limits.pf){
+      model.critical.status = 'stable';
+      model.critical.stabilizationWindow = true;
+      model.critical.deathRound = 0;
+      addRuleLog('recuperacao','Saiu do estado de Morrendo.',{total:total,limit:limits.pf});
+    }
+    return stage;
+  }
+
+  function changePF(amount, context){
+    var previous = pfTotal();
+    var limits = bloodLimits();
+    var target = clamp(previous + (parseInt(amount,10) || 0),0,limits.pf+6);
+    model.health.pf = Math.max(0,target-model.health.permanentPf);
+    reconcileCriticalState(previous,context || {});
+    renderHealth();
+    saveModel();
+    return target-previous;
+  }
+
+  function stressState(){
+    var limits = bloodLimits();
+    return ENGINE.stressStage(peTotal(),limits.pe,limits.peSegments);
+  }
+
+  function changePE(amount, context){
+    var previous = peTotal();
+    var limits = bloodLimits();
+    var target = clamp(previous + (parseInt(amount,10) || 0),0,limits.pe);
+    model.health.pe = Math.max(0,target-model.health.permanentPe);
+    if(target >= limits.pe) model.stress.breaking = true;
+    else if(context && context.resolveBreaking) model.stress.breaking = false;
+    if(target !== previous && context && context.source) addRuleLog('estresse',(target > previous ? 'Recebeu ' : 'Reduziu ')+Math.abs(target-previous)+' PE.',{source:context.source,total:target});
+    renderHealth();
+    saveModel();
+    return target-previous;
+  }
+
+  function corruptionEffectActive(key){
+    var stage = currentCorruptionStage();
+    return stage.effects.some(function(effect){ return effect.key === key; }) && model.corruptionFilters.indexOf(key) < 0;
+  }
+
+  function applyStress(amount, context){
+    context = context || {};
+    amount = Math.max(0,parseInt(amount,10) || 0);
+    if(model.fields['ocupacao-select'] === 'Determinado' && (context.cause === 'ally-crisis' || context.cause === 'ally-wound' || context.cause === 'ally-breaking')) amount = 0;
+    if(model.fields['ocupacao-select'] === 'Verdugo' && context.cause === 'guilt') amount = 0;
+    if(amount > 0 && corruptionEffectActive('critica-colapso')) amount += 1;
+    var stateBefore = stressState();
+    var capped = ENGINE.capStressGain(amount,stateBefore,model.fields['ocupacao-select'] === 'Determinado' && context.determination);
+    var applied = capped.applied;
+    if(applied > 0) changePE(applied,{source:context.source || 'ganho de Estresse'});
+    model.stress.lastDetermination = context.determination ? {requested:amount,applied:applied,range:context.range || null,at:new Date().toISOString()} : model.stress.lastDetermination;
+    if(applied >= 4 || context.forceCrisis) triggerStressCrisis({source:context.source || 'ganho de Estresse',automatic:applied >= 4});
+    renderStressToolStatus();
+    saveModel();
+    return {requested:amount,applied:applied,prevented:capped.prevented,crisis:applied >= 4 || !!context.forceCrisis};
   }
 
   function renderHealth(){
@@ -869,19 +1167,19 @@
     model.health.permanentPf = clamp(model.health.permanentPf,0,limits.pf);
     model.health.permanentPe = clamp(model.health.permanentPe,0,limits.pe);
     model.health.pf = clamp(model.health.pf,0,limits.pf + 6 - model.health.permanentPf);
-    model.health.pe = clamp(model.health.pe,0,limits.pe + 1 - model.health.permanentPe);
+    model.health.pe = clamp(model.health.pe,0,limits.pe - model.health.permanentPe);
     var pfTotal = model.health.pf + model.health.permanentPf;
     var peTotal = model.health.pe + model.health.permanentPe;
     var pfGroup = $('#pf-boxes');
     var peGroup = $('#pe-boxes');
     buildTrackPips(pfGroup, limits.pf + 6);
-    buildTrackPips(peGroup, limits.pe + 1);
+    buildTrackPips(peGroup, limits.pe);
     var permanentPfFrom = model.health.permanentPf ? limits.pf - model.health.permanentPf + 1 : 0;
     var permanentPeFrom = model.health.permanentPe ? limits.pe - model.health.permanentPe + 1 : 0;
     renderPips(pfGroup,pfTotal,limits.pf+6,{ safeMax:limits.pf, stages:limits.pfSegments, separateOverflow:true, permanentFrom:permanentPfFrom, permanentTo:limits.pf });
-    renderPips(peGroup,peTotal,limits.pe+1,{ safeMax:limits.pe, stages:limits.peSegments, permanentFrom:permanentPeFrom, permanentTo:limits.pe });
+    renderPips(peGroup,peTotal,limits.pe,{ safeMax:limits.pe, stages:limits.peSegments, permanentFrom:permanentPeFrom, permanentTo:limits.pe });
     $('#pf-max-label').textContent = '/' + limits.pf + ' (+' + Math.max(0,pfTotal-limits.pf) + ')';
-    $('#pe-max-label').textContent = '/' + limits.pe + (peTotal > limits.pe ? ' (+1)' : '');
+    $('#pe-max-label').textContent = '/' + limits.pe;
     $('#pf-readout').childNodes[0].nodeValue = String(pfTotal).padStart(2,'0');
     $('#pe-readout').childNodes[0].nodeValue = String(peTotal).padStart(2,'0');
     $('#pf-permanent').max = limits.pf;
@@ -890,8 +1188,9 @@
     $('#pe-permanent').value = model.health.permanentPe;
     renderTrackZones('pf', limits.pfSegments, limits.pf);
     renderTrackZones('pe', limits.peSegments, limits.pe);
-    var pfStage = pfTotal === 0 ? 'Nenhum' : (pfTotal <= limits.pfSegments[0] ? 'Machucado' : (pfTotal <= limits.pfSegments[1] ? 'Ferido' : (pfTotal <= limits.pf ? 'Crítico' : (pfTotal <= limits.pf + 5 ? 'Morrendo' : 'Morte Direta'))));
-    var peStage = peTotal === 0 ? 'Nenhum' : (peTotal <= limits.peSegments[0] ? 'Estável' : (peTotal <= limits.peSegments[1] ? 'Instável' : (peTotal <= limits.pe ? 'Desequilibrado' : 'Enlouquecendo')));
+    var pfStageRule = ENGINE.pfStage(pfTotal,limits.pf,limits.pfSegments);
+    var pfStage = model.critical.status === 'stabilized' && pfStageRule.key === 'dying' ? 'Estabilizado' : pfStageRule.name;
+    var peStage = model.stress.breaking ? 'Enlouquecendo' : ENGINE.stressStage(peTotal,limits.pe,limits.peSegments).name;
     $('#pf-stage').textContent = 'Estágio atual: ' + pfStage;
     $('#pe-stage').textContent = 'Estágio atual: ' + peStage;
     $('#pf-stage').className = 'track-stage ' + (pfStage === 'Morte Direta' || pfStage === 'Morrendo' || pfStage === 'Crítico' ? 'stage-crit' : (pfStage === 'Machucado' || pfStage === 'Ferido' ? 'stage-warn' : 'stage-ok'));
@@ -903,16 +1202,181 @@
       if(pfStage === 'Morte Direta'){
         alertText = 'MORTE DIRETA — o total de PF atingiu 6 pontos além do limite. Aplique imediatamente a condição de morte prevista pela regra.';
         alertClass = 'death';
-      } else if(pfStage === 'Morrendo'){
+      } else if(pfStage === 'Morrendo' && model.critical.status === 'dying'){
         alertText = 'MORRENDO — o personagem ultrapassou o limite de PF e precisa ser estabilizado antes de alcançar Morte Direta.';
         alertClass = 'dying';
       } else if(peStage === 'Enlouquecendo'){
-        alertText = 'ENLOUQUECENDO — o personagem ultrapassou o limite de PE ('+(limits.pe + 1)+'+).';
+        alertText = 'ENLOUQUECENDO — o personagem atingiu o limite de PE ('+limits.pe+'). O controle passa ao MP até a resolução narrativa.';
         alertClass = 'insanity';
       }
       alertBox.textContent = alertText;
       alertBox.className = 'critical-state-alert' + (alertText ? ' '+alertClass : ' hidden');
     }
+    renderDyingToolStatus();
+    renderStressToolStatus();
+  }
+
+  function characterTest(attribute, skill, bonus){
+    var attributeValue = Math.max(0,Number(model.attributes[attribute]) || 0);
+    var skillValue = isSkillLocked(skill) ? 0 : (model.originSkills.indexOf(skill) >= 0 ? 5 : Number(model.skills[skill]) || 0);
+    var roll = ENGINE.rollPool(Math.max(0,attributeValue+(Number(bonus)||0)),skillValue);
+    roll.attribute = attribute;
+    roll.skill = skill;
+    roll.threshold = skillValue;
+    return roll;
+  }
+
+  function diceFaces(results, threshold){
+    return '<div class="dice-faces">'+(results || []).map(function(die){ return '<span class="die '+(die <= threshold ? 'success' : 'fail')+'">'+die+'</span>'; }).join('')+'</div>';
+  }
+
+  function renderDyingToolStatus(){
+    var status = $('#dying-tool-status');
+    if(!status) return;
+    var labels = {stable:'Estado estável',dying:'Morrendo · cuidado pendente',stabilized:'Estabilizado',dead:'Morte Direta'};
+    status.textContent = labels[model.critical.status] || labels.stable;
+    status.closest('.rule-tool-card').classList.toggle('critical',model.critical.status === 'dying' || model.critical.status === 'dead');
+  }
+
+  function dyingPanelHtml(){
+    var limits = bloodLimits();
+    var stage = ENGINE.pfStage(pfTotal(),limits.pf,limits.pfSegments);
+    var labels = {stable:'Estável',dying:'Morrendo',stabilized:'Estabilizado',dead:'Morte Direta'};
+    var toleranceText = model.critical.tolerance === 'success' ? 'Sucesso: consciente, apenas fala, rasteja e Ações Simples.' : (model.critical.tolerance === 'failure' ? 'Falha: Inconsciente até receber cuidado.' : 'Teste ainda não realizado.');
+    var deathLog = model.critical.deathRolls.length ? model.critical.deathRolls.map(function(test){
+      return '<li class="'+(test.dead ? 'danger-text' : '')+'"><b>Teste '+test.round+'</b><span>1D6 = '+test.roll+' · fatal em '+(test.round >= 6 ? 'qualquer resultado' : '1–'+test.threshold)+'</span></li>';
+    }).join('') : '<li class="empty-state">Nenhum Teste de Morte realizado.</li>';
+    var actions = '';
+    if(model.critical.status === 'dying'){
+      actions += '<section class="rule-step"><div><span>1</span><strong>Tolerância · NS Dilacerante</strong></div><p>'+toleranceText+'</p>'+
+        (model.critical.tolerance === 'pending' ? '<div class="inline-actions"><button type="button" class="notes-btn" id="dying-tolerance-roll">Rolar Físico + Tolerância</button><button type="button" class="notes-btn" data-dying-tolerance="success">Registrar sucesso</button><button type="button" class="notes-btn danger" data-dying-tolerance="failure">Registrar falha</button></div>' : '')+'</section>'+
+        '<section class="rule-step"><div><span>2</span><strong>Janela de salvamento</strong></div><p>'+(model.critical.stabilizationWindow ? 'Aliados têm esta Rodada/Cena para estabilizar condições contínuas e prestar cuidado.' : 'A janela encerrou; os Testes de Morte começaram.')+'</p><div class="inline-actions">'+
+        '<button type="button" class="notes-btn" id="dying-stabilize-roll">Rolar Intelecto + Medicina</button><button type="button" class="notes-btn" id="dying-stabilize-success">Registrar cuidado bem-sucedido</button>'+
+        (model.critical.stabilizationWindow ? '<button type="button" class="notes-btn danger" id="dying-end-window">Encerrar janela sem cuidado</button>' : '')+'</div></section>'+
+        '<section class="rule-step"><div><span>3</span><strong>Testes de Morte</strong></div><p>1D6; o valor fatal cresce a cada Rodada/Cena. No sexto teste, a morte é inevitável.</p><button type="button" class="primary-action" id="death-test-roll" '+(model.critical.stabilizationWindow ? 'disabled' : '')+'>Rolar próximo Teste de Morte</button><ol class="death-test-log">'+deathLog+'</ol></section>';
+    } else if(model.critical.status === 'stabilized'){
+      actions = '<section class="rule-step success-step"><strong>Estabilizado</strong><p>Os Testes de Morte foram encerrados. A estabilização recuperou exatamente 1 PF; continue o tratamento normalmente.</p></section>';
+    } else if(model.critical.status === 'dead'){
+      actions = '<section class="rule-step death-step"><strong>Morte Direta</strong><p>O total chegou a '+stage.overflow+' PF além do limite. Esse resultado usa a fórmula coerente do livro: limite +6.</p><button type="button" class="notes-btn danger" id="dying-correct-state">Corrigir marcação de PF e reavaliar estado</button></section><ol class="death-test-log">'+deathLog+'</ol>';
+    } else {
+      actions = '<section class="rule-step"><strong>Nenhum episódio ativo</strong><p>Morrendo começa em '+(limits.pf+1)+' PF e vai até '+(limits.pf+5)+'. Morte Direta começa em '+(limits.pf+6)+' PF.</p></section>';
+    }
+    return '<div class="rule-dashboard"><div class="rule-state-banner state-'+model.critical.status+'"><span>'+labels[model.critical.status]+'</span><strong>'+pfTotal()+'/'+limits.pf+' PF</strong></div>'+actions+
+      '<label class="rule-long-field">Ferida Final / consequência narrativa<textarea id="dying-final-wound" placeholder="Cicatriz, perda, limitação ou consequência definida com o MP...">'+escapeHtml(model.critical.finalWound)+'</textarea></label><p class="rule-footnote">A Ferida Final é narrativa. Condições que continuam causando PF devem ser estabilizadas antes da cura.</p></div>';
+  }
+
+  function openDyingPanel(){ openRuleModal('Morrendo & Testes de Morte',dyingPanelHtml(),'dying'); }
+  function refreshDyingPanel(){ if($('#rule-action-modal').dataset.modalName === 'dying') $('#rule-action-content').innerHTML = dyingPanelHtml(); }
+
+  function resolveDyingTolerance(success, roll){
+    model.critical.tolerance = success ? 'success' : 'failure';
+    if(!success && !hasCondition('Inconsciente')) model.conditions.push('Inconsciente');
+    addRuleLog('morrendo','Teste de Tolerância: '+(success ? 'sucesso' : 'falha')+'.',roll || null);
+    renderConditions();
+    renderHealth();
+    refreshDyingPanel();
+    saveModel();
+  }
+
+  function resolveStabilization(success, roll){
+    addRuleLog('morrendo','Estabilização: '+(success ? 'sucesso' : 'falha')+'.',roll || null);
+    if(success){
+      model.critical.status = 'stabilized';
+      model.critical.stabilizationWindow = false;
+      changePF(-1,{source:'estabilização'});
+    }
+    refreshDyingPanel();
+    saveModel();
+  }
+
+  function rollDeathTest(){
+    if(model.critical.status !== 'dying' || model.critical.stabilizationWindow) return;
+    var round = model.critical.deathRound + 1;
+    var roll = 1+Math.floor(Math.random()*6);
+    var result = ENGINE.deathTest(round,roll);
+    model.critical.deathRound = round;
+    model.critical.deathRolls.push({round:round,roll:roll,threshold:result.threshold,dead:result.dead,at:new Date().toISOString()});
+    if(result.dead) model.critical.status = 'dead';
+    addRuleLog('morte','Teste de Morte '+round+': '+roll+(result.dead ? ' · morte' : ' · sobreviveu')+'.',result);
+    renderHealth();
+    refreshDyingPanel();
+    saveModel();
+  }
+
+  var STRESS_RECOVERY = {
+    rest:{name:'Descanso',min:1,max:3}, conversation:{name:'Conversas',min:2,max:5}, hobby:{name:'Hobbies',min:1,max:4},
+    solitude:{name:'Solitude',min:1,max:5}, social:{name:'Momentos sociais',min:2,max:4}, beauty:{name:'Beleza no caos',min:2,max:4}, support:{name:'Apoio e companheirismo',min:1,max:3}
+  };
+
+  function renderStressToolStatus(){
+    var status = $('#stress-tool-status');
+    if(!status) return;
+    var state = model.stress.breaking ? {name:'Enlouquecendo'} : stressState();
+    status.textContent = state.name+(model.stress.pendingCrisis ? ' · crise registrada' : '');
+    status.closest('.rule-tool-card').classList.toggle('critical',model.stress.breaking || !!model.stress.pendingCrisis);
+  }
+
+  function determinationChoiceHtml(pending){
+    if(!pending) return '';
+    var range = pending.range;
+    if(range.undefinedByBook){
+      return '<div class="rule-result warning-step">'+diceFaces(pending.results,pending.threshold)+'<strong>'+pending.successes+' sucessos · '+range.deficit+' níveis abaixo</strong><p>O livro não define 4 ou mais níveis abaixo. O MP deve informar o ganho; use “Aplicar outro evento” abaixo.</p></div>';
+    }
+    var buttons = '';
+    for(var value=range.min;value<=range.max;value++) buttons += '<button type="button" class="notes-btn" data-determination-pe="'+value+'">'+value+' PE</button>';
+    return '<div class="rule-result">'+diceFaces(pending.results,pending.threshold)+'<strong>'+pending.successes+' sucessos · '+range.label+'</strong><p>O MP escolhe o valor exato dentro da faixa.</p><div class="inline-actions">'+buttons+'</div></div>';
+  }
+
+  function stressPanelHtml(){
+    var limits = bloodLimits();
+    var state = model.stress.breaking ? {key:'breaking',name:'Enlouquecendo',eventCap:Infinity} : stressState();
+    var crises = model.stress.crises.slice(-8).reverse().map(function(crisis){
+      return '<li><div><strong>'+escapeHtml(crisis.name)+'</strong><span>'+crisis.rolls.join(' + ')+' = '+crisis.sum+(crisis.shift ? ' · ajuste +'+crisis.shift : '')+' · resultado '+crisis.adjusted+'</span></div><small>'+escapeHtml(crisis.description)+'</small></li>';
+    }).join('') || '<li class="empty-state">Nenhuma Crise registrada.</li>';
+    var recoveryOptions = Object.keys(STRESS_RECOVERY).map(function(key){ var item=STRESS_RECOVERY[key]; return '<option value="'+key+'">'+item.name+' · '+item.min+'–'+item.max+' PE</option>'; }).join('');
+    var cap = state.eventCap === Infinity ? 'sem teto adicional' : 'máximo '+state.eventCap+' PE por evento';
+    return '<div class="rule-dashboard"><div class="rule-state-banner stress-'+state.key+'"><span>'+state.name+'</span><strong>'+peTotal()+'/'+limits.pe+' PE</strong><small>'+cap+'</small></div>'+
+      (model.stress.breaking ? '<section class="rule-step death-step"><strong>Surto em andamento</strong><p>O MP controla o personagem. Reduzir PE não encerra o estado sozinho.</p><button type="button" class="notes-btn" id="stress-resolve-breaking">O MP encerrou o surto</button></section>' : '')+
+      '<section class="rule-step"><div><span>1</span><strong>Rolagem de Determinação</strong></div><p>Role Espírito + Determinação contra o NS escolhido pelo MP.</p><div class="inline-form"><label>NS<select id="determination-target"><option value="1">Sofrido</option><option value="2">Gangrenado</option><option value="3" selected>Dilacerante</option><option value="4">Profano</option><option value="5">Absoluto</option></select></label><button type="button" class="primary-action" id="determination-roll">Rolar Determinação</button></div>'+determinationChoiceHtml(model.stress.pendingDetermination)+'</section>'+
+      '<section class="rule-step"><div><span>2</span><strong>Aplicar outro evento de Estresse</strong></div><div class="inline-form"><label>PE<input id="stress-manual-amount" type="number" min="0" max="9" value="1"></label><label>Causa<select id="stress-cause"><option value="other">Outro</option><option value="guilt">Culpa por ferir alguém</option><option value="ally-wound">Aliado ferido</option><option value="ally-crisis">Crise de um aliado</option><option value="ally-breaking">Aliado enlouquecendo</option></select></label><button type="button" class="notes-btn" id="stress-manual-apply">Aplicar</button><button type="button" class="notes-btn danger" id="stress-crisis-manual">Disparar Crise sem PE</button></div><p class="rule-footnote">Ganhos de 4+ PE disparam Crise automaticamente. Determinado e Verdugo aplicam suas imunidades conforme a causa.</p></section>'+
+      '<section class="rule-step"><div><span>3</span><strong>Recuperação</strong></div><p>Uma Recuperação oferece duas Ações e não permite repetir o mesmo benefício.</p><div class="inline-form"><label>Método<select id="stress-recovery-method">'+recoveryOptions+'</select></label><label>PE a reduzir<input id="stress-recovery-amount" type="number" min="1" max="5" value="1"></label><button type="button" class="notes-btn" id="stress-recovery-apply">Recuperar</button></div></section>'+
+      '<section class="rule-step"><div><strong>Histórico de Crises</strong><button type="button" class="text-action" id="stress-acknowledge-crisis">Limpar aviso</button></div><ul class="crisis-log">'+crises+'</ul></section></div>';
+  }
+
+  function openStressPanel(){ openRuleModal('Determinação, Estresse & Crises',stressPanelHtml(),'stress'); }
+  function refreshStressPanel(){ if($('#rule-action-modal').dataset.modalName === 'stress') $('#rule-action-content').innerHTML = stressPanelHtml(); }
+
+  function recordCrisisPain(name){
+    var slot = model.pains.filter(function(pain){ return !pain.checked; })[0];
+    if(slot){ slot.checked = true; if(!slot.text) slot.text = 'Crise de Estresse — '+name; }
+  }
+
+  function triggerStressCrisis(context){
+    context = context || {};
+    var diceCount = model.fields['ocupacao-select'] === 'Determinado' ? 5 : 3;
+    var rolls = ENGINE.rollPool(diceCount,6).results;
+    var sum = rolls.reduce(function(total,die){ return total+die; },0);
+    var outcome = ENGINE.crisisOutcome(sum,stressState());
+    var crisis = {id:uid('crisis'),rolls:rolls,sum:sum,shift:outcome.shift,adjusted:outcome.adjusted,name:outcome.name,condition:outcome.condition,description:outcome.description,source:context.source || '',at:new Date().toISOString()};
+    model.stress.crises.push(crisis);
+    model.stress.pendingCrisis = crisis;
+    if(outcome.condition && !hasCondition(outcome.condition)) model.conditions.push(outcome.condition);
+    recordCrisisPain(outcome.name);
+    addRuleLog('crise','Crise de Estresse: '+outcome.name+'.',crisis);
+    renderConditions();
+    renderPains();
+    renderStressToolStatus();
+    saveModel();
+    return crisis;
+  }
+
+  function rollDetermination(){
+    var target = clamp($('#determination-target').value,1,5);
+    var roll = characterTest('Espírito','Determinação',0);
+    model.stress.pendingDetermination = {target:target,successes:roll.successes,results:roll.results,threshold:roll.threshold,range:ENGINE.determinationRange(roll.successes,target),at:new Date().toISOString()};
+    addRuleLog('determinacao','Rolagem de Determinação: '+roll.successes+' sucessos contra NS '+target+'.',model.stress.pendingDetermination);
+    refreshStressPanel();
+    saveModel();
   }
 
   function renderNeeds(){
@@ -920,14 +1384,17 @@
     if(!grid) return;
     grid.innerHTML = ['hunger','sleep','thirst'].map(function(key){
       var rule = NEED_RULES[key];
-      var value = clamp(model.needs[key],0,rule.max);
-      var current = rule.levels[value];
+      var delayed = DATA.archetypes[model.fields['origem-select']] === 'Terra Viva' && hasGrowthStage(10);
+      var max = rule.max + (delayed ? 2 : 0);
+      var value = clamp(model.needs[key],0,max);
+      var effectiveValue = delayed ? Math.max(0,value-2) : value;
+      var current = rule.levels[effectiveValue];
       var segments = '';
-      for(var level=1;level<=rule.max;level++){
+      for(var level=1;level<=max;level++){
         segments += '<button type="button" class="need-segment '+(level <= value ? 'filled' : '')+' '+(level === value ? 'current' : '')+'" data-need-key="'+key+'" data-need-value="'+level+'" aria-label="'+escapeHtml(rule.label)+' — '+level+'º dia" aria-pressed="'+(level <= value ? 'true' : 'false')+'"><span>'+level+'</span></button>';
       }
-      return '<article class="need-card need-'+key+' '+(value ? 'active' : 'satisfied')+(value === rule.max ? ' critical' : '')+'">'+
-        '<div class="need-card-header"><strong>'+rule.label+'</strong><span>'+current.name+'</span></div>'+
+      return '<article class="need-card need-'+key+' '+(value ? 'active' : 'satisfied')+(value === max ? ' critical' : '')+'">'+
+        '<div class="need-card-header"><strong>'+rule.label+'</strong><span>'+current.name+(delayed && value ? ' · Ritidoma' : '')+'</span></div>'+
         '<div class="need-bar" role="group" aria-label="Dias sem '+rule.label.toLowerCase()+'">'+segments+'</div>'+
         '<p>'+current.effect+'</p><button type="button" class="need-reset" data-need-reset="'+key+'" '+(value ? '' : 'disabled')+'>'+rule.action+' · atender necessidade</button>'+
         '</article>';
@@ -959,7 +1426,7 @@
       previous = end;
     });
     if(type === 'pf') text.textContent = 'Base ' + max + ' · Morrendo até +' + 5 + ' · Morte Direta em +' + 6;
-    else text.textContent = 'Limite ' + max + ' · Enlouquecendo ao ultrapassar · pontos permanentes ocupam o fim da barra';
+    else text.textContent = 'Limite ' + max + ' · Enlouquecendo ao atingir · pontos permanentes ocupam o fim da barra';
   }
 
   function currentCorruptionStage(){
@@ -994,6 +1461,37 @@
     $('#old-blood-panel').classList.toggle('hidden', isNew);
   }
 
+  function extraOriginPowerCost(originName,power){
+    var initialArchetype = DATA.archetypes[model.fields['origem-select']] || '';
+    return Number(power.cost || 0) + (DATA.archetypes[originName] !== initialArchetype ? Number(DATA.growthTracks.rules.foreignOriginCost || 1) : 0);
+  }
+
+  function originPowerSpent(){
+    var origin = getOrigin();
+    var spent = origin ? origin.powers.reduce(function(sum,power){ return sum + (model.originPowers.indexOf(power.name) >= 0 ? power.cost : 0); },0) : 0;
+    model.growth.unlockedOrigins.forEach(function(originName){
+      var extraOrigin = DATA.origins[originName];
+      if(!extraOrigin) return;
+      var selected = model.growth.powerSelections[originName] || [];
+      extraOrigin.powers.forEach(function(power){ if(selected.indexOf(power.name) >= 0) spent += extraOriginPowerCost(originName,power); });
+    });
+    return spent;
+  }
+
+  function renderUnlockedOriginPowers(){
+    if(!model.growth.unlockedOrigins.length) return '';
+    return '<div class="unlocked-origin-powers"><div class="subsection-heading">Origens liberadas pelo Crescimento</div>'+model.growth.unlockedOrigins.map(function(originName){
+      var origin = DATA.origins[originName];
+      if(!origin) return '';
+      var selected = model.growth.powerSelections[originName] || [];
+      return '<details class="unlocked-origin"><summary><strong>'+escapeHtml(originName)+'</strong><span>'+escapeHtml(DATA.archetypes[originName] || '')+' · Poder Inicial não comprável</span></summary><div class="power-list">'+origin.powers.map(function(power){
+        var checked = selected.indexOf(power.name) >= 0;
+        var cost = extraOriginPowerCost(originName,power);
+        return '<label class="power-card selectable '+(checked ? 'selected' : '')+'"><input type="checkbox" class="growth-origin-power-check" data-growth-origin="'+escapeHtml(originName)+'" data-power="'+escapeHtml(power.name)+'" '+(checked ? 'checked' : '')+'><span class="power-cost">'+cost+' PO</span><h3>'+escapeHtml(power.name)+'</h3><p>'+escapeHtml(power.description)+'</p></label>';
+      }).join('')+'</div></details>';
+    }).join('')+'</div>';
+  }
+
   function renderOrigin(){
     var originName = model.fields['origem-select'];
     var origin = DATA.origins[originName];
@@ -1012,13 +1510,13 @@
     $('#origin-overview').innerHTML = '<div class="origin-summary-line"><strong>'+originName+'</strong><span>'+origin.weapon+'</span><span>'+origin.skills.join(' · ')+'</span></div>'+
       '<article class="power-card initial-power"><span class="power-cost">GRÁTIS</span><h3>'+escapeHtml(initial.name)+'</h3><p>'+escapeHtml(initial.description)+'</p></article>';
     var occupation = getOccupation();
-    var total = 7 + (occupation && occupation.originPointsBonus || 0);
-    var spent = origin.powers.reduce(function(sum,power){ return sum + (model.originPowers.indexOf(power.name) >= 0 ? power.cost : 0); },0);
+    var total = 7 + (occupation && occupation.originPointsBonus || 0) + currentGrowthTotals().originPoints;
+    var spent = originPowerSpent();
     $('#origin-budget').innerHTML = '<span>Total <b>'+total+' PO</b></span><span>Gasto <b>'+spent+'</b></span><span class="'+(spent === total ? 'budget-ok' : (spent > total ? 'over' : ''))+'">Restante <b>'+(total-spent)+'</b></span>';
     $('#origin-power-list').innerHTML = origin.powers.map(function(power){
       var checked = model.originPowers.indexOf(power.name) >= 0;
       return '<label class="power-card selectable '+(checked ? 'selected' : '')+'"><input type="checkbox" class="origin-power-check" data-power="'+escapeHtml(power.name)+'" '+(checked ? 'checked' : '')+'><span class="power-cost">'+power.cost+' PO</span><h3>'+escapeHtml(power.name)+'</h3><p>'+escapeHtml(power.description)+'</p></label>';
-    }).join('');
+    }).join('')+renderUnlockedOriginPowers();
     renderGrowth();
   }
 
@@ -1080,7 +1578,7 @@
       'Abissal':['Ceifador','Mercenário','Inquisidor']
     };
     $$('#reputacao-select option').forEach(function(option){
-      option.disabled = !!requiredGroup && !!option.value && allowed[requiredGroup].indexOf(option.value) < 0;
+      option.disabled = !!requiredGroup && !!option.value && !!allowed[requiredGroup] && allowed[requiredGroup].indexOf(option.value) < 0;
     });
     renderParadigmStyle();
   }
@@ -1101,7 +1599,23 @@
     $$('#paradigm-legend [data-paradigm-group]').forEach(function(label){
       label.classList.toggle('active',label.dataset.paradigmGroup === group);
     });
+    var summary=$('#paradigm-summary');
+    if(summary){
+      var selectedName=select.value||model.fields['reputacao-select'];
+      var paradigm=(DATA.paradigms||[]).filter(function(item){return item.name===selectedName;})[0];
+      summary.innerHTML=paradigm?'<span><b>'+escapeHtml(paradigm.path)+' · '+escapeHtml(paradigm.name)+'</b>'+escapeHtml(paradigm.positive)+'</span><button type="button" class="text-action" id="paradigm-info-button">Ver efeitos</button>':'<span>Selecione um Paradigma para ver seus efeitos.</span><button type="button" class="text-action" id="paradigm-info-button">Ver todos</button>';
+    }
   }
+
+  function paradigmMatrixHtml(){
+    var selected=model.fields['reputacao-select'];
+    var rules=DATA.reputationRules||{};
+    var paths=['Sublime','Síntese','Abissal'];
+    return '<div class="rule-dashboard paradigm-reference"><section class="rule-step"><strong>Como a Reputação funciona</strong><ul><li>'+escapeHtml(rules.consistentAction||'')+'</li><li>'+escapeHtml(rules.inconsistentAction||'')+'</li><li>'+escapeHtml(rules.change||'')+'</li></ul><p class="rule-footnote">A Reputação é regional e não possui pontuação numérica no livro.</p></section><div class="paradigm-matrix">'+paths.map(function(path){
+      return '<section class="paradigm-path paradigm-'+paradigmGroup(path==='Sublime'?'Guardião':path==='Síntese'?'Sobrevivente':'Ceifador')+'"><div class="subsection-heading">'+path+'</div>'+(DATA.paradigms||[]).filter(function(item){return item.path===path;}).map(function(item){return '<article class="paradigm-card '+(item.name===selected?'selected':'')+'"><div><strong>'+escapeHtml(item.name)+'</strong><span>'+escapeHtml(item.focus)+'</span></div><p>'+escapeHtml(item.description)+'</p><dl><dt>Favorece</dt><dd>'+escapeHtml(item.positive)+'</dd><dt>Cobra</dt><dd>'+escapeHtml(item.negative)+'</dd></dl></article>';}).join('')+'</section>';
+    }).join('')+'</div></div>';
+  }
+  function openParadigmMatrix(){openRuleModal('Paradigmas & Reputação',paradigmMatrixHtml(),'paradigms');}
 
   function applyOccupation(name){
     model.fields['ocupacao-select'] = name;
@@ -1179,47 +1693,374 @@
     saveModel();
   }
 
+  function effectiveFlowerIndex(){
+    var stage = currentCorruptionStage();
+    var currentIndex = Math.min(4,DATA.corruptionStages.indexOf(stage));
+    return model.fields['ocupacao-select'] === 'Devoto' ? Math.min(4,currentIndex+1) : currentIndex;
+  }
+
+  function powerUsageState(key, scope){
+    if(!model.powerUsage[key]) model.powerUsage[key] = {count:0,scope:scope || 'manual',lastUsed:'',notes:''};
+    if(scope) model.powerUsage[key].scope = scope;
+    return model.powerUsage[key];
+  }
+
+  function markPowerUsed(key, scope){
+    var usage = powerUsageState(key,scope);
+    usage.count += 1;
+    usage.lastUsed = new Date().toISOString();
+    return usage;
+  }
+
+  function powerLimit(description){
+    var match = String(description || '').match(/(?:m[aá]ximo(?: de)?|at[eé])\s+(\d+)/i);
+    return match ? Math.max(1,parseInt(match[1],10) || 1) : 1;
+  }
+
+  function detectedPowerCosts(description){
+    var costs = {pf:0,pe:0,pc:0,permanentPf:0,permanentPe:0};
+    var text = String(description || '');
+    var pattern = /(?:gaste|sofra|sofre|sofrendo|receba|recebe|recebendo|aceite|perca|perde|perdendo)\s*\+?(\d+)\s*(PF|PE|PC)(?:'s)?(?:\s+permanentes?)?/gi;
+    var match;
+    while((match = pattern.exec(text))){
+      var value = parseInt(match[1],10) || 0;
+      var resource = match[2].toUpperCase();
+      var permanent = /permanente/i.test(match[0]);
+      if(resource === 'PF') costs[permanent ? 'permanentPf' : 'pf'] += value;
+      if(resource === 'PE') costs[permanent ? 'permanentPe' : 'pe'] += value;
+      if(resource === 'PC') costs.pc += value;
+    }
+    var pairedPattern = /(?:gaste|sofra|sofre|sofrendo|receba|recebe|recebendo|aceite|perca|perde|perdendo)\s*\+?\d+\s*(?:PF|PE|PC)(?:'s)?(?:\s+permanentes?)?\s+e\s+\+?(\d+)\s*(PF|PE|PC)(?:'s)?(?:\s+permanentes?)?/gi;
+    while((match = pairedPattern.exec(text))){
+      var pairedValue = parseInt(match[1],10) || 0;
+      var pairedResource = match[2].toUpperCase();
+      var pairedPermanent = new RegExp(match[2]+"(?:'s)?\\s+permanente",'i').test(match[0].slice(match[0].lastIndexOf(match[2])));
+      if(pairedResource === 'PF') costs[pairedPermanent ? 'permanentPf' : 'pf'] += pairedValue;
+      if(pairedResource === 'PE') costs[pairedPermanent ? 'permanentPe' : 'pe'] += pairedValue;
+      if(pairedResource === 'PC') costs.pc += pairedValue;
+    }
+    var actionCostPattern = /(?:gaste|gastando)[^.]{0,80}a[cç][oõ]es\s+e\s+\+?(\d+)\s*(PF|PE|PC)(?:'s)?(?:\s+permanentes?)?/gi;
+    while((match = actionCostPattern.exec(text))){
+      var actionValue = parseInt(match[1],10) || 0;
+      var actionResource = match[2].toUpperCase();
+      var actionPermanent = /permanente/i.test(match[0]);
+      if(actionResource === 'PF') costs[actionPermanent ? 'permanentPf' : 'pf'] += actionValue;
+      if(actionResource === 'PE') costs[actionPermanent ? 'permanentPe' : 'pe'] += actionValue;
+      if(actionResource === 'PC') costs.pc += actionValue;
+    }
+    return costs;
+  }
+
+  function hasDetectedCost(costs){ return Object.keys(costs).some(function(key){ return costs[key] > 0; }); }
+
+  function activePowerList(){
+    var list = [];
+    var occupationName = model.fields['ocupacao-select'];
+    var occupation = getOccupation();
+    if(occupation){
+      occupation.powers.forEach(function(power){
+        var item = typeof power === 'string' ? {name:power,description:''} : power;
+        list.push({key:ENGINE.powerKey('occupation',occupationName,item.name),sourceType:'Ocupação',sourceName:occupationName,name:item.name,description:item.description || ''});
+      });
+    }
+    var originName = model.fields['origem-select'];
+    var origin = getOrigin();
+    if(origin){
+      var initial = origin.initial || {name:'Poder Inicial',description:''};
+      list.push({key:ENGINE.powerKey('origin',originName,initial.name),sourceType:'Origem · Inicial',sourceName:originName,name:initial.name,description:initial.description || ''});
+      origin.powers.filter(function(power){ return model.originPowers.indexOf(power.name) >= 0; }).forEach(function(power){
+        list.push({key:ENGINE.powerKey('origin',originName,power.name),sourceType:'Origem',sourceName:originName,name:power.name,description:power.description || ''});
+      });
+    }
+    model.growth.unlockedOrigins.forEach(function(extraOriginName){
+      var extraOrigin = DATA.origins[extraOriginName];
+      var selected = model.growth.powerSelections[extraOriginName] || [];
+      if(!extraOrigin) return;
+      extraOrigin.powers.filter(function(power){ return selected.indexOf(power.name) >= 0; }).forEach(function(power){
+        list.push({key:ENGINE.powerKey('growth-origin',extraOriginName,power.name),sourceType:'Origem',sourceName:extraOriginName,name:power.name,description:power.description || ''});
+      });
+    });
+    var flowerName = model.fields['flor-select'];
+    var flower = DATA.flowers[flowerName];
+    if(model.fields.sangue === 'novo' && flower){
+      var effectiveIndex = effectiveFlowerIndex();
+      flower.stages.forEach(function(stage,index){
+        if(index > effectiveIndex) return;
+        list.push({key:ENGINE.powerKey('flower',flowerName,stage.name),sourceType:'Flor · '+stage.stage,sourceName:flowerName,name:stage.name,description:stage.description || ''});
+      });
+    }
+    var track = currentGrowthTrack();
+    if(track){
+      track.stages.forEach(function(stage){
+        if(!hasGrowthStage(stage.stage)) return;
+        (stage.effects || []).forEach(function(effect,index){
+          list.push({key:ENGINE.powerKey('growth',DATA.archetypes[originName],stage.name+'-'+index),sourceType:'Crescimento · '+stage.roman,sourceName:stage.name,name:stage.name,description:effect});
+        });
+      });
+    }
+    return list.map(function(power){
+      power.scope = ENGINE.usageScope(power.description);
+      power.limit = power.scope.key === 'manual' ? Infinity : powerLimit(power.description);
+      power.costs = detectedPowerCosts(power.description);
+      return power;
+    });
+  }
+
+  function renderScopeClock(){
+    var clock = $('#scope-clock');
+    if(!clock) return;
+    var labels = {round:'Rodada/Cena clínica',scene:'Cena',conflict:'Conflito',cycle:'Ciclo',session:'Sessão',arc:'Arco',survivor:'Sobrevivente'};
+    clock.innerHTML = Object.keys(labels).map(function(scope){ return '<button type="button" class="scope-clock-button" data-advance-scope="'+scope+'"><span>'+labels[scope]+'</span><b>'+model.clock[scope]+'</b><small>avançar</small></button>'; }).join('');
+  }
+
+  function powerCenterHtml(){
+    var powers = activePowerList();
+    var groups = ['Ocupação','Origem · Inicial','Origem','Flor','Crescimento'];
+    if(!powers.length) return '<p class="empty-state">Selecione Ocupação, Origem e, se for Sangue Novo, uma Flor.</p>';
+    var expiryLabels = {use:'próximo teste',round:'fim da Rodada',scene:'fim da Cena',conflict:'fim do Conflito',cycle:'fim do Ciclo',session:'fim da Sessão',arc:'fim do Arco',survivor:'troca de Sobrevivente'};
+    var effects = model.effects.length ? '<section class="power-source-group active-effects"><div class="subsection-heading">Efeitos temporários</div>'+model.effects.map(function(effect){
+      return '<article class="power-use-card effect-card"><div class="power-use-heading"><div><span>Bônus ativo</span><strong>'+escapeHtml(effect.name)+'</strong></div><b>+'+effect.bonus+'</b></div><p>'+(effect.allTests ? 'Todos os testes' : escapeHtml([effect.attribute,effect.skill].filter(Boolean).join(' + ')))+' · até '+escapeHtml(expiryLabels[effect.expires] || effect.expires)+'</p></article>';
+    }).join('')+'</section>' : '';
+    var feedback = model.ui.powerFeedback ? '<div class="status-line power-feedback">'+escapeHtml(model.ui.powerFeedback)+'</div>' : '';
+    return '<div class="power-center">'+feedback+'<p class="rule-footnote">O marcador controla limites explícitos de uso. Custos numéricos pessoais detectados na descrição podem ser aplicados junto do registro.</p>'+effects+groups.map(function(group){
+      var entries = powers.filter(function(power){ return group === 'Flor' || group === 'Crescimento' ? power.sourceType.indexOf(group) === 0 : power.sourceType === group; });
+      if(!entries.length) return '';
+      return '<section class="power-source-group"><div class="subsection-heading">'+group+'</div>'+entries.map(function(power){
+        var usage = powerUsageState(power.key,power.scope.key);
+        var exhausted = power.limit !== Infinity && usage.count >= power.limit;
+        var costText = Object.keys(power.costs).filter(function(key){ return power.costs[key] > 0; }).map(function(key){ return power.costs[key]+' '+({pf:'PF',pe:'PE',pc:'PC',permanentPf:'PF permanentes',permanentPe:'PE permanentes'}[key]); }).join(' · ');
+        return '<article class="power-use-card '+(exhausted ? 'used' : '')+'" data-power-key="'+escapeHtml(power.key)+'"><div class="power-use-heading"><div><span>'+escapeHtml(power.sourceType)+' · '+escapeHtml(power.sourceName)+'</span><strong>'+escapeHtml(power.name)+'</strong></div><b>'+(power.scope.key === 'manual' ? usage.count+' usos' : usage.count+'/'+power.limit+' por '+power.scope.label)+'</b></div><p>'+escapeHtml(power.description)+'</p>'+(costText ? '<div class="detected-cost">Custo pessoal detectado: '+escapeHtml(costText)+'</div>' : '')+'<div class="inline-actions"><button type="button" class="notes-btn" data-power-use="'+escapeHtml(power.key)+'" '+(exhausted ? 'disabled' : '')+'>'+(costText ? 'Usar e aplicar custo' : 'Registrar uso')+'</button>'+(costText ? '<button type="button" class="text-action" data-power-use-free="'+escapeHtml(power.key)+'" '+(exhausted ? 'disabled' : '')+'>Registrar por outro gatilho</button>' : '')+'</div></article>';
+      }).join('')+'</section>';
+    }).join('')+'</div>';
+  }
+
+  function openPowerCenter(){ openRuleModal('Central de Poderes',powerCenterHtml(),'powers'); }
+  function refreshPowerCenter(){ if($('#rule-action-modal').dataset.modalName === 'powers') $('#rule-action-content').innerHTML = powerCenterHtml(); }
+
+  function usePower(key, skipCosts){
+    var power = activePowerList().filter(function(item){ return item.key === key; })[0];
+    if(!power) return;
+    var usage = powerUsageState(power.key,power.scope.key);
+    if(power.limit !== Infinity && usage.count >= power.limit) return;
+    if(!skipCosts){
+      if(power.costs.permanentPf){ var previous=pfTotal();model.health.permanentPf += power.costs.permanentPf;reconcileCriticalState(previous,{source:power.name}); }
+      if(power.costs.permanentPe){ model.health.permanentPe += power.costs.permanentPe;if(peTotal()>=bloodLimits().pe)model.stress.breaking=true; }
+      if(power.costs.pf) changePF(power.costs.pf,{source:power.name});
+      if(power.costs.pe) applyStress(power.costs.pe,{source:power.name});
+      if(power.costs.pc) addPC(power.costs.pc);
+    }
+    markPowerUsed(power.key,power.scope.key);
+    model.ui.powerFeedback = 'Uso registrado: '+power.name+'.';
+    if(power.sourceType === 'Ocupação' && power.sourceName === 'Masoquista' && power.name === 'Carne Voluntária'){
+      addTemporaryEffect({sourceKey:power.key,name:power.name,bonus:1,expires:'scene',allTests:true});
+      model.ui.powerFeedback = 'Carne Voluntária: Bônus ativo em todos os testes até o fim da Cena.';
+    }
+    if(power.sourceType === 'Ocupação' && power.sourceName === 'Preparado' && power.name === 'Eu Sei Usar Isso'){
+      addTemporaryEffect({sourceKey:power.key,name:power.name,bonus:2,expires:'use',allTests:true});
+      model.ui.powerFeedback = 'Eu Sei Usar Isso: 2 Bônus preparados para o próximo teste auxiliado por um item.';
+    }
+    if(power.sourceType === 'Ocupação' && power.sourceName === 'Estudioso' && power.name === 'Eu Sempre Tenho um Plano'){
+      var planRoll = characterTest('Intelecto','Planejar',0);
+      if(planRoll.successes >= 1){
+        addTemporaryEffect({sourceKey:power.key,name:power.name,bonus:1,expires:'use',allTests:true});
+        model.ui.powerFeedback = 'Plano bem-sucedido ('+planRoll.successes+' sucesso'+(planRoll.successes === 1 ? '' : 's')+'): Bônus preparado para o primeiro teste da Cena.';
+      } else {
+        model.ui.powerFeedback = 'O teste de Planejar não obteve sucessos; nenhum Bônus foi preparado.';
+      }
+      addRuleLog('poder','Teste de Planejar para Eu Sempre Tenho um Plano.',{results:planRoll.results,successes:planRoll.successes});
+    }
+    addRuleLog('poder','Poder usado: '+power.name+'.',{source:power.sourceType+' · '+power.sourceName,scope:power.scope.key,costs:skipCosts ? {} : power.costs});
+    renderHealth();renderPC();renderScopeClock();refreshPowerCenter();renderPowerCenterStatus();saveModel();
+  }
+
+  function renderPowerCenterStatus(){
+    var status = $('#power-center-status');
+    if(!status) return;
+    var powers = activePowerList();
+    var limited = powers.filter(function(power){ return power.scope.key !== 'manual'; }).length;
+    status.textContent = powers.length+' poderes disponíveis · '+limited+' com limite rastreado · '+model.effects.length+' efeitos ativos';
+    renderScopeClock();
+  }
+
+  function applyContinuousWoundDamage(){
+    var recurring = {Sangrando:{pf:1,threshold:4},'Ferida Profunda':{pf:2,threshold:3},'Ferida Severa':{pf:3,threshold:2}};
+    var total = 0;
+    Object.keys(model.wounds).forEach(function(zoneId){
+      woundsForBodyZone(zoneId).forEach(function(wound){
+        if(!wound.conditionApplied || wound.armorBlocked) return;
+        if(wound.condition === 'Atordoado'){
+          wound.conditionTicks = (wound.conditionTicks || 0)+1;
+          wound.conditionApplied = false;
+          addRuleLog('condicao','Atordoado encerrou ao fim da próxima Rodada.',{woundId:wound.id});
+          return;
+        }
+        var rule = recurring[wound.condition];
+        if(!rule) return;
+        wound.conditionTicks = (wound.conditionTicks || 0)+1;
+        total += rule.pf;
+        if(!wound.toleranceResolved && wound.conditionTicks >= rule.threshold) wound.tolerancePending = true;
+      });
+    });
+    if(total > 0){ changePF(total,{source:'Condições contínuas'}); applyMasochistRelief(total); }
+    renderWounds();renderConditions();renderHealth();saveModel();
+    return total;
+  }
+
+  function advanceScope(scope){
+    if(!model.clock.hasOwnProperty(scope)) return;
+    model.clock[scope] += 1;
+    Object.keys(model.powerUsage).forEach(function(key){ if(model.powerUsage[key].scope === scope) model.powerUsage[key].count = 0; });
+    model.effects = model.effects.filter(function(effect){ return effect.expires !== scope; });
+    model.ui.powerFeedback = '';
+    if(scope === 'round') applyContinuousWoundDamage();
+    if(scope === 'conflict' && DATA.archetypes[model.fields['origem-select']] === 'Cães de Guerra' && hasGrowthStage(10)) changePF(-3,{source:'Máquina de Guerra · início do Conflito'});
+    addRuleLog('relogio','Avançou '+scope+'.',{value:model.clock[scope]});
+    renderScopeClock();refreshPowerCenter();renderPowerCenterStatus();renderConditions();saveModel();
+  }
+
+  function treatWoundCondition(zoneId, woundId){
+    var wound = woundById(zoneId,woundId);
+    if(!wound) return;
+    var replacements = {Sangrando:'Tratado','Ferida Profunda':'Estabilizado','Ferida Severa':'Quebrado'};
+    if(replacements[wound.condition]) wound.condition = replacements[wound.condition];
+    else wound.conditionApplied = false;
+    wound.conditionTicks = 0;
+    wound.tolerancePending = false;
+    wound.toleranceResolved = true;
+    addRuleLog('tratamento','Condição do ferimento tratada.',{woundId:wound.id,result:wound.conditionApplied ? wound.condition : 'removida'});
+    renderWounds();renderConditions();saveModel();
+  }
+
+  function rollWoundTolerance(zoneId,woundId){
+    var wound = woundById(zoneId,woundId);
+    if(!wound || !wound.tolerancePending) return;
+    var roll = characterTest('Físico','Tolerância',0);
+    var success = roll.successes >= 3;
+    wound.tolerancePending = false;
+    wound.toleranceResolved = true;
+    if(!success && !hasCondition('Inconsciente')) model.conditions.push('Inconsciente');
+    addRuleLog('condicao','Tolerância de '+wound.condition+': '+(success ? 'sucesso' : 'falha')+'.',{results:roll.results,successes:roll.successes});
+    renderConditions();saveModel();
+  }
+
   function renderFlower(){
     var name = model.fields['flor-select'];
     var flower = DATA.flowers[name];
     if(!flower){
       $('#flower-overview').innerHTML = '<p class="empty-state">Escolha uma Flor na Ficha Principal.</p>';
       $('#flower-stages').innerHTML = '';
+      renderPowerCenterStatus();
       return;
     }
     $('#flower-overview').innerHTML = '<h3>'+escapeHtml(name)+'</h3><p>'+escapeHtml(flower.description)+'</p>';
-    var stage = currentCorruptionStage();
-    var currentIndex = DATA.corruptionStages.indexOf(stage);
-    if(currentIndex > 4) currentIndex = 4;
-    var occupation = getOccupation();
-    var effectiveIndex = occupation && model.fields['ocupacao-select'] === 'Devoto' ? Math.min(4,currentIndex+1) : currentIndex;
+    var currentIndex = Math.min(4,DATA.corruptionStages.indexOf(currentCorruptionStage()));
+    var effectiveIndex = effectiveFlowerIndex();
     $('#flower-stages').innerHTML = flower.stages.map(function(item,index){
       var active = index === effectiveIndex;
       var unlocked = index <= effectiveIndex;
       return '<article class="flower-stage '+(active ? 'active' : '')+' '+(unlocked ? 'unlocked' : 'locked')+'"><span>'+escapeHtml(item.stage)+'</span><h4>'+escapeHtml(item.name)+'</h4><p>'+escapeHtml(item.description)+'</p>'+(active && effectiveIndex !== currentIndex ? '<em>Ativa um estágio acima por Devoto.</em>' : '')+'</article>';
     }).join('');
+    renderPowerCenterStatus();
   }
 
-  function growthSummary(stage){
-    if(!stage) return 'A Trilha de Crescimento começa ao fim do primeiro Arco.';
-    var rewards = stage % 3 === 0 ? 'Libera uma nova Origem e concede PO.' : 'Concede benefícios do Arquétipo, PO e possivelmente PP/PA.';
-    if(stage === 10) rewards = 'Ápice da Trilha. A partir daqui: +2 PO e +2 PP por Arco.';
-    return 'Etapa ' + ['','I','II','III','IV','V','VI','VII','VIII','IX','X'][stage] + ': ' + rewards;
+  function growthRewardText(stage){
+    var rewards = stage.rewards || {};
+    var values = [];
+    if(rewards.originPoints) values.push('+'+rewards.originPoints+' PO');
+    if(rewards.skillPoints) values.push('+'+rewards.skillPoints+' PP');
+    if(rewards.attributePoints) values.push('+'+rewards.attributePoints+' PA');
+    return values.join(' · ') || 'Benefício de Arquétipo';
+  }
+
+  function claimedUnlockStages(){
+    var track = currentGrowthTrack();
+    return track ? track.stages.filter(function(stage){ return hasGrowthStage(stage.stage) && stage.unlockOrigin; }) : [];
   }
 
   function renderGrowth(){
     if(!$('#growth-stage')) return;
-    var stage = clamp(model.fields['growth-stage'],0,10);
+    var track = currentGrowthTrack();
+    var stage = clamp(model.growth.stage,0,10);
+    model.fields['growth-stage'] = stage;
     $('#growth-stage').value = String(stage);
-    $('#growth-summary').textContent = growthSummary(stage);
-    if(model.fields['ocupacao-select'] === 'Estudioso') renderSkills();
+    if(!track){
+      $('#growth-summary').textContent = 'Selecione uma Origem para definir o Arquétipo e sua Trilha.';
+      $('#growth-ledger').innerHTML = '';
+      $('#growth-track-list').innerHTML = '';
+      return;
+    }
+    var totals = currentGrowthTotals();
+    $('#growth-summary').textContent = stage ? 'Etapa atual: '+['','I','II','III','IV','V','VI','VII','VIII','IX','X'][stage]+'. As recompensas marcadas já ampliam os orçamentos da ficha.' : 'A Trilha começa ao fim do primeiro Arco relevante.';
+    $('#growth-ledger').innerHTML = '<span><small>PO acumulados</small><b>'+totals.originPoints+'</b></span><span><small>PP recebidos</small><b>'+totals.skillPoints+'</b></span><span><small>PA recebidos</small><b>'+totals.attributePoints+'</b></span><span><small>Origens liberadas</small><b>'+model.growth.unlockedOrigins.length+'</b></span>';
+    $('#growth-track-list').innerHTML = track.stages.map(function(item){
+      var claimed = hasGrowthStage(item.stage);
+      return '<article class="growth-stage-card '+(claimed ? 'claimed' : 'future')+'"><div class="growth-stage-index">'+item.roman+'</div><div><div class="growth-stage-heading"><strong>'+escapeHtml(item.name)+'</strong><span>'+growthRewardText(item)+'</span></div><ul>'+(item.effects || []).map(function(effect){ return '<li>'+escapeHtml(effect)+'</li>'; }).join('')+'</ul>'+(item.unlockOrigin ? '<small class="growth-unlock">Nova Origem · '+(item.unlockOrigin.scope === 'same-archetype' ? 'mesmo Arquétipo' : 'qualquer Arquétipo')+'</small>' : '')+'</div><b class="growth-state">'+(claimed ? 'APLICADA' : 'FUTURA')+'</b></article>';
+    }).join('');
+    var missingUnlocks = Math.max(0,claimedUnlockStages().length-model.growth.unlockedOrigins.length);
+    if(missingUnlocks) $('#growth-ledger').innerHTML += '<button type="button" class="notes-btn danger" id="growth-complete-choices">Escolher '+missingUnlocks+' Origem'+(missingUnlocks === 1 ? '' : 's')+' pendente'+(missingUnlocks === 1 ? '' : 's')+'</button>';
+    $('#growth-future-arc').disabled = stage < 10;
+    $('#growth-future-status').textContent = stage < 10 ? 'Disponível após a etapa X.' : model.growth.postCapArcs+' Arco'+(model.growth.postCapArcs === 1 ? '' : 's')+' após X · +'+(model.growth.postCapArcs*2)+' PO / +'+(model.growth.postCapArcs*2)+' PP';
+    renderPowerCenterStatus();
   }
 
-  function inventoryCapacity(){ return 2 + model.attributes.Físico; }
+  function growthUnlockOptions(unlock, selectedValues){
+    var track = currentGrowthTrack();
+    var candidates = unlock.scope === 'same-archetype' ? track.origins.slice() : Object.keys(DATA.origins);
+    var unavailable = [model.fields['origem-select']].concat(model.growth.unlockedOrigins).concat(selectedValues || []);
+    return candidates.filter(function(name){ return unavailable.indexOf(name) < 0; }).map(function(name){ return '<option value="'+escapeHtml(name)+'">'+escapeHtml(name)+' · '+escapeHtml(DATA.archetypes[name] || '')+'</option>'; }).join('');
+  }
+
+  function growthApplyHtml(nextStage, repair){
+    var track = currentGrowthTrack();
+    var stages = repair ? claimedUnlockStages().slice(model.growth.unlockedOrigins.length) : track.stages.filter(function(stage){ return stage.stage > model.growth.stage && stage.stage <= nextStage; });
+    var unlocks = stages.filter(function(stage){ return stage.unlockOrigin; });
+    var selected = [];
+    var choices = unlocks.map(function(stage,index){
+      var options = growthUnlockOptions(stage.unlockOrigin,selected);
+      return '<label class="growth-choice">Etapa '+stage.roman+' · Nova Origem ('+(stage.unlockOrigin.scope === 'same-archetype' ? 'mesmo Arquétipo' : 'qualquer Arquétipo')+')<select data-growth-unlock-choice="'+index+'"><option value="">— Escolher —</option>'+options+'</select></label>';
+    }).join('');
+    var stageCards = stages.filter(function(stage){ return !repair || stage.unlockOrigin; }).map(function(stage){ return '<li><b>'+stage.roman+' · '+escapeHtml(stage.name)+'</b><span>'+growthRewardText(stage)+'</span></li>'; }).join('');
+    return '<div class="rule-dashboard"><p>'+(repair ? 'Complete as escolhas de Origem obtidas em etapas já aplicadas.' : 'Esta aplicação é permanente e inclui todas as etapas atravessadas.')+'</p><ul class="growth-apply-list">'+stageCards+'</ul>'+choices+'<div class="inline-actions"><button type="button" class="primary-action" id="growth-confirm" data-growth-stage="'+nextStage+'" data-growth-repair="'+(repair ? '1' : '0')+'">Confirmar '+(repair ? 'escolhas' : 'Crescimento')+'</button><button type="button" class="notes-btn" data-close-rule-modal>Cancelar</button></div></div>';
+  }
+
+  function openGrowthApply(nextStage, repair){
+    var track = currentGrowthTrack();
+    if(!track) return;
+    if(!repair && nextStage <= model.growth.stage){ $('#growth-stage').value = String(model.growth.stage); return; }
+    openRuleModal(repair ? 'Escolhas pendentes de Crescimento' : 'Aplicar Crescimento',growthApplyHtml(nextStage,!!repair),'growth');
+  }
+
+  function confirmGrowth(){
+    var button = $('#growth-confirm');
+    if(!button) return;
+    var repair = button.dataset.growthRepair === '1';
+    var nextStage = clamp(button.dataset.growthStage,0,10);
+    var values = $$('[data-growth-unlock-choice]',$('#rule-action-content')).map(function(select){ return select.value; });
+    if(values.some(function(value){ return !value; }) || values.some(function(value,index){ return values.indexOf(value) !== index; })){
+      alert('Escolha uma Origem diferente em cada liberação antes de confirmar.'); return;
+    }
+    values.forEach(function(originName){ if(model.growth.unlockedOrigins.indexOf(originName) < 0){ model.growth.unlockedOrigins.push(originName); model.growth.powerSelections[originName] = []; } });
+    if(!repair){
+      for(var stage=model.growth.stage+1;stage<=nextStage;stage++) if(model.growth.claimedStages.indexOf(stage)<0) model.growth.claimedStages.push(stage);
+      model.growth.stage = nextStage;
+      model.fields['growth-stage'] = nextStage;
+      addRuleLog('crescimento','Crescimento aplicado até a etapa '+nextStage+'.',{unlockedOrigins:values});
+    }
+    closeRuleModal();
+    renderAttributes();renderOrigin();renderGrowth();renderNeeds();renderEquipment();saveModel();
+  }
+
+  function catalogItem(id){ return (DATA.commonItems || []).filter(function(item){ return item.id === id; })[0] || null; }
+  function ammunitionData(id){ return (DATA.ammunitionTypes || []).filter(function(item){ return item.id === id; })[0] || null; }
+  function isInventoryAmmo(item){ return !!(item && item.kind === 'ammo' && item.ammoId); }
+  function inventoryCapacity(){
+    var bonus = model.inventory.reduce(function(total,item){ var data=item && item.kind === 'item' ? catalogItem(item.catalogId) : null;return total+(data&&data.inventoryCapacityBonus||0); },0);
+    return 2 + model.attributes.Físico + bonus;
+  }
   function initialItemLimit(){ var occ = getOccupation(); return occ && occ.initialItems || 3; }
   function isInventoryWeapon(item){ return !!(item && item.kind === 'weapon' && item.weapon); }
-  function inventoryEntryUsed(item){ return isInventoryWeapon(item) || !!String(item && item.name || '').trim(); }
-  function emptyInventoryItem(){ return {id:uid('item'),kind:'item',name:'',uses:''}; }
+  function inventoryEntryUsed(item){ return isInventoryWeapon(item) || isInventoryAmmo(item) && (item.quantity > 0 || item.charges > 0) || !!String(item && item.name || '').trim(); }
+  function emptyInventoryItem(){ return {id:uid('item'),kind:'item',catalogId:'',name:'',uses:'',quantity:0}; }
   function inventoryWeaponOptions(selected){
     var categories = ['Leves','Versáteis','Pesadas','De Fogo'];
     var html = '<option value="custom" '+(selected === 'custom' ? 'selected' : '')+'>Arma personalizada</option>';
@@ -1238,11 +2079,71 @@
     var modHtml = '';
     for(var modIndex=0; modIndex<modLimit; modIndex++){
       var selected = state.mods[modIndex] || '';
-      modHtml += '<label>Modificação '+(modIndex+1)+'<select class="inventory-weapon-mod-select" data-mod-index="'+modIndex+'"><option value="">— Nenhuma —</option>'+mods.map(function(mod){ return '<option value="'+mod.id+'" '+(selected === mod.id ? 'selected' : '')+'>'+escapeHtml(mod.name)+' · '+mod.cost+' Partes</option>'; }).join('')+'</select></label>';
+      modHtml += '<label>Modificação '+(modIndex+1)+'<select class="inventory-weapon-mod-select" data-mod-index="'+modIndex+'"><option value="">— Nenhuma —</option>'+mods.map(function(mod){ return '<option value="'+mod.id+'" '+(selected === mod.id ? 'selected' : '')+'>'+escapeHtml(mod.name)+' · '+modificationCost(mod)+' Partes</option>'; }).join('')+'</select></label>';
     }
     var custom = state.weaponId === 'custom' ? '<div class="custom-weapon-fields"><input class="inventory-custom-weapon-name" value="'+escapeHtml(state.customName)+'" placeholder="Nome"><input class="inventory-custom-weapon-damage" value="'+escapeHtml(state.customDamage)+'" placeholder="Ferimento / munição"><input class="inventory-custom-weapon-range" value="'+escapeHtml(state.customRange)+'" placeholder="Distância / recuo"><input class="inventory-custom-weapon-max" type="number" min="0" value="'+state.customMax+'" placeholder="Usos"></div>' : '';
     var track = max ? '<div class="weapon-track"><span>'+(weapon && weapon.durability ? 'Durabilidade' : 'Munição')+' <b>'+state.current+'/'+max+'</b></span><div class="pips weapon-pips inventory-weapon-pips" data-item-id="'+item.id+'">'+pipButtons(max)+'</div></div>' : '<div class="weapon-track muted">Munição controlada pelo Inventário.</div>';
-    return '<div class="inventory-weapon-editor" data-editor-item-id="'+item.id+'"><div class="inventory-editor-heading"><strong>Editando arma guardada</strong><span>Os ajustes não movem nem duplicam a arma.</span></div><label class="inventory-editor-field">Arma<select class="inventory-weapon-select">'+inventoryWeaponOptions(state.weaponId)+'</select></label>'+custom+weaponPowerDetails(weapon)+track+'<div class="weapon-mods">'+modHtml+'</div><textarea class="inventory-weapon-notes" placeholder="Anotações, munição, reparos...">'+escapeHtml(state.notes)+'</textarea><div class="inventory-editor-footer"><button type="button" class="notes-btn small inventory-weapon-equip">Equipar em espaço livre</button></div></div>';
+    return '<div class="inventory-weapon-editor" data-editor-item-id="'+item.id+'"><div class="inventory-editor-heading"><strong>Editando arma guardada</strong><span>Os ajustes não movem nem duplicam a arma.</span></div><label class="inventory-editor-field">Arma<select class="inventory-weapon-select">'+inventoryWeaponOptions(state.weaponId)+'</select></label>'+custom+weaponPowerDetails(weapon)+track+weaponAmmoActions(state,weapon,'inventory',item.id)+'<div class="weapon-mods">'+modHtml+'</div><textarea class="inventory-weapon-notes" placeholder="Anotações, munição, reparos...">'+escapeHtml(state.notes)+'</textarea><div class="inventory-editor-footer"><button type="button" class="notes-btn small inventory-weapon-equip">Equipar em espaço livre</button></div></div>';
+  }
+
+  function placeInventoryEntry(entry){
+    var emptyIndex = model.inventory.findIndex(function(item){ return !inventoryEntryUsed(item) && !isInventoryWeapon(item); });
+    if(emptyIndex >= 0) model.inventory[emptyIndex] = entry;
+    else model.inventory.push(entry);
+  }
+
+  function addCatalogItem(id){
+    var data = catalogItem(id);
+    if(!data) return;
+    placeInventoryEntry({id:uid('item'),kind:'item',catalogId:data.id,name:data.name,uses:data.uses && data.uses.max != null ? String(data.uses.max) : '',quantity:1});
+    addRuleLog('inventario','Item adicionado: '+data.name+'.',{catalogId:data.id});
+    renderEquipment();refreshItemCatalog();saveModel();
+  }
+
+  function ammoCompatibleWeaponOptions(ammo){
+    return DATA.weapons.filter(function(weapon){ return ammo.compatibleWeapons.indexOf(weapon.name) >= 0; }).map(function(weapon){ return '<option value="'+weapon.id+'">'+escapeHtml(weapon.name)+' · capacidade '+weaponMax(weaponStateFromId(weapon.id))+'</option>'; }).join('');
+  }
+
+  function addAmmunition(id, mode, weaponId, amountOverride){
+    var ammo = ammunitionData(id);
+    if(!ammo) return;
+    if(ammo.storage === 'container'){
+      var weapon = weaponData(weaponId);
+      if(!weapon || ammo.compatibleWeapons.indexOf(weapon.name) < 0) return;
+      var capacity = weaponMax(weaponStateFromId(weapon.id));
+      var charges = mode === 'initial' ? Math.ceil(capacity*Number(ammo.initialFill || .5)) : capacity;
+      placeInventoryEntry({id:uid('ammo'),kind:'ammo',catalogId:ammo.id,ammoId:ammo.id,name:ammo.name,weaponId:weapon.id,quantity:1,charges:charges,capacity:capacity,uses:''});
+    } else {
+      var amount = amountOverride != null ? Math.max(0,parseInt(amountOverride,10)||0) : (mode === 'initial' ? Number(ammo.initialAmount || 0) : 1);
+      if(amount <= 0) amount = 1;
+      var max = Number(ammo.maxPerInventorySlot || ammo.maxLoaded || 6);
+      while(amount > 0){
+        var stack = model.inventory.filter(function(item){ return isInventoryAmmo(item) && item.ammoId === ammo.id && !item.weaponId && item.quantity < max; })[0];
+        var room = stack ? max-stack.quantity : 0;
+        if(stack && room > 0){ var moved=Math.min(room,amount);stack.quantity+=moved;amount-=moved; }
+        else { var created=Math.min(max,amount);placeInventoryEntry({id:uid('ammo'),kind:'ammo',catalogId:ammo.id,ammoId:ammo.id,name:ammo.name,weaponId:'',quantity:created,charges:0,capacity:max,uses:''});amount-=created; }
+      }
+    }
+    addRuleLog('inventario','Munição adicionada: '+ammo.name+'.',{mode:mode,weaponId:weaponId || ''});
+    renderEquipment();refreshItemCatalog();saveModel();
+  }
+
+  function itemCatalogHtml(){
+    var itemCards = DATA.commonItems.map(function(item){
+      return '<article class="catalog-card" data-catalog-search-text="'+escapeHtml((item.name+' '+item.description).toLocaleLowerCase('pt-BR'))+'"><div><span>ITEM COMUM</span><strong>'+escapeHtml(item.name)+'</strong></div><p>'+escapeHtml(item.description)+'</p><ul>'+item.effects.map(function(effect){ return '<li><b>'+escapeHtml(effect.name)+'</b> · '+escapeHtml(effect.description)+'</li>'; }).join('')+'</ul><small>'+escapeHtml(item.uses.label)+'</small><button type="button" class="notes-btn" data-catalog-item="'+item.id+'">Adicionar ao Inventário</button></article>';
+    }).join('');
+    var ammoCards = DATA.ammunitionTypes.map(function(ammo){
+      var controls = ammo.storage === 'container' ? '<label>Compatível com<select data-ammo-weapon-select="'+ammo.id+'">'+ammoCompatibleWeaponOptions(ammo)+'</select></label><div class="inline-actions"><button type="button" class="notes-btn" data-catalog-ammo="'+ammo.id+'" data-ammo-mode="full">Adicionar cheio</button><button type="button" class="text-action" data-catalog-ammo="'+ammo.id+'" data-ammo-mode="initial">Adicionar inicial · metade</button></div>' : '<div class="inline-actions"><button type="button" class="notes-btn" data-catalog-ammo="'+ammo.id+'" data-ammo-mode="single">Adicionar 1</button>'+(ammo.initialAmount ? '<button type="button" class="text-action" data-catalog-ammo="'+ammo.id+'" data-ammo-mode="initial">Adicionar inicial · '+ammo.initialAmount+'</button>' : '')+'</div>';
+      return '<article class="catalog-card ammo-catalog-card" data-catalog-search-text="'+escapeHtml((ammo.name+' '+ammo.description+' '+ammo.compatibleWeapons.join(' ')).toLocaleLowerCase('pt-BR'))+'"><div><span>MUNIÇÃO · '+escapeHtml(ammo.storage)+'</span><strong>'+escapeHtml(ammo.name)+'</strong></div><p>'+escapeHtml(ammo.description)+'</p><small>'+escapeHtml(ammo.reload)+'</small>'+controls+'</article>';
+    }).join('');
+    return '<div class="catalog-shell"><label class="catalog-search">Buscar no catálogo<input id="catalog-search" type="search" placeholder="Nome, efeito ou arma..." value="'+escapeHtml(model.ui.itemCatalogFilter)+'"></label><div class="subsection-heading">Itens comuns · '+DATA.commonItems.length+'</div><div class="catalog-grid">'+itemCards+'</div><div class="subsection-heading">Munições · '+DATA.ammunitionTypes.length+'</div><div class="catalog-grid">'+ammoCards+'</div></div>';
+  }
+
+  function openItemCatalog(){ openRuleModal('Catálogo de Itens & Munições',itemCatalogHtml(),'catalog');filterCatalogCards(model.ui.itemCatalogFilter); }
+  function refreshItemCatalog(){ if($('#rule-action-modal').dataset.modalName === 'catalog'){ $('#rule-action-content').innerHTML=itemCatalogHtml();filterCatalogCards(model.ui.itemCatalogFilter); } }
+  function filterCatalogCards(value){
+    value=String(value||'').toLocaleLowerCase('pt-BR').trim();
+    $$('.catalog-card',$('#rule-action-content')).forEach(function(card){ card.classList.toggle('hidden',value && card.dataset.catalogSearchText.indexOf(value)<0); });
   }
   function ensureInventorySlots(){
     var capacity = inventoryCapacity();
@@ -1255,7 +2156,8 @@
     ensureInventorySlots();
     var used = model.inventory.filter(inventoryEntryUsed).length;
     var capacity = inventoryCapacity();
-    $('#inventory-capacity-tag').textContent = 'MÁX. = ' + capacity + ' (2 + FÍSICO)';
+    var capacityBonus = capacity-(2+model.attributes.Físico);
+    $('#inventory-capacity-tag').textContent = 'MÁX. = ' + capacity + ' (2 + FÍSICO'+(capacityBonus ? ' + '+capacityBonus+' EQUIP.' : '')+')';
     var excess = Math.max(0,used-capacity);
     $('#inventory-status').textContent = 'Ocupados: ' + used + '/' + capacity + (excess ? ' · Sobrecarregado: −1 PA em Físico ou Destreza por item ('+excess+')' : '');
     $('#inventory-status').className = used > capacity ? 'over' : '';
@@ -1271,6 +2173,15 @@
         var stats = weapon ? [weapon.category,weapon.damage,weapon.severity,weapon.range].filter(Boolean).join(' · ') : [state.customDamage,state.customRange].filter(Boolean).join(' · ');
         var editing = model.ui.editingInventoryWeaponId === item.id;
         return '<article class="inv-slot inventory-weapon '+(index >= capacity ? 'overloaded-slot ' : '')+(broken ? 'broken ' : '')+(editing ? 'editing' : '')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div class="inventory-weapon-body"><div class="weapon-card-header"><strong>'+escapeHtml(name)+'</strong>'+(broken ? '<span class="broken-chip">QUEBRADA</span>' : '')+'</div><span>'+escapeHtml(stats)+'</span>'+(max ? '<small>'+(weapon && weapon.durability ? 'Durabilidade' : 'Munição')+': '+state.current+'/'+max+'</small>' : '')+weaponPowerDetails(weapon)+'</div><div class="inventory-weapon-actions"><button type="button" class="notes-btn small inventory-weapon-edit '+(editing ? 'active' : '')+'" aria-expanded="'+(editing ? 'true' : 'false')+'">Editar</button><button type="button" class="list-row-remove inventory-remove" title="Excluir arma">×</button></div>'+(editing ? inventoryWeaponEditor(item,state,weapon) : '')+'</article>';
+      }
+      if(isInventoryAmmo(item)){
+        var ammo=ammunitionData(item.ammoId);var ammoWeapon=weaponData(item.weaponId);var ammoAmount=ammo&&ammo.storage==='container' ? item.charges+'/'+item.capacity+' cargas' : item.quantity+' unidade'+(item.quantity===1?'':'s');
+        return '<article class="inv-slot catalog-inventory-slot ammo-inventory-slot '+(index>=capacity?'overloaded-slot':'')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div><span class="inventory-kind">MUNIÇÃO</span><strong>'+escapeHtml(ammo?ammo.name:item.name)+'</strong><p>'+(ammoWeapon?escapeHtml(ammoWeapon.name)+' · ':'')+ammoAmount+'</p><small>'+escapeHtml(ammo?ammo.reload:'')+'</small></div><div class="inventory-quantity"><button type="button" data-ammo-delta="-1" aria-label="Diminuir munição">−</button><b>'+(ammo&&ammo.storage==='container'?item.charges:item.quantity)+'</b><button type="button" data-ammo-delta="1" aria-label="Aumentar munição">+</button></div><button type="button" class="list-row-remove inventory-remove" title="Excluir">×</button></article>';
+      }
+      var catalog=catalogItem(item.catalogId);
+      if(catalog){
+        var unlimited=catalog.uses&&catalog.uses.max==null;var remaining=unlimited?'∞':Math.max(0,parseInt(item.uses,10)||0);
+        return '<article class="inv-slot catalog-inventory-slot '+(index>=capacity?'overloaded-slot':'')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div><span class="inventory-kind">ITEM COMUM</span><strong>'+escapeHtml(catalog.name)+'</strong><p>'+escapeHtml(catalog.effects.map(function(effect){return effect.name;}).join(' · '))+'</p><small>'+escapeHtml(catalog.uses.label)+'</small></div><div class="inventory-quantity">'+(unlimited?'<b>∞</b>':'<button type="button" data-item-use="-1" aria-label="Gastar uso">−</button><b>'+remaining+'</b><button type="button" data-item-use="1" aria-label="Recuperar uso">+</button>')+'</div><button type="button" class="list-row-remove inventory-remove" title="Excluir">×</button></article>';
       }
       return '<div class="inv-slot '+(index >= capacity ? 'overloaded-slot' : '')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div class="inventory-fields"><input type="text" class="inventory-name" value="'+escapeHtml(item.name)+'" placeholder="Item..."><input type="text" class="inventory-uses" value="'+escapeHtml(item.uses)+'" placeholder="Usos"></div><button type="button" class="list-row-remove inventory-remove" title="Excluir">×</button></div>';
     }).join('');
@@ -1312,6 +2223,60 @@
       if(mod.weapon) return mod.weapon === weapon.id;
       return mod.group === weapon.group;
     });
+  }
+  function modificationCost(mod){
+    var discount = DATA.archetypes[model.fields['origem-select']] === 'Donos da Razão' && hasGrowthStage(8);
+    return discount ? Math.ceil(Number(mod.cost || 0)/2) : Number(mod.cost || 0);
+  }
+  function weaponAmmunition(weapon){
+    if(!weapon) return null;
+    return DATA.ammunitionTypes.filter(function(ammo){ return ammo.compatibleWeapons.indexOf(weapon.name) >= 0; })[0] || null;
+  }
+  function looseAmmoAvailable(ammoId){
+    return model.inventory.reduce(function(total,item){ return total+(isInventoryAmmo(item)&&item.ammoId===ammoId&&!item.weaponId?item.quantity:0); },0);
+  }
+  function consumeLooseAmmo(ammoId, amount){
+    var remaining=Math.max(0,amount);
+    model.inventory.forEach(function(item){if(!remaining||!isInventoryAmmo(item)||item.ammoId!==ammoId||item.weaponId)return;var used=Math.min(item.quantity,remaining);item.quantity-=used;remaining-=used;});
+    model.inventory=model.inventory.filter(function(item){return !isInventoryAmmo(item)||item.quantity>0||item.charges>0;});
+    return amount-remaining;
+  }
+  function weaponAmmoActions(state, weapon, location, itemId){
+    var ammo=weaponAmmunition(weapon);if(!ammo)return '';
+    var locationAttributes=location==='inventory'?' data-ammo-item="'+itemId+'"':' data-weapon-index="'+itemId+'"';
+    var bow=ammo.id==='flechas';
+    return '<div class="weapon-ammo-actions no-print"><button type="button" class="notes-btn small weapon-fire"'+locationAttributes+'>'+(bow?'Disparar · 1 Flecha':'Registrar ataque')+'</button>'+(bow?'':'<button type="button" class="notes-btn small weapon-reload"'+locationAttributes+'>Recarregar</button>')+'<small>'+escapeHtml(ammo.name)+' na reserva: '+(ammo.storage==='container'?model.inventory.filter(function(item){return isInventoryAmmo(item)&&item.ammoId===ammo.id&&item.weaponId===weapon.id&&item.charges>0;}).length:looseAmmoAvailable(ammo.id))+'</small></div>';
+  }
+  function reloadWeaponState(state){
+    var weapon=weaponData(state.weaponId);var ammo=weaponAmmunition(weapon);if(!weapon||!ammo||ammo.id==='flechas')return {ok:false,message:'Esta arma não usa recarga carregada.'};
+    var max=weaponMax(state);if(state.current>=max)return {ok:false,message:'A arma já está com a capacidade máxima.'};
+    if(ammo.storage==='container'){
+      var reserve=model.inventory.filter(function(item){return isInventoryAmmo(item)&&item.ammoId===ammo.id&&item.weaponId===weapon.id&&item.charges>0;})[0];
+      if(!reserve)return {ok:false,message:'Não há '+ammo.name+' compatível no Inventário.'};
+      var oldCurrent=state.current;
+      state.current=Math.min(max,reserve.charges);
+      model.inventory=model.inventory.filter(function(item){return item.id!==reserve.id;});
+      if(oldCurrent>0)placeInventoryEntry({id:uid('ammo'),kind:'ammo',catalogId:ammo.id,ammoId:ammo.id,name:ammo.name,weaponId:weapon.id,quantity:1,charges:oldCurrent,capacity:max,uses:''});
+      return {ok:true,message:ammo.name+' trocado: '+state.current+'/'+max+'. A munição anterior foi preservada no Inventário.'};
+    }
+    var perAction=ammo.id==='cargas'?1:4;var need=Math.min(perAction,max-state.current);var consumed=consumeLooseAmmo(ammo.id,need);
+    if(!consumed)return {ok:false,message:'Não há '+ammo.name+' no Inventário.'};
+    state.current+=consumed;
+    return {ok:true,message:'Recarregou '+consumed+' '+ammo.name+' · '+state.current+'/'+max+'.'};
+  }
+  function fireWeaponState(state){
+    var weapon=weaponData(state.weaponId);var ammo=weaponAmmunition(weapon);if(!weapon||!ammo)return {ok:false,message:'Esta arma não usa munição.'};
+    if(ammo.id==='flechas'){
+      if(consumeLooseAmmo('flechas',1)<1)return {ok:false,message:'Não há Flechas no Inventário.'};
+      return {ok:true,message:'Disparo registrado: −1 Flecha. Se matou o Alvo, role 1D6 para possível recuperação.'};
+    }
+    var cost=weapon.id==='submetralhadora'?2:1;
+    if(state.current<cost)return {ok:false,message:'Munição carregada insuficiente. Recarregue a arma.'};
+    state.current-=cost;
+    return {ok:true,message:'Ataque registrado: −'+cost+' '+ammo.name+' · '+state.current+'/'+weaponMax(state)+'.'};
+  }
+  function showWeaponFeedback(result){
+    var feedback=$('#weapon-add-feedback');if(!feedback)return;feedback.textContent=result.message;feedback.className='inline-feedback '+(result.ok?'budget-ok':'over');
   }
 
   function weaponAllowedInSlot(weapon,index){
@@ -1411,13 +2376,13 @@
       var modHtml = '';
       for(var modIndex=0; modIndex<modLimit; modIndex++){
         var selected = state.mods[modIndex] || '';
-        modHtml += '<label>Modificação '+(modIndex+1)+'<select class="weapon-mod-select" data-mod-index="'+modIndex+'"><option value="">— Nenhuma —</option>'+mods.map(function(mod){ return '<option value="'+mod.id+'" '+(selected === mod.id ? 'selected' : '')+'>'+mod.name+' · '+mod.cost+' Partes</option>'; }).join('')+'</select></label>';
+        modHtml += '<label>Modificação '+(modIndex+1)+'<select class="weapon-mod-select" data-mod-index="'+modIndex+'"><option value="">— Nenhuma —</option>'+mods.map(function(mod){ return '<option value="'+mod.id+'" '+(selected === mod.id ? 'selected' : '')+'>'+mod.name+' · '+modificationCost(mod)+' Partes</option>'; }).join('')+'</select></label>';
       }
       var custom = state.weaponId === 'custom' ? '<div class="custom-weapon-fields"><input class="custom-weapon-name" value="'+escapeHtml(state.customName)+'" placeholder="Nome"><input class="custom-weapon-damage" value="'+escapeHtml(state.customDamage)+'" placeholder="Ferimento / munição"><input class="custom-weapon-range" value="'+escapeHtml(state.customRange)+'" placeholder="Distância / recuo"><input class="custom-weapon-max" type="number" min="0" value="'+state.customMax+'" placeholder="Usos"></div>' : '';
       var track = max ? '<div class="weapon-track"><span>'+(weapon && weapon.durability ? 'Durabilidade' : 'Munição')+' <b>'+state.current+'/'+max+'</b></span><div class="pips weapon-pips" data-weapon-index="'+index+'">'+pipButtons(max)+'</div></div>' : '<div class="weapon-track muted">Munição carregada diretamente do Inventário.</div>';
       var invalidSlot = weapon && !weaponAllowedInSlot(weapon,index);
       var broken = weaponHasContent(state) && max > 0 && state.current === 0;
-      return '<article class="weapon-card '+(index >= allowed || invalidSlot ? 'overloaded-slot ' : '')+(broken ? 'broken' : '')+'" data-weapon-index="'+index+'"><div class="weapon-card-header"><div class="weapon-card-title">Espaço '+(index+1)+' · '+weaponSlotLabel(index)+'</div><div>'+(broken ? '<span class="broken-chip">QUEBRADA</span>' : '')+(invalidSlot ? '<span class="warning-chip">Espaço incompatível</span>' : '')+'</div></div><select class="weapon-select">'+weaponOptions(state.weaponId,index)+'</select>'+custom+'<div class="weapon-stats">'+escapeHtml(stats)+'</div>'+weaponPowerDetails(weapon)+track+'<div class="weapon-mods">'+modHtml+'</div><textarea class="weapon-notes" placeholder="Anotações, munição no Inventário, reparos...">'+escapeHtml(state.notes)+'</textarea>'+(weaponHasContent(state) ? '<button type="button" class="notes-btn small weapon-to-inventory">Mover para o Inventário</button>' : '')+'</article>';
+      return '<article class="weapon-card '+(index >= allowed || invalidSlot ? 'overloaded-slot ' : '')+(broken ? 'broken' : '')+'" data-weapon-index="'+index+'"><div class="weapon-card-header"><div class="weapon-card-title">Espaço '+(index+1)+' · '+weaponSlotLabel(index)+'</div><div>'+(broken ? '<span class="broken-chip">QUEBRADA</span>' : '')+(invalidSlot ? '<span class="warning-chip">Espaço incompatível</span>' : '')+'</div></div><select class="weapon-select">'+weaponOptions(state.weaponId,index)+'</select>'+custom+'<div class="weapon-stats">'+escapeHtml(stats)+'</div>'+weaponPowerDetails(weapon)+track+weaponAmmoActions(state,weapon,'equipped',index)+'<div class="weapon-mods">'+modHtml+'</div><textarea class="weapon-notes" placeholder="Anotações, munição no Inventário, reparos...">'+escapeHtml(state.notes)+'</textarea>'+(weaponHasContent(state) ? '<button type="button" class="notes-btn small weapon-to-inventory">Mover para o Inventário</button>' : '')+'</article>';
     }).join('');
     $$('#weapons-list .weapon-pips').forEach(function(group){
       var index = parseInt(group.dataset.weaponIndex,10);
@@ -1479,6 +2444,11 @@
   function consumeInventoryIngredient(name){
     var item = findInventoryIngredient(name);
     if(!item) return;
+    if(isInventoryAmmo(item)){
+      item.quantity=Math.max(0,item.quantity-1);
+      if(item.quantity===0)model.inventory=model.inventory.filter(function(entry){return entry.id!==item.id;});
+      return;
+    }
     var uses = parseInt(item.uses,10);
     if(uses > 1) item.uses = String(uses-1);
     else { item.kind = 'item'; item.name = ''; item.uses = ''; }
@@ -1548,6 +2518,7 @@
     return '<option value="">Todas as categorias</option>'+CONDITION_CATEGORIES.map(function(category){
       return '<option value="'+category.id+'" '+(selected === category.id ? 'selected' : '')+'>'+category.label+'</option>';
     }).join('');
+    renderPowerCenterStatus();
   }
   function renderConditionPicker(){
     var categorySelect = $('#condition-category');
@@ -1586,19 +2557,38 @@
     var categoryInfo = conditionCategory(definition.category);
     reference.innerHTML = '<div><strong>'+escapeHtml(definition.name)+'</strong><span>'+categoryInfo.label+' · '+escapeHtml(definition.duration)+'</span></div><p>'+escapeHtml(definition.summary)+'</p>';
   }
+  function derivedWoundConditions(){
+    var entries = [];
+    Object.keys(model.wounds).forEach(function(zoneId){
+      var label = BODY_ZONE_LABELS.filter(function(zone){ return zone.id === zoneId; })[0];
+      woundsForBodyZone(zoneId).forEach(function(wound){
+        if(!wound.condition || !wound.conditionApplied || wound.armorBlocked) return;
+        entries.push({name:wound.condition,zoneId:zoneId,woundId:wound.id,source:'Ferimento · '+(label ? label.label : woundRegion(zoneId)),severity:wound.severity,ticks:wound.conditionTicks || 0,tolerancePending:!!wound.tolerancePending});
+      });
+    });
+    return entries;
+  }
   function renderConditions(){
     renderConditionPicker();
     var list = $('#condition-list');
     if(!list) return;
-    if(!model.conditions.length){
+    var grouped = {};
+    model.conditions.forEach(function(name,index){
+      if(!grouped[name]) grouped[name] = {name:name,manualIndices:[],sources:[],definition:conditionDefinition(name)};
+      grouped[name].manualIndices.push(index);
+    });
+    derivedWoundConditions().forEach(function(source){
+      if(!grouped[source.name]) grouped[source.name] = {name:source.name,manualIndices:[],sources:[],definition:conditionDefinition(source.name)};
+      grouped[source.name].sources.push(source);
+    });
+    var allEntries = Object.keys(grouped).map(function(name){ return grouped[name]; });
+    if(!allEntries.length){
       list.innerHTML = '<span class="empty-state">Nenhuma condição ativa.</span>';
       return;
     }
     var categoryIds = CONDITION_CATEGORIES.map(function(category){ return category.id; }).concat(['other']);
     list.innerHTML = categoryIds.map(function(categoryId){
-      var entries = model.conditions.map(function(name,index){
-        return {name:name,index:index,definition:conditionDefinition(name)};
-      }).filter(function(entry){
+      var entries = allEntries.filter(function(entry){
         return (entry.definition ? entry.definition.category : 'other') === categoryId;
       });
       if(!entries.length) return '';
@@ -1607,12 +2597,19 @@
         '<div class="condition-card-list">'+entries.map(function(entry){
           var duration = entry.definition ? entry.definition.duration : 'Personalizada';
           var summary = entry.definition ? entry.definition.summary : 'Efeito definido pelo grupo.';
-          return '<article class="condition-card"><div><strong>'+escapeHtml(entry.name)+'</strong><span>'+escapeHtml(duration)+'</span></div><p>'+escapeHtml(summary)+'</p><button type="button" data-condition-index="'+entry.index+'" title="Remover '+escapeHtml(entry.name)+'" aria-label="Remover '+escapeHtml(entry.name)+'">×</button></article>';
+          var sources = entry.sources.map(function(source){ return '<div class="condition-source-row"><button type="button" class="condition-source" data-wound-source="'+escapeHtml(source.zoneId)+'" data-wound-id="'+escapeHtml(source.woundId)+'">'+escapeHtml(source.source)+(source.ticks ? ' · '+source.ticks+' avanço'+(source.ticks === 1 ? '' : 's') : '')+'</button>'+(source.tolerancePending ? '<button type="button" class="notes-btn small danger" data-wound-tolerance="'+escapeHtml(source.woundId)+'" data-wound-zone="'+escapeHtml(source.zoneId)+'">Tolerância NS 3</button>' : '')+'<button type="button" class="notes-btn small" data-wound-treat="'+escapeHtml(source.woundId)+'" data-wound-zone="'+escapeHtml(source.zoneId)+'">Tratar</button></div>'; }).join('');
+          var remove = entry.manualIndices.length ? '<button type="button" data-condition-index="'+entry.manualIndices[0]+'" title="Remover condição manual '+escapeHtml(entry.name)+'" aria-label="Remover condição manual '+escapeHtml(entry.name)+'">×</button>' : '';
+          return '<article class="condition-card '+(entry.sources.length ? 'derived-condition' : '')+'"><div><strong>'+escapeHtml(entry.name)+'</strong><span>'+escapeHtml(duration)+'</span></div><p>'+escapeHtml(summary)+'</p>'+(sources ? '<div class="condition-sources">'+sources+'</div>' : '')+remove+'</article>';
         }).join('')+'</div></section>';
     }).join('');
   }
   function addCondition(name){
     name = String(name || '').trim();
+    var definition = conditionDefinition(name);
+    if(name && definition && (definition.category === 'terrain' || definition.category === 'environment') && DATA.archetypes[model.fields['origem-select']] === 'Terra Viva' && hasGrowthStage(7)){
+      addRuleLog('imunidade','Resiliência Ecológica impediu '+name+'.',null);
+      renderConditions();saveModel();return;
+    }
     if(name && !hasCondition(name)) model.conditions.push(name);
     renderConditions();
     saveModel();
@@ -1643,7 +2640,7 @@
         var ordered = wounds.slice().sort(function(a,b){ return Number(b.severity)-Number(a.severity); });
         var items = ordered.map(function(detail){
         var label = detail.severity === 1 ? 'Leve' : (detail.severity === 2 ? 'Moderado' : 'Grave');
-          return '<div class="wound-summary-entry severity-'+detail.severity+'"><span>'+label+(detail.type ? ' · '+escapeHtml(detail.type) : '')+(detail.pf != null ? ' · '+detail.pf+' PF' : '')+'</span>'+(detail.note ? '<small>'+escapeHtml(detail.note)+'</small>' : '')+'</div>';
+          return '<div class="wound-summary-entry severity-'+detail.severity+'"><span>'+label+(detail.type ? ' · '+escapeHtml(detail.type) : '')+(detail.pf != null ? ' · '+detail.pf+' PF' : '')+(detail.condition ? ' · '+escapeHtml(detail.condition)+(detail.armorBlocked || !detail.conditionApplied ? ' impedida' : '') : '')+'</span>'+(detail.note ? '<small>'+escapeHtml(detail.note)+'</small>' : '')+'</div>';
         }).join('');
         lines.push('<section class="wound-region-summary"><div><strong>'+escapeHtml(zone.dataset.part)+'</strong><b>'+wounds.length+'</b></div>'+items+'</section>');
       }
@@ -1661,12 +2658,12 @@
     if(!type || !severity) return {pf:0};
     var region = woundRegion(zoneId);
     if(DATA.woundTable[type] && DATA.woundTable[type][region]){
-      return {pf:Math.max(0,parseInt(DATA.woundTable[type][region][severity-1].pf,10) || 0)};
+      return ENGINE.woundOutcome(DATA.woundTable,type,region,severity);
     }
     var environment = {
-      'Explosão':{pf:10}, 'Corrosão':{pf:8}, 'Fogo':{pf:6}, 'Veneno':{pf:4}, 'Clima':{pf:0}
+      'Explosão':{pf:10,condition:'Ferida Severa'}, 'Corrosão':{pf:8,condition:'Corrosão'}, 'Fogo':{pf:6,condition:'Em Chamas'}, 'Veneno':{pf:4,condition:'Envenenado'}, 'Clima':{pf:0,condition:'Clima Extremo'}
     };
-    return environment[type] || {pf:0};
+    return environment[type] || {pf:0,condition:''};
   }
   function armorForRegion(region){
     var item = DATA.armors.filter(function(entry){ return entry.location === region; })[0];
@@ -1685,7 +2682,7 @@
     var wounds = woundsForBodyZone(editingZoneId);
     $('#wound-existing-list').innerHTML = wounds.length ? wounds.map(function(detail,index){
       var severity = ['','Leve','Moderado','Grave'][detail.severity] || '';
-      return '<article class="wound-existing-card '+(detail.id === editingWoundId ? 'editing' : '')+'"><div><strong>Ferimento '+(index+1)+' · '+severity+'</strong><span>'+escapeHtml(detail.type || 'Sem tipo')+' · '+detail.pf+' PF</span></div>'+
+      return '<article class="wound-existing-card '+(detail.id === editingWoundId ? 'editing' : '')+'"><div><strong>Ferimento '+(index+1)+' · '+severity+'</strong><span>'+escapeHtml(detail.type || 'Sem tipo')+' · '+detail.pf+' PF'+(detail.condition ? ' · '+escapeHtml(detail.condition)+(detail.armorBlocked ? ' impedida' : '') : '')+'</span></div>'+
         '<div><button type="button" class="wound-edit-button" data-wound-edit="'+escapeHtml(detail.id)+'">Editar</button><button type="button" class="wound-remove-button" data-wound-remove="'+escapeHtml(detail.id)+'">Remover</button></div></article>';
     }).join('') : '<span class="empty-state">Nenhum ferimento nesta região.</span>';
     $('#wound-existing-count').textContent = wounds.length+' registrado'+(wounds.length === 1 ? '' : 's');
@@ -1699,6 +2696,13 @@
     $('#wound-apply-pf').checked = !detail.id;
     $('#wound-save').textContent = detail.id ? 'Atualizar ferimento' : 'Adicionar ferimento';
     $('#wound-new').classList.toggle('hidden',!detail.id);
+    var firstDefenseOption = $('#wound-first-defense-option');
+    if(firstDefenseOption){
+      var firstDefenseKey = ENGINE.powerKey('growth','Cães de Guerra','Primeiro Impacto');
+      var firstDefenseReady = DATA.archetypes[model.fields['origem-select']] === 'Cães de Guerra' && hasGrowthStage(1) && !(model.powerUsage[firstDefenseKey] && model.powerUsage[firstDefenseKey].count > 0);
+      firstDefenseOption.classList.toggle('hidden',!firstDefenseReady || !!detail.id);
+      $('#wound-ignore-first-defense').checked = false;
+    }
     updateWoundPreview();
   }
   function startNewWound(){
@@ -1725,7 +2729,7 @@
     if(!model.wounds[editingZoneId].length) delete model.wounds[editingZoneId];
     if(editingWoundId === woundId) startNewWound();
     else renderWoundModalList();
-    renderWounds();
+    renderWounds(); renderConditions();
     saveModel();
   }
   function closeWoundModal(){ editingZoneId = null; editingWoundId = ''; $('#wound-modal').style.display = 'none'; }
@@ -1736,7 +2740,9 @@
   function updateWoundPreview(){
     if(!editingZoneId) return;
     var rule = woundRule($('#wound-type').value,selectedWoundSeverity(),editingZoneId);
-    $('#wound-rule-preview').textContent = selectedWoundSeverity() && $('#wound-type').value ? ('Regra base: '+rule.pf+' PF. Armadura equipada será aplicada automaticamente ao somar os PF.') : 'Selecione tipo e gravidade para consultar a regra.';
+    var armor = armorForRegion(woundRegion(editingZoneId));
+    var growthBlocks = DATA.archetypes[model.fields['origem-select']] === 'Terra Viva' && hasGrowthStage(8) && selectedWoundSeverity() <= 2;
+    $('#wound-rule-preview').textContent = selectedWoundSeverity() && $('#wound-type').value ? ('Regra base: '+rule.pf+' PF'+(rule.condition ? ' + '+rule.condition : ' · sem Condição')+'. '+(armor ? armor.item.name+' reduzirá os PF, consumirá 1 Integridade e impedirá a Condição.' : (growthBlocks && rule.condition ? 'Ritidoma impedirá a Condição deste Ferimento.' : 'Sem proteção automática ativa.'))) : 'Selecione tipo e gravidade para consultar a regra.';
   }
 
   function applyWound(){
@@ -1750,14 +2756,33 @@
     }
     $('#wound-rule-preview').classList.remove('error');
     var rule = woundRule(type,severity,editingZoneId);
-    var pf = rule.pf;
+    var previousDetail = editingWoundId ? woundById(editingZoneId,editingWoundId) : null;
+    var applyRules = $('#wound-apply-pf').checked;
+    var pf = applyRules ? rule.pf : (previousDetail ? previousDetail.pf : rule.pf);
+    var basePf = rule.pf;
+    var conditionBlocked = false;
     var armor = armorForRegion(woundRegion(editingZoneId));
-    if(armor && $('#wound-apply-pf').checked){
+    if(armor && applyRules){
       if(armor.item.reduction === 'todos') pf = 0;
       else pf = Math.max(0,pf-armor.item.reduction);
       armor.state.remaining = Math.max(0,armor.state.remaining-1);
+      conditionBlocked = true;
     }
-    var detail = { id:editingWoundId || uid('wound'), type:type, severity:severity, note:$('#wound-note').value, pf:pf };
+    var firstDefense = $('#wound-ignore-first-defense');
+    if(applyRules && firstDefense && firstDefense.checked){
+      pf = 0; conditionBlocked = true;
+      markPowerUsed(ENGINE.powerKey('growth','Cães de Guerra','Primeiro Impacto'),'conflict');
+    }
+    if(DATA.archetypes[model.fields['origem-select']] === 'Terra Viva' && hasGrowthStage(8) && severity <= 2) conditionBlocked = true;
+    var detail = {
+      id:editingWoundId || uid('wound'), type:type, severity:severity, note:$('#wound-note').value,
+      pf:pf, basePf:basePf, condition:rule.condition || '',
+      conditionApplied:applyRules ? !!rule.condition && !conditionBlocked : (previousDetail ? previousDetail.conditionApplied : false),
+      armorBlocked:applyRules ? conditionBlocked : !!(previousDetail && previousDetail.armorBlocked), rulesApplied:applyRules || !!(previousDetail && previousDetail.rulesApplied),
+      conditionTicks:previousDetail ? previousDetail.conditionTicks || 0 : 0,
+      tolerancePending:previousDetail ? !!previousDetail.tolerancePending : false,
+      toleranceResolved:previousDetail ? !!previousDetail.toleranceResolved : false
+    };
     var wounds = woundsForBodyZone(editingZoneId).slice();
     if(editingWoundId){
       wounds = wounds.map(function(existing){ return existing.id === editingWoundId ? detail : existing; });
@@ -1765,8 +2790,8 @@
       wounds.push(detail);
     }
     model.wounds[editingZoneId] = wounds;
-    if($('#wound-apply-pf').checked){ model.health.pf += pf; applyMasochistRelief(pf); }
-    renderWounds(); renderHealth(); renderArmor(); saveModel(); closeWoundModal();
+    if(applyRules){ changePF(pf,{source:'ferimento '+type+' em '+woundRegion(editingZoneId)}); applyMasochistRelief(pf); }
+    renderWounds(); renderConditions(); renderHealth(); renderArmor(); saveModel(); closeWoundModal();
   }
 
   function getSelectedNotebook(){
@@ -1827,6 +2852,7 @@
     buildLists();
     renderWounds();
     renderGrowth();
+    renderPowerCenterStatus();
     renderNeeds();
     renderRelationships();
     setModifier('roll-bonus',0);
@@ -1867,12 +2893,13 @@
     if(group.id === 'pf-boxes'){
       var total = model.health.pf + model.health.permanentPf;
       var target = total === index ? index-1 : index;
-      model.health.pf = Math.max(0,target-model.health.permanentPf);
-      applyMasochistRelief(Math.max(0,target-total));
+      var received = Math.max(0,target-total);
+      changePF(target-total,{source:'ajuste manual da barra'});
+      applyMasochistRelief(received);
     } else {
       var peTotal = model.health.pe + model.health.permanentPe;
       var peTarget = peTotal === index ? index-1 : index;
-      model.health.pe = Math.max(0,peTarget-model.health.permanentPe);
+      changePE(peTarget-peTotal,{source:'ajuste manual da barra'});
     }
     renderHealth(); saveModel();
   }
@@ -1913,7 +2940,9 @@
     var attributeValue = model.attributes[attribute] || 0;
     var skillValue = isSkillLocked(skill) ? 0 : (model.originSkills.indexOf(skill) >= 0 ? 5 : model.skills[skill]);
     var prodigyBonus = model.fields['ocupacao-select'] === 'Prodígio' && [model.fields['prodigio-skill-1'],model.fields['prodigio-skill-2']].indexOf(skill) >= 0 ? 1 : 0;
-    var bonus = clamp((Number($('#roll-bonus').value) || 0) + prodigyBonus,0,3);
+    var rollEffects = activeRollEffects(attribute,skill);
+    var temporaryBonus = rollEffects.reduce(function(total,effect){ return total + effect.bonus; },0);
+    var bonus = clamp((Number($('#roll-bonus').value) || 0) + prodigyBonus + temporaryBonus,0,3);
     var penalty = clamp($('#roll-penalty').value,0,3);
     var stress = $('#roll-stress').checked;
     var net = bonus - penalty + (stress ? 1 : 0);
@@ -1940,19 +2969,38 @@
       if(againstDevotee) successes++;
     }
     var target = parseInt($('#roll-target').value,10) || 0;
-    if(stress){ model.health.pe += 2; renderHealth(); }
     var labels = ['Falha','Sofrido','Gangrenado','Dilacerante','Profano','Absoluto'];
     var nsIndex = Math.min(5,successes);
     var passed = target ? successes >= target : null;
+    var failed = target ? !passed : successes === 0;
     var crisis = stress && target && !passed;
+    var stressCost = DATA.archetypes[model.fields['origem-select']] === 'Donos da Razão' && hasGrowthStage(4) ? 1 : 2;
+    if(stress) applyStress(stressCost,{source:'Aposta de Estresse',forceCrisis:crisis});
+    consumeNextTestEffects(attribute,skill);
+    var rapidLearning = model.fields['ocupacao-select'] === 'Prodígio' && failed;
+    if(rapidLearning){
+      addTemporaryEffect({
+        sourceKey:ENGINE.powerKey('occupation','Prodígio','Aprendizado Rápido')+':'+attribute+':'+skill,
+        name:'Aprendizado Rápido · '+attribute+' + '+skill,
+        bonus:1,
+        expires:'use',
+        allTests:false,
+        attribute:attribute,
+        skill:skill
+      });
+    }
     var html = '<div class="roll-summary"><strong>'+labels[nsIndex]+'</strong><span>'+successes+' sucesso'+(successes === 1 ? '' : 's')+'</span>'+(passed === null ? '' : '<span class="'+(passed ? 'budget-ok' : 'over')+'">'+(passed ? 'NS alcançado' : 'NS não alcançado')+'</span>')+'</div>'+
       '<div class="dice-faces">'+results.map(function(die){ return '<span class="die '+(penalized ? (desperateSuccess ? 'success' : 'fail') : (die <= skillValue ? 'success' : 'fail'))+'">'+die+'</span>'; }).join('')+'</div>'+
       (prodigyBonus ? '<p>Dom Superior aplicou 1 Bônus a esta Perícia.</p>' : '')+
+      (rollEffects.length ? '<p>Efeito temporário aplicado: '+escapeHtml(rollEffects.map(function(effect){ return effect.name+' (+'+effect.bonus+')'; }).join(' · '))+'.</p>' : '')+
+      (rapidLearning ? '<p>Aprendizado Rápido preparou Bônus para o próximo teste igual.</p>' : '')+
       (penalized ? '<p>Teste penalizado: o número escolhido era '+$('#roll-guess').value+'.</p>' : '')+
       (plagueResult != null ? '<p>Dado da Praga: <b>'+plagueResult+'</b> · '+(symptom ? 'provoca Sintoma de '+currentCorruptionStage().name : 'sem Sintoma')+(againstDevotee ? ' · conta como sucesso adicional; o Sintoma só se manifesta ao fim da Cena' : '')+'.</p>' : '')+
+      (stress ? '<p>Aposta de Estresse: +1 dado e +'+stressCost+' PE.</p>' : '')+
       (crisis ? '<p class="over">A Aposta de Estresse falhou: ocorre uma Crise de Estresse.</p>' : '');
     $('#roll-result').innerHTML = html;
     model.ui.lastRoll = { attribute:attribute, skill:skill, results:results, successes:successes, plague:plagueResult, at:new Date().toISOString() };
+    refreshPowerCenter();renderPowerCenterStatus();
     saveModel();
   }
 
@@ -1967,7 +3015,12 @@
       targetWeapon.current = weaponMax(targetWeapon);
       renderEquipment(); saveModel(); return;
     }
-    var label = recipe.id === 'flecha' ? 'Flechas' : recipe.name;
+    if(recipe.id === 'flecha'){addAmmunition('flechas','single','',model.originPowers.indexOf('Flechas E Mais Flechas')>=0?3:2);return;}
+    var chargeAmmo=ammunitionData('cargas');
+    if(chargeAmmo&&chargeAmmo.compatibleRecipes&&chargeAmmo.compatibleRecipes.indexOf(recipe.name)>=0){addAmmunition('cargas','single','',1);return;}
+    var matchingCatalog=DATA.commonItems.filter(function(item){return item.name===recipe.name||(item.aliases||[]).indexOf(recipe.name)>=0;})[0];
+    if(matchingCatalog){addCatalogItem(matchingCatalog.id);return;}
+    var label = recipe.name;
     var empty = model.inventory.filter(function(item){ return !isInventoryWeapon(item) && !item.name; })[0];
     if(empty){ empty.name = label; empty.uses = recipe.id === 'flecha' ? '2' : ''; }
     else model.inventory.push({id:uid('item'),kind:'item',name:label,uses:recipe.id === 'flecha' ? '2' : ''});
@@ -1994,7 +3047,7 @@
     reader.onload = function(){
       try{
         var parsed = JSON.parse(reader.result);
-        model = parsed.version === 3 ? normalizeModel(parsed) : normalizeModel(migrateLegacy(parsed,defaultModel()));
+        model = Number(parsed.version) >= 3 ? normalizeModel(parsed) : normalizeModel(migrateLegacy(parsed,defaultModel()));
         renderAll(); saveModel(true); alert('Backup restaurado com sucesso.');
       } catch(error){ alert('O arquivo de backup não é válido.'); }
     };
@@ -2004,6 +3057,7 @@
   function resetSheet(){
     if(!confirm('Isso apagará todos os dados preenchidos na ficha. Continuar?')) return;
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PREVIOUS_STORAGE_KEY);
     localStorage.removeItem(LEGACY_STORAGE_KEY);
     localStorage.removeItem(LEGACY_NOTES_KEY);
     model = defaultModel();
@@ -2013,6 +3067,42 @@
   function onClick(event){
     var tab = event.target.closest('.sheet-tab');
     if(tab){ activatePage(tab.dataset.pageTarget); return; }
+    if(event.target.closest('[data-close-rule-modal]')){closeRuleModal();return;}
+    if(event.target.id==='rule-action-modal'){closeRuleModal();return;}
+    if(event.target.closest('#open-dying-panel')){openDyingPanel();return;}
+    if(event.target.closest('#open-stress-panel')){openStressPanel();return;}
+    if(event.target.closest('#open-power-center')){openPowerCenter();return;}
+    if(event.target.closest('#open-item-catalog')){openItemCatalog();return;}
+    if(event.target.closest('#paradigm-info-button')){openParadigmMatrix();return;}
+    if(event.target.closest('#dying-tolerance-roll')){var toleranceRoll=characterTest('Físico','Tolerância',0);resolveDyingTolerance(toleranceRoll.successes>=3,toleranceRoll);return;}
+    var manualTolerance=event.target.closest('[data-dying-tolerance]');if(manualTolerance){resolveDyingTolerance(manualTolerance.dataset.dyingTolerance==='success',null);return;}
+    if(event.target.closest('#dying-stabilize-roll')){var medicineRoll=characterTest('Intelecto','Medicina',0);resolveStabilization(medicineRoll.successes>=3,medicineRoll);return;}
+    if(event.target.closest('#dying-stabilize-success')){resolveStabilization(true,{manual:true});return;}
+    if(event.target.closest('#dying-end-window')){model.critical.stabilizationWindow=false;addRuleLog('morrendo','Janela de salvamento encerrada sem cuidado.',null);refreshDyingPanel();saveModel();return;}
+    if(event.target.closest('#death-test-roll')){rollDeathTest();return;}
+    if(event.target.closest('#dying-correct-state')){if(confirm('Corrigir o estado com base no total atual de PF?')){model.critical.status='stable';reconcileCriticalState(pfTotal(),{source:'correção manual'});renderHealth();refreshDyingPanel();saveModel();}return;}
+    if(event.target.closest('#determination-roll')){rollDetermination();return;}
+    var determinationGain=event.target.closest('[data-determination-pe]');if(determinationGain){var pendingDetermination=model.stress.pendingDetermination;if(!pendingDetermination)return;var chosenPE=parseInt(determinationGain.dataset.determinationPe,10)||0;model.stress.pendingDetermination=null;applyStress(chosenPE,{source:'Rolagem de Determinação',determination:true,range:pendingDetermination.range});refreshStressPanel();return;}
+    if(event.target.closest('#stress-manual-apply')){var stressAmount=Math.max(0,parseInt($('#stress-manual-amount').value,10)||0);applyStress(stressAmount,{source:'Evento de Estresse',cause:$('#stress-cause').value});refreshStressPanel();return;}
+    if(event.target.closest('#stress-crisis-manual')){triggerStressCrisis({source:'Crise definida pelo MP'});refreshStressPanel();return;}
+    if(event.target.closest('#stress-recovery-apply')){var recoveryKey=$('#stress-recovery-method').value;var recoveryRule=STRESS_RECOVERY[recoveryKey];var recoveryAmount=clamp($('#stress-recovery-amount').value,recoveryRule.min,recoveryRule.max);if(model.fields['ocupacao-select']==='Verdugo'&&['conversation','social','support'].indexOf(recoveryKey)>=0){alert('Coração de Pedra impede reduzir PE por vínculos, conexões ou afeto.');return;}changePE(-recoveryAmount,{source:'Recuperação · '+recoveryRule.name});model.stress.recoveryLog.push({method:recoveryKey,amount:recoveryAmount,at:new Date().toISOString()});refreshStressPanel();saveModel();return;}
+    if(event.target.closest('#stress-resolve-breaking')){if(peTotal()>=bloodLimits().pe){alert('Reduza os PE abaixo do limite antes de encerrar o Surto.');return;}changePE(0,{source:'Resolução narrativa',resolveBreaking:true});refreshStressPanel();return;}
+    if(event.target.closest('#stress-acknowledge-crisis')){model.stress.pendingCrisis=null;renderStressToolStatus();refreshStressPanel();saveModel();return;}
+    if(event.target.closest('#growth-confirm')){confirmGrowth();return;}
+    if(event.target.closest('#growth-complete-choices')){openGrowthApply(model.growth.stage,true);return;}
+    if(event.target.closest('#growth-future-arc')){if(model.growth.stage===10){model.growth.postCapArcs+=1;addRuleLog('crescimento','Arco após a Etapa X registrado.',{arc:model.growth.postCapArcs});renderAttributes();renderOrigin();renderGrowth();saveModel();}return;}
+    var scopeAdvance=event.target.closest('[data-advance-scope]');if(scopeAdvance){advanceScope(scopeAdvance.dataset.advanceScope);return;}
+    var powerUse=event.target.closest('[data-power-use]');if(powerUse){usePower(powerUse.dataset.powerUse,false);return;}
+    var powerUseFree=event.target.closest('[data-power-use-free]');if(powerUseFree){usePower(powerUseFree.dataset.powerUseFree,true);return;}
+    var catalogItemButton=event.target.closest('[data-catalog-item]');if(catalogItemButton){addCatalogItem(catalogItemButton.dataset.catalogItem);return;}
+    var catalogAmmoButton=event.target.closest('[data-catalog-ammo]');if(catalogAmmoButton){var ammoId=catalogAmmoButton.dataset.catalogAmmo;var ammoWeaponSelect=$('[data-ammo-weapon-select="'+ammoId+'"]',$('#rule-action-content'));addAmmunition(ammoId,catalogAmmoButton.dataset.ammoMode,ammoWeaponSelect?ammoWeaponSelect.value:'');return;}
+    var woundSource=event.target.closest('[data-wound-source]');if(woundSource){var sourceZone=$('#'+woundSource.dataset.woundSource);if(sourceZone){openWoundModal(sourceZone);editWound(woundSource.dataset.woundId);}return;}
+    var woundTreat=event.target.closest('[data-wound-treat]');if(woundTreat){treatWoundCondition(woundTreat.dataset.woundZone,woundTreat.dataset.woundTreat);return;}
+    var woundTolerance=event.target.closest('[data-wound-tolerance]');if(woundTolerance){rollWoundTolerance(woundTolerance.dataset.woundZone,woundTolerance.dataset.woundTolerance);return;}
+    var catalogItemUse=event.target.closest('[data-item-use]');if(catalogItemUse){var catalogRow=catalogItemUse.closest('.inv-slot');var catalogEntry=model.inventory.filter(function(item){return item.id===catalogRow.dataset.itemId;})[0];var catalogData=catalogItem(catalogEntry&&catalogEntry.catalogId);if(catalogEntry&&catalogData&&catalogData.uses.max!=null){catalogEntry.uses=String(clamp((parseInt(catalogEntry.uses,10)||0)+parseInt(catalogItemUse.dataset.itemUse,10),0,catalogData.uses.max));renderInventory();saveModel();}return;}
+    var ammoDelta=event.target.closest('[data-ammo-delta]');if(ammoDelta){var ammoRow=ammoDelta.closest('.inv-slot');var ammoEntry=model.inventory.filter(function(item){return item.id===ammoRow.dataset.itemId;})[0];var ammoInfo=ammunitionData(ammoEntry&&ammoEntry.ammoId);var ammoChange=parseInt(ammoDelta.dataset.ammoDelta,10)||0;if(ammoEntry&&ammoInfo){if(ammoInfo.storage==='container')ammoEntry.charges=clamp(ammoEntry.charges+ammoChange,0,ammoEntry.capacity);else ammoEntry.quantity=clamp(ammoEntry.quantity+ammoChange,0,ammoInfo.maxPerInventorySlot||ammoInfo.maxLoaded||6);renderInventory();saveModel();}return;}
+    var weaponFire=event.target.closest('.weapon-fire');if(weaponFire){var fireState=weaponFire.dataset.ammoItem?model.inventory.filter(function(item){return item.id===weaponFire.dataset.ammoItem;})[0].weapon:model.weapons[parseInt(weaponFire.dataset.weaponIndex,10)];var fireResult=fireWeaponState(fireState);showWeaponFeedback(fireResult);renderEquipment();saveModel();return;}
+    var weaponReload=event.target.closest('.weapon-reload');if(weaponReload){var reloadItem=weaponReload.dataset.ammoItem?model.inventory.filter(function(item){return item.id===weaponReload.dataset.ammoItem;})[0]:null;var reloadState=reloadItem?reloadItem.weapon:model.weapons[parseInt(weaponReload.dataset.weaponIndex,10)];var reloadResult=reloadWeaponState(reloadState);showWeaponFeedback(reloadResult);renderEquipment();saveModel();return;}
     var modifier = event.target.closest('.modifier-option');
     if(modifier){ setModifier(modifier.dataset.modifierInput,parseInt(modifier.dataset.value,10)); return; }
     var pip = event.target.closest('.pip');
@@ -2056,7 +3146,7 @@
       addCondition($('#condition-custom').value || $('#condition-select').value); $('#condition-custom').value=''; return;
     }
     if(event.target.closest('#masoquista-voluntary')){
-      addPC(1); addCondition('Carne Voluntária — Bônus'); return;
+      usePower(ENGINE.powerKey('occupation','Masoquista','Carne Voluntária'),false); return;
     }
     var conditionRemove = event.target.closest('[data-condition-index]');
     if(conditionRemove){ model.conditions.splice(parseInt(conditionRemove.dataset.conditionIndex,10),1); renderConditions(); saveModel(); return; }
@@ -2108,7 +3198,7 @@
     var noteRemove=event.target.closest('.note-remove-btn'); if(noteRemove){var noteCard=noteRemove.closest('.note-card');var selected=getSelectedNotebook();selected.notes=selected.notes.filter(function(note){return note.id!==noteCard.dataset.noteId;});renderNotes();saveModel();return;}
     if(event.target.closest('#filter-fixed-button')){selectFilterMode('fixed');var gain=Math.max(0,parseInt($('#filter-fixed-input').value,10)||0);var net=Math.max(0,gain-4);addPC(net);$('#filter-result').textContent='Redução fixa: '+gain+' PC antes do filtro, −4 PC, '+net+' PC recebidos.';return;}
     if(event.target.closest('#filter-variable-button')){selectFilterMode('variable');var diceCount=clamp($('#filter-dice-count').value,1,6);var rolls=[];for(var d=0;d<diceCount;d++)rolls.push(1+Math.floor(Math.random()*6));var discarded=diceCount>1?Math.max.apply(Math,rolls):0;var total=rolls.reduce(function(sum,value){return sum+value;},0)-discarded;addPC(total);$('#filter-result').textContent='Redução variável: '+rolls.join(', ') + (discarded?' · maior descartado: '+discarded:'')+' · '+total+' PC recebidos.';return;}
-    if(event.target.closest('#filter-overload-button')){selectFilterMode('overload');model.health.permanentPf+=2;addCondition('Inconsciente');renderHealth();saveModel();$('#filter-result').textContent='Sobrecarga acionada: ganho anulado, +2 PF permanentes e Inconsciente.';return;}
+    if(event.target.closest('#filter-overload-button')){selectFilterMode('overload');var overloadPrevious=pfTotal();model.health.permanentPf+=2;reconcileCriticalState(overloadPrevious,{source:'Sobrecarga do Filtro'});addCondition('Inconsciente');renderHealth();saveModel();$('#filter-result').textContent='Sobrecarga acionada: ganho anulado, +2 PF permanentes e Inconsciente.';return;}
     if(event.target.closest('#clear-filter-mode')){selectFilterMode('');$('#filter-result').textContent='Seleção de modo limpa; nenhum valor da ficha foi alterado.';return;}
     if(event.target.closest('#clear-corruption-filters')){if(confirm('Limpar todos os efeitos permanentemente anulados pela Pulseira?')){model.corruptionFilters=[];renderCorruption();saveModel();}return;}
     if(event.target.closest('#btn-save-backup')){exportBackup();return;}
@@ -2120,6 +3210,8 @@
   function onInput(event){
     var target = event.target;
     if(target.classList.contains('modifier-number')){ setModifier(target.id,target.value); return; }
+    if(target.id==='catalog-search'){model.ui.itemCatalogFilter=target.value;filterCatalogCards(target.value);saveModel();return;}
+    if(target.id==='dying-final-wound'){model.critical.finalWound=target.value;saveModel();return;}
     if(target.dataset.modelField){
       if(target.tagName === 'SELECT') return;
       model.fields[target.dataset.modelField] = target.value;
@@ -2127,8 +3219,8 @@
       if(target.id === 'growth-stage') renderGrowth();
       saveModel(); return;
     }
-    if(target.id === 'pf-permanent'){ model.health.permanentPf=Math.max(0,parseInt(target.value,10)||0);renderHealth();saveModel();return; }
-    if(target.id === 'pe-permanent'){ model.health.permanentPe=Math.max(0,parseInt(target.value,10)||0);renderHealth();saveModel();return; }
+    if(target.id === 'pf-permanent'){ var previousPfTotal=pfTotal();model.health.permanentPf=Math.max(0,parseInt(target.value,10)||0);reconcileCriticalState(previousPfTotal,{source:'PF permanente'});renderHealth();saveModel();return; }
+    if(target.id === 'pe-permanent'){ model.health.permanentPe=Math.max(0,parseInt(target.value,10)||0);if(peTotal()>=bloodLimits().pe)model.stress.breaking=true;renderHealth();saveModel();return; }
     if(target.id === 'parts-input'){ model.parts=Math.max(0,parseInt(target.value,10)||0);saveModel();return; }
     var invRow=target.closest('.inv-slot');
     if(invRow){
@@ -2181,11 +3273,15 @@
         return;
       }
       model.fields.sangue=target.value;
+      reconcileCriticalState(pfTotal(),{source:'troca do tipo de Sangue'});
+      if(peTotal() >= bloodLimits().pe) model.stress.breaking = true;
       renderHealth();renderPC();renderOccupation();renderFlower();saveModel();return;
     }
     if(target.id==='origem-select'){
       var previous=model.fields['origem-select'];
-      if(previous&&previous!==target.value&&!confirm('Trocar a Origem redefine as quatro Perícias e os Poderes escolhidos. Continuar?')){target.value=previous;return;}
+      var resetsGrowth=previous&&previous!==target.value&&model.growth.stage>0;
+      if(previous&&previous!==target.value&&!confirm('Trocar a Origem redefine as quatro Perícias e os Poderes escolhidos'+(resetsGrowth?' e reinicia a Trilha de Crescimento':'')+'. Continuar?')){target.value=previous;return;}
+      if(resetsGrowth)model.growth=clone(defaultModel().growth);
       applyOrigin(target.value);return;
     }
     if(target.id==='ocupacao-select'){applyOccupation(target.value);return;}
@@ -2199,14 +3295,22 @@
       model.fields['abutre-resource']=target.value;
       renderOccupation();renderResources();renderRecipes();saveModel();return;
     }
+    if(target.id==='growth-stage'){var requestedGrowth=clamp(target.value,0,10);target.value=String(model.growth.stage);openGrowthApply(requestedGrowth,false);return;}
     if(target.dataset.modelField){model.fields[target.dataset.modelField]=target.value;if(target.id==='growth-stage')renderGrowth();if(target.id==='reputacao-select')renderParadigmStyle();if(target.id==='genero-select')renderBodyMap();saveModel();return;}
+    if(target.classList.contains('growth-origin-power-check')){
+      var extraOriginName=target.dataset.growthOrigin;var extraOrigin=DATA.origins[extraOriginName];if(!extraOrigin)return;var extraPower=extraOrigin.powers.filter(function(item){return item.name===target.dataset.power;})[0];if(!extraPower)return;
+      if(!model.growth.powerSelections[extraOriginName])model.growth.powerSelections[extraOriginName]=[];
+      var extraSelected=model.growth.powerSelections[extraOriginName];var extraIndex=extraSelected.indexOf(extraPower.name);var extraOccupation=getOccupation();var extraTotal=7+(extraOccupation&&extraOccupation.originPointsBonus||0)+currentGrowthTotals().originPoints;
+      if(target.checked&&extraIndex<0){if(originPowerSpent()+extraOriginPowerCost(extraOriginName,extraPower)>extraTotal){target.checked=false;alert('Pontos de Origem insuficientes. Poderes de Origem fora do Arquétipo custam +1 PO.');return;}extraSelected.push(extraPower.name);}else if(!target.checked&&extraIndex>=0)extraSelected.splice(extraIndex,1);
+      renderOrigin();renderPowerCenterStatus();saveModel();return;
+    }
     if(target.classList.contains('origin-power-check')){
-      var origin=getOrigin();if(!origin)return;var power=origin.powers.filter(function(item){return item.name===target.dataset.power;})[0];var index=model.originPowers.indexOf(power.name);if(target.checked&&index<0){var occ=getOccupation();var total=7+(occ&&occ.originPointsBonus||0);var spent=origin.powers.reduce(function(sum,item){return sum+(model.originPowers.indexOf(item.name)>=0?item.cost:0);},0);if(spent+power.cost>total){target.checked=false;alert('Pontos de Origem insuficientes.');return;}model.originPowers.push(power.name);}else if(!target.checked&&index>=0)model.originPowers.splice(index,1);renderOrigin();saveModel();return;
+      var origin=getOrigin();if(!origin)return;var power=origin.powers.filter(function(item){return item.name===target.dataset.power;})[0];var index=model.originPowers.indexOf(power.name);if(target.checked&&index<0){var occ=getOccupation();var total=7+(occ&&occ.originPointsBonus||0)+currentGrowthTotals().originPoints;var spent=originPowerSpent();if(spent+power.cost>total){target.checked=false;alert('Pontos de Origem insuficientes.');return;}model.originPowers.push(power.name);}else if(!target.checked&&index>=0)model.originPowers.splice(index,1);renderOrigin();renderPowerCenterStatus();saveModel();return;
     }
     if(target.classList.contains('inventory-weapon-select')){var storedCard=target.closest('.inv-slot');var storedItem=model.inventory.filter(function(item){return item.id===storedCard.dataset.itemId;})[0];if(!storedItem||!isInventoryWeapon(storedItem))return;var storedWeaponState=storedItem.weapon;storedWeaponState.weaponId=target.value;storedWeaponState.mods=[];storedWeaponState.current=weaponMax(storedWeaponState);if(target.value!=='custom'){storedWeaponState.customName='';storedWeaponState.customDamage='';storedWeaponState.customRange='';storedWeaponState.customMax=0;}renderInventory();renderRecipes();saveModel();return;}
-    if(target.classList.contains('inventory-weapon-mod-select')){var storedModCard=target.closest('.inv-slot');var storedModItem=model.inventory.filter(function(item){return item.id===storedModCard.dataset.itemId;})[0];if(!storedModItem||!isInventoryWeapon(storedModItem))return;var storedModState=storedModItem.weapon;var storedModIndex=parseInt(target.dataset.modIndex,10);var storedOldMod=storedModState.mods[storedModIndex]||'';var storedNextMod=target.value;if(storedOldMod&&storedNextMod!==storedOldMod){alert('Modificações são permanentes. Apenas poderes específicos permitem removê-las.');renderInventory();return;}if(storedNextMod){var storedMod=DATA.modifications.filter(function(item){return item.id===storedNextMod;})[0];if(model.parts<storedMod.cost){alert('Partes insuficientes para instalar esta modificação.');renderInventory();return;}model.parts-=storedMod.cost;storedModState.mods[storedModIndex]=storedNextMod;storedModState.current=Math.min(storedModState.current,weaponMax(storedModState));renderEquipment();saveModel();}return;}
+    if(target.classList.contains('inventory-weapon-mod-select')){var storedModCard=target.closest('.inv-slot');var storedModItem=model.inventory.filter(function(item){return item.id===storedModCard.dataset.itemId;})[0];if(!storedModItem||!isInventoryWeapon(storedModItem))return;var storedModState=storedModItem.weapon;var storedModIndex=parseInt(target.dataset.modIndex,10);var storedOldMod=storedModState.mods[storedModIndex]||'';var storedNextMod=target.value;if(storedOldMod&&storedNextMod!==storedOldMod){alert('Modificações são permanentes. Apenas poderes específicos permitem removê-las.');renderInventory();return;}if(storedNextMod){var storedMod=DATA.modifications.filter(function(item){return item.id===storedNextMod;})[0];var storedModCost=modificationCost(storedMod);if(model.parts<storedModCost){alert('Partes insuficientes para instalar esta modificação.');renderInventory();return;}model.parts-=storedModCost;storedModState.mods[storedModIndex]=storedNextMod;storedModState.current=Math.min(storedModState.current,weaponMax(storedModState));renderEquipment();saveModel();}return;}
     if(target.classList.contains('weapon-select')){var card=target.closest('.weapon-card');var state=model.weapons[parseInt(card.dataset.weaponIndex,10)];state.weaponId=target.value;state.mods=[];state.current=weaponMax(state);if(target.value!=='custom'){state.customName='';state.customDamage='';state.customRange='';state.customMax=0;}renderWeapons();saveModel();return;}
-    if(target.classList.contains('weapon-mod-select')){var modCard=target.closest('.weapon-card');var weaponState=model.weapons[parseInt(modCard.dataset.weaponIndex,10)];var modIndex=parseInt(target.dataset.modIndex,10);var old=weaponState.mods[modIndex]||'';var next=target.value;if(old&&next!==old){alert('Modificações são permanentes. Apenas poderes específicos permitem removê-las.');renderWeapons();return;}if(next){var mod=DATA.modifications.filter(function(item){return item.id===next;})[0];if(model.parts<mod.cost){alert('Partes insuficientes para instalar esta modificação.');renderWeapons();return;}model.parts-=mod.cost;weaponState.mods[modIndex]=next;renderEquipment();saveModel();}return;}
+    if(target.classList.contains('weapon-mod-select')){var modCard=target.closest('.weapon-card');var weaponState=model.weapons[parseInt(modCard.dataset.weaponIndex,10)];var modIndex=parseInt(target.dataset.modIndex,10);var old=weaponState.mods[modIndex]||'';var next=target.value;if(old&&next!==old){alert('Modificações são permanentes. Apenas poderes específicos permitem removê-las.');renderWeapons();return;}if(next){var mod=DATA.modifications.filter(function(item){return item.id===next;})[0];var modCost=modificationCost(mod);if(model.parts<modCost){alert('Partes insuficientes para instalar esta modificação.');renderWeapons();return;}model.parts-=modCost;weaponState.mods[modIndex]=next;renderEquipment();saveModel();}return;}
     if(target.classList.contains('armor-equipped')){var armorCard=target.closest('.armor-card');var armorItem=DATA.armors.filter(function(item){return item.id===armorCard.dataset.armorId;})[0];var armorState=model.armor[armorItem.id];armorState.equipped=target.checked;if(target.checked&&armorState.remaining===0)armorState.remaining=armorItem.maxUses;renderArmor();saveModel();return;}
     if(target.classList.contains('corruption-filter-check')){
       var stage=currentCorruptionStage();var stageKeys=stage.effects.map(function(effect){return effect.key;});var effectKey=target.dataset.effectKey;var filterIndex=model.corruptionFilters.indexOf(effectKey);
@@ -2220,6 +3324,7 @@
   }
 
   function onKeyDown(event){
+    if(event.key === 'Escape' && $('#rule-action-modal') && $('#rule-action-modal').style.display !== 'none'){event.preventDefault();closeRuleModal();return;}
     var zone = event.target.closest && event.target.closest('.zone');
     if(zone && (event.key === 'Enter' || event.key === ' ')){
       event.preventDefault();
@@ -2238,6 +3343,8 @@
     window.addEventListener('pagehide',function(){saveModel(true);});
     window.addEventListener('beforeunload',function(){saveModel(true);});
     $('#footer-date').textContent='IMPRESSO EM '+new Date().toLocaleDateString('pt-BR').toUpperCase();
+    reconcileCriticalState(pfTotal(),{source:'restauração da ficha'});
+    if(peTotal()>=bloodLimits().pe) model.stress.breaking=true;
     renderAll();
     saveModel(true);
   }
