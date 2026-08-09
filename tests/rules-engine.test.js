@@ -22,14 +22,26 @@ Object.entries(data.occupations).forEach(([name, occupation]) => {
 assert.ok(names(data.origins.Renegado.powers).some((name) => name.toLocaleLowerCase('pt-BR') === 'banho de sangue'), 'Banho de Sangue deve estar no Renegado');
 assert.ok(names(data.origins.Renegado.powers).includes('Carnificina'), 'Carnificina deve estar no Renegado');
 
-assert.equal(Object.keys(data.flowers).length, 12, 'todas as Flores da Corrupção devem estar cadastradas');
+const addedFlowers = ['Raflésia','Dama da Noite','Papoula','Lírio da Morte','Margarida','Lótus'];
+assert.equal(Object.keys(data.flowers).length, 18, 'todas as Flores da Corrupção devem estar cadastradas');
+addedFlowers.forEach((name) => assert.ok(data.flowers[name], `${name} deve estar cadastrada`));
 Object.entries(data.flowers).forEach(([name, flower]) => {
   assert.equal(flower.stages.length, 5, `${name} deve ter cinco estágios`);
   assert.ok(unique(flower.stages.map((stage) => stage.name)), `${name} não pode repetir poderes`);
 });
+const titan = data.flowers['Jarro-Titã'];
+assert.ok(titan.specialRules.description.includes('não pode ser manobrado'), 'Jarro-Titã precisa informar a imunidade a manobras');
+assert.ok(titan.specialRules.deactivation.includes('Dormir por 8 Cenas'), 'Jarro-Titã precisa manter a trava de reativação');
+assert.deepEqual(titan.stages.map((stage) => stage.stats.fixedPf), [11,12,13,14,15], 'PF fixo do Jarro-Titã deve seguir o livro');
+assert.deepEqual(titan.stages.map((stage) => stage.stats.reduction), [5,6,7,8,9], 'Redução do Jarro-Titã deve seguir o livro');
 
 assert.equal(data.commonItems.length, 26, 'catálogo de itens comuns incompleto');
 assert.ok(unique(data.commonItems.map((item) => item.id)), 'IDs de itens comuns devem ser únicos');
+data.commonItems.forEach((item) => {
+  assert.ok(item.uses && item.uses.label, `${item.name} precisa explicar seus usos`);
+  assert.ok(item.uses.max === null || Number.isInteger(item.uses.max) && item.uses.max > 0, `${item.name} precisa ter limite positivo ou uso ilimitado`);
+  if(item.uses.max !== null) assert.ok(item.uses.unit, `${item.name} precisa informar a unidade de uso`);
+});
 assert.equal(data.ammunitionTypes.length, 6, 'catálogo de munições incompleto');
 assert.ok(unique(data.ammunitionTypes.map((ammo) => ammo.id)), 'IDs de munição devem ser únicos');
 assert.deepEqual(names(data.ammunitionTypes), ['Balas','Cartuchos','Pentes','Flechas','Combustível','Cargas']);
@@ -38,8 +50,15 @@ assert.equal(data.paradigms.length, 9, 'matriz de Paradigmas incompleta');
 assert.deepEqual(names(data.paradigms), [
   'Guardião','Justo','Messias','Peregrino','Sobrevivente','Imperfeito','Ceifador','Mercenário','Inquisidor'
 ]);
+assert.equal(data.reputationRules.initialParadigm, 'Sobrevivente');
+assert.match(data.reputationRules.overview, /pública, impessoal/i, 'Reputação precisa explicar seu caráter público');
+assert.match(data.reputationRules.consistentAction, /Apenas sobreviver/i, 'Bônus de Reputação precisa excluir ações corriqueiras');
+assert.match(data.reputationRules.change, /um único gesto/i, 'mudança de Reputação precisa exigir um padrão');
+assert.ok(unique(data.paradigms.map((paradigm) => `${paradigm.row}:${paradigm.column}`)), 'cada Paradigma precisa ocupar uma posição única na matriz');
 data.paradigms.forEach((paradigm) => {
   assert.ok(paradigm.description && paradigm.positive && paradigm.negative, `${paradigm.name} precisa de descrição e efeitos`);
+  assert.ok(paradigm.description.length >= 240, `${paradigm.name} precisa manter a descrição completa do livro`);
+  assert.ok(paradigm.focus && paradigm.path, `${paradigm.name} precisa informar Caminho e foco`);
 });
 
 const trackNames = ['Terra Viva','Cães de Guerra','Donos da Razão','Línguas de Ferro'];
@@ -88,7 +107,11 @@ assert.deepEqual([1,2,3].map((deficit) => {
   const range = engine.determinationRange(0,deficit);
   return [range.min,range.max];
 }), [[1,3],[4,6],[7,9]]);
-assert.equal(engine.determinationRange(0,4).undefinedByBook, true);
+assert.deepEqual([4,5].map((deficit) => {
+  const range = engine.determinationRange(0,deficit);
+  return [range.min,range.max];
+}), [[10,12],[10,12]], 'cinco níveis abaixo deve repetir a faixa de quatro níveis abaixo');
+assert.equal(engine.determinationRange(0,5).sameAsFourth, true);
 assert.equal(engine.capStressGain(8,engine.stressStage(3,15,[5,10,15]),false).applied, 4);
 assert.equal(engine.capStressGain(8,engine.stressStage(7,15,[5,10,15]),false).applied, 6);
 assert.equal(engine.capStressGain(8,engine.stressStage(12,15,[5,10,15]),false).applied, 8);
@@ -100,6 +123,14 @@ assert.equal(engine.crisisOutcome(11,{crisisShift:3}).key, 'controle');
 assert.equal(engine.deathTest(1,1).dead, true);
 assert.equal(engine.deathTest(1,2).dead, false);
 assert.equal(engine.deathTest(6,6).dead, true);
+
+const plagueRandom = [0,.3,.99];
+const plagueRoll = engine.rollPlagueDice(4,2,() => plagueRandom.shift());
+assert.deepEqual(plagueRoll.results,[1,2,6]);
+assert.equal(plagueRoll.count,3,'Dados da Praga devem ter limite máximo de 3');
+assert.equal(plagueRoll.symptomCount,2,'cada Dado da Praga dentro da faixa deve gerar um Sintoma');
+assert.deepEqual(plagueRoll.symptomResults,[1,2]);
+assert.deepEqual(engine.rollPlagueDice(-2,6,() => 0).results,[],'zero Dados da Praga não deve rolar dados');
 
 assert.equal(engine.usageScope('Uma vez por Ciclo, faça algo.').key, 'cycle');
 assert.equal(engine.usageScope('Uma única vez por Sobrevivente.').key, 'survivor');

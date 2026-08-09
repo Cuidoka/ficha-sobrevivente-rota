@@ -211,7 +211,7 @@
     var armor = {};
     DATA.armors.forEach(function(item){ armor[item.id] = { equipped:false, remaining:0 }; });
     return {
-      version:4,
+      version:5,
       updatedAt:null,
       portrait:{ dataUrl:'', fileName:'' },
       fields:{
@@ -227,8 +227,9 @@
       skills:skillValues,
       originSkills:[],
       originPowers:[],
+      powerNotes:'',
       health:{ pf:0, pe:0, permanentPf:0, permanentPe:0 },
-      critical:{ status:'stable', enteredAt:null, tolerance:'pending', stabilizationWindow:true, deathRound:0, deathRolls:[], finalWound:'', postRecoveryRounds:0 },
+      critical:{ status:'stable', enteredAt:null, tolerance:'pending', deathRound:0, deathRolls:[], finalWound:'', postRecoveryRounds:0 },
       stress:{ breaking:false, lastDetermination:null, pendingDetermination:null, pendingCrisis:null, crises:[], recoveryLog:[] },
       pc:0,
       needs:{ hunger:0, thirst:0, sleep:0 },
@@ -252,7 +253,7 @@
       knownRecipes:[],
       allowCampaignRecipes:false,
       notes:defaultNotes(),
-      ui:{ activePage:'principal', lastRoll:null, filterMode:'', editingInventoryWeaponId:'', activeModal:'', itemCatalogFilter:'', selectedPowerKey:'', powerFeedback:'' }
+      ui:{ activePage:'principal', lastRoll:null, filterMode:'', editingInventoryWeaponId:'', activeModal:'', itemCatalogFilter:'' }
     };
   }
 
@@ -307,6 +308,7 @@
     });
     if(!Array.isArray(base.originSkills)) base.originSkills = [];
     if(!Array.isArray(base.originPowers)) base.originPowers = [];
+    base.powerNotes = String(base.powerNotes || '');
     if(!Array.isArray(base.knownRecipes)) base.knownRecipes = [];
     if(!Array.isArray(base.conditions)) base.conditions = [];
     base.conditions = base.conditions.map(function(condition){
@@ -347,6 +349,9 @@
     if(!isObject(base.stress)) base.stress = clone(defaultModel().stress);
     base.stress.breaking = !!base.stress.breaking;
     if(base.stress.pendingDetermination && !isObject(base.stress.pendingDetermination)) base.stress.pendingDetermination = null;
+    if(base.stress.pendingDetermination){
+      base.stress.pendingDetermination.range = ENGINE.determinationRange(base.stress.pendingDetermination.successes,base.stress.pendingDetermination.target);
+    }
     if(base.stress.pendingCrisis && !isObject(base.stress.pendingCrisis)) base.stress.pendingCrisis = null;
     base.stress.crises = Array.isArray(base.stress.crises) ? base.stress.crises : [];
     base.stress.recoveryLog = Array.isArray(base.stress.recoveryLog) ? base.stress.recoveryLog : [];
@@ -391,8 +396,6 @@
     if(typeof base.ui.editingInventoryWeaponId !== 'string') base.ui.editingInventoryWeaponId = '';
     if(typeof base.ui.activeModal !== 'string') base.ui.activeModal = '';
     if(typeof base.ui.itemCatalogFilter !== 'string') base.ui.itemCatalogFilter = '';
-    if(typeof base.ui.selectedPowerKey !== 'string') base.ui.selectedPowerKey = '';
-    if(typeof base.ui.powerFeedback !== 'string') base.ui.powerFeedback = '';
     if(base.ui.editingInventoryWeaponId && !base.inventory.some(function(item){ return item.id === base.ui.editingInventoryWeaponId && item.kind === 'weapon'; })) base.ui.editingInventoryWeaponId = '';
     if(!base.notes || !Array.isArray(base.notes.notebooks) || !base.notes.notebooks.length) base.notes = defaultNotes();
     if(!base.notes.selectedNotebookId || !base.notes.notebooks.some(function(nb){ return nb.id === base.notes.selectedNotebookId; })){
@@ -565,7 +568,7 @@
     for(var value=1; value<=3; value++){
       dots += '<button type="button" class="modifier-option modifier-dot" data-modifier-input="'+id+'" data-value="'+value+'" aria-pressed="false" aria-label="'+label+' '+value+'"></button>';
     }
-    return '<div class="modifier-control"><span>'+label+'</span><div class="modifier-picker">'+
+    return '<div class="modifier-control '+(id === 'roll-plague' ? 'plague-control' : '')+'"><span>'+label+'</span><div class="modifier-picker">'+
       '<input id="'+id+'" class="modifier-number" type="number" min="0" max="3" step="1" value="0" inputmode="numeric" aria-label="Valor de '+label+'">'+
       '<div class="modifier-dots" role="group" aria-label="'+label+' de zero a três">'+dots+'</div>'+
       '</div></div>';
@@ -600,7 +603,8 @@
           '<label>Número escolhido (0 dados)<select id="roll-guess"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>'+
         '</div>'+
         '<div class="dice-options">'+
-          '<label class="check-line"><input type="checkbox" id="roll-plague"> Dado da Praga</label>'+
+          modifierPicker('roll-plague','Dados da Praga')+
+          '<small class="plague-help">Cada dado pode gerar um Sintoma · máximo 3</small>'+
           '<label class="check-line hidden" id="roll-devotee-option"><input type="checkbox" id="roll-devotee"> Teste rolado contra o Devoto</label>'+
           '<label class="check-line"><input type="checkbox" id="roll-stress"> Apostar Estresse (+1 dado, +2 PE)</label>'+
           '<div class="dice-actions"><button type="button" class="notes-btn small" id="roll-reset-modifiers">Zerar modificadores</button><button type="button" class="primary-action" id="roll-button">Rolar dados</button></div>'+
@@ -649,12 +653,13 @@
       resourcesList.insertBefore(needsPanel,criticalAlert);
       var ruleTools = document.createElement('div');
       ruleTools.className = 'health-rule-tools no-print';
-      ruleTools.innerHTML = '<button type="button" class="rule-tool-card" id="open-dying-panel"><span>PF</span><strong>Morrendo & Morte</strong><small id="dying-tool-status">Estado estável</small></button>'+
+      ruleTools.innerHTML = '<button type="button" class="rule-tool-card" id="open-dying-panel"><span>PF</span><strong>Morrendo & Testes de Morte</strong><small id="dying-tool-status">Estado estável</small></button>'+
         '<button type="button" class="rule-tool-card" id="open-stress-panel"><span>PE</span><strong>Determinação & Crises</strong><small id="stress-tool-status">Sem crise pendente</small></button>';
       resourcesList.appendChild(ruleTools);
     }
     var paradigmField = $('#reputacao-select') && $('#reputacao-select').closest('.meta-field');
     if(paradigmField){
+      paradigmField.classList.add('paradigm-meta-field');
       var paradigmSummary = document.createElement('div');
       paradigmSummary.id = 'paradigm-summary';
       paradigmSummary.className = 'paradigm-summary';
@@ -687,7 +692,9 @@
     overlay.style.display = 'flex';
     document.body.classList.add('modal-open');
     model.ui.activeModal = modalName || '';
-    $('.rule-action-dialog',overlay).focus();
+    var dialog = $('.rule-action-dialog',overlay);
+    dialog.scrollTop = 0;
+    dialog.focus();
   }
 
   function closeRuleModal(){
@@ -769,14 +776,15 @@
         '</div></div>'+
         '<div class="section"><div class="section-title">Ocupação</div><div class="section-body"><div id="occupation-detail"></div></div></div>'+
       '</div>'+
+      '<div class="section"><div class="section-title">Poderes do Sobrevivente <span class="tag">LISTA CONSOLIDADA</span></div><div class="section-body consolidated-power-shell">'+
+        '<div class="consolidated-power-heading"><div><strong id="consolidated-power-status">Nenhum poder disponível</strong><p>Reúne automaticamente Ocupação, Origem, Flor e etapas aplicadas do Crescimento.</p></div><div class="duration-controls no-print"><span>CONTROLES DE DURAÇÃO</span><button type="button" class="notes-btn" data-advance-scope="round">Próxima Rodada</button><button type="button" class="notes-btn" data-advance-scope="scene">Encerrar Cena</button><button type="button" class="notes-btn" data-advance-scope="conflict">Encerrar Conflito</button><button type="button" class="notes-btn" data-advance-scope="cycle">Encerrar Ciclo</button></div></div>'+
+        '<div class="duration-status" id="duration-status"></div><div class="consolidated-power-list" id="consolidated-power-list"></div>'+
+        '<label class="consolidated-power-notes"><span>Poderes adicionais e anotações</span><textarea id="consolidated-power-notes" placeholder="Poderes temporários, efeitos concedidos pelo MP ou observações que não aparecem automaticamente..."></textarea></label>'+
+      '</div></div>'+
       '<div class="section"><div class="section-title">Disseminação <span class="tag" id="plague-threshold-tag">DADO DA PRAGA: 1</span></div><div class="section-body">'+
         '<div class="corruption-overview" id="corruption-overview"></div><div class="corruption-effects" id="corruption-effects"></div>'+
         '<div class="blood-path" id="new-blood-panel"><div class="subsection-heading">Flor da Corrupção</div><div id="flower-overview"></div><div class="flower-stages" id="flower-stages"></div></div>'+
         '<div class="blood-path" id="old-blood-panel"><div class="subsection-heading">Filtro Corruptivo</div>'+filterControls()+'<div id="corruption-filter-picker"></div><div id="filter-result" class="rule-preview" aria-live="polite"></div></div>'+
-      '</div></div>'+
-      '<div class="section no-print"><div class="section-title">Central de Poderes <span class="tag">USOS E RECARGAS</span></div><div class="section-body power-center-launch">'+
-        '<div><strong id="power-center-status">Nenhum poder selecionado</strong><p>Registre usos de Ocupação, Origem e Flor sem perder limites por Cena, Ciclo, Conflito ou Sessão.</p></div>'+
-        '<button type="button" class="primary-action" id="open-power-center">Abrir Central</button><div class="scope-clock" id="scope-clock"></div>'+
       '</div></div>'+
       '<div class="section"><div class="section-title">Crescimento <span class="tag">TRILHA I–X</span></div><div class="section-body growth-row">'+
         '<label>Arquétipo<input id="growth-archetype" type="text" readonly></label><label>Próxima etapa<select id="growth-stage"><option value="0">Ainda não iniciou</option>'+growthOptions()+'</select></label><div id="growth-summary" class="rule-preview"></div>'+
@@ -1073,8 +1081,21 @@
     if(reduction >= 5){
       addTemporaryEffect({sourceKey:'occupation:masoquista:florescer-na-dor',name:'Florescer na Dor',bonus:1,expires:'scene',allTests:true});
       addRuleLog('poder','Florescer na Dor concedeu Bônus até o fim da Cena.',{reducedPe:reduction});
-      renderPowerCenterStatus();
+      renderConsolidatedPowers();
     }
+  }
+
+  function useMasoquistVoluntary(){
+    if(model.fields['ocupacao-select'] !== 'Masoquista') return;
+    var key = ENGINE.powerKey('occupation','Masoquista','Carne Voluntária');
+    var usage = powerUsageState(key,'cycle');
+    if(usage.count >= 1){ alert('Carne Voluntária já foi usada neste Ciclo.'); return; }
+    addPC(1);
+    addTemporaryEffect({sourceKey:key,name:'Carne Voluntária',bonus:1,expires:'scene',allTests:true});
+    markPowerUsed(key,'cycle');
+    addRuleLog('poder','Carne Voluntária ativada.',{pc:1,expires:'scene'});
+    renderConsolidatedPowers();
+    saveModel();
   }
 
   function addRuleLog(kind, message, detail){
@@ -1092,7 +1113,6 @@
     if(stage.key === 'dead'){
       if(model.critical.status !== 'dead'){
         model.critical.status = 'dead';
-        model.critical.stabilizationWindow = false;
         addRuleLog('morte','Morte Direta atingida.',{total:total,limit:limits.pf,source:context && context.source || 'ajuste'});
       }
       return stage;
@@ -1102,7 +1122,6 @@
         model.critical.status = 'dying';
         model.critical.enteredAt = new Date().toISOString();
         model.critical.tolerance = 'pending';
-        model.critical.stabilizationWindow = true;
         model.critical.deathRound = 0;
         model.critical.deathRolls = [];
         addRuleLog('morrendo','Entrou em Morrendo.',{total:total,limit:limits.pf,previous:previousTotal,source:context && context.source || 'ajuste'});
@@ -1111,7 +1130,6 @@
     }
     if((model.critical.status === 'dying' || model.critical.status === 'stabilized') && total <= limits.pf){
       model.critical.status = 'stable';
-      model.critical.stabilizationWindow = true;
       model.critical.deathRound = 0;
       addRuleLog('recuperacao','Saiu do estado de Morrendo.',{total:total,limit:limits.pf});
     }
@@ -1159,7 +1177,7 @@
     if(model.fields['ocupacao-select'] === 'Verdugo' && context.cause === 'guilt') amount = 0;
     if(amount > 0 && corruptionEffectActive('critica-colapso')) amount += 1;
     var stateBefore = stressState();
-    var capped = ENGINE.capStressGain(amount,stateBefore,model.fields['ocupacao-select'] === 'Determinado' && context.determination);
+    var capped = context.determination ? ENGINE.capStressGain(amount,stateBefore,model.fields['ocupacao-select'] === 'Determinado') : {requested:amount,applied:amount,prevented:0,cap:Infinity};
     var applied = capped.applied;
     if(applied > 0) changePE(applied,{source:context.source || 'ganho de Estresse'});
     model.stress.lastDetermination = context.determination ? {requested:amount,applied:applied,range:context.range || null,at:new Date().toISOString()} : model.stress.lastDetermination;
@@ -1240,7 +1258,10 @@
   function renderDyingToolStatus(){
     var status = $('#dying-tool-status');
     if(!status) return;
-    var labels = {stable:'Estado estável',dying:'Morrendo · cuidado pendente',stabilized:'Estabilizado',dead:'Morte Direta'};
+    var labels = {stable:'Estado estável',stabilized:'Estabilizado',dead:'Morte Direta'};
+    if(model.critical.status === 'dying'){
+      labels.dying = model.critical.tolerance === 'pending' ? 'Morrendo · Tolerância pendente' : (model.critical.deathRound ? 'Morrendo · Teste de Morte '+model.critical.deathRound : 'Morrendo');
+    }
     status.textContent = labels[model.critical.status] || labels.stable;
     status.closest('.rule-tool-card').classList.toggle('critical',model.critical.status === 'dying' || model.critical.status === 'dead');
   }
@@ -1255,12 +1276,9 @@
     }).join('') : '<li class="empty-state">Nenhum Teste de Morte realizado.</li>';
     var actions = '';
     if(model.critical.status === 'dying'){
-      actions += '<section class="rule-step"><div><span>1</span><strong>Tolerância · NS Dilacerante</strong></div><p>'+toleranceText+'</p>'+
-        (model.critical.tolerance === 'pending' ? '<div class="inline-actions"><button type="button" class="notes-btn" id="dying-tolerance-roll">Rolar Físico + Tolerância</button><button type="button" class="notes-btn" data-dying-tolerance="success">Registrar sucesso</button><button type="button" class="notes-btn danger" data-dying-tolerance="failure">Registrar falha</button></div>' : '')+'</section>'+
-        '<section class="rule-step"><div><span>2</span><strong>Janela de salvamento</strong></div><p>'+(model.critical.stabilizationWindow ? 'Aliados têm esta Rodada/Cena para estabilizar condições contínuas e prestar cuidado.' : 'A janela encerrou; os Testes de Morte começaram.')+'</p><div class="inline-actions">'+
-        '<button type="button" class="notes-btn" id="dying-stabilize-roll">Rolar Intelecto + Medicina</button><button type="button" class="notes-btn" id="dying-stabilize-success">Registrar cuidado bem-sucedido</button>'+
-        (model.critical.stabilizationWindow ? '<button type="button" class="notes-btn danger" id="dying-end-window">Encerrar janela sem cuidado</button>' : '')+'</div></section>'+
-        '<section class="rule-step"><div><span>3</span><strong>Testes de Morte</strong></div><p>1D6; o valor fatal cresce a cada Rodada/Cena. No sexto teste, a morte é inevitável.</p><button type="button" class="primary-action" id="death-test-roll" '+(model.critical.stabilizationWindow ? 'disabled' : '')+'>Rolar próximo Teste de Morte</button><ol class="death-test-log">'+deathLog+'</ol></section>';
+      actions += '<section class="rule-step"><div><span>1</span><strong>Consciência · Tolerância Dilacerante</strong></div><p>'+toleranceText+'</p><div class="inline-actions"><button type="button" class="notes-btn" id="dying-tolerance-roll">'+(model.critical.tolerance === 'pending' ? 'Rolar Físico + Tolerância' : 'Rolar Tolerância novamente')+'</button></div></section>'+
+        '<section class="rule-step"><div><span>2</span><strong>Testes de Morte</strong></div><p>A partir da Rodada/Cena seguinte, se nenhum aliado tiver aplicado cuidado, role 1D6. O valor fatal cresce a cada teste; no sexto, a morte é inevitável.</p><div class="inline-actions"><button type="button" class="primary-action" id="death-test-roll" '+(model.critical.tolerance === 'pending' ? 'disabled title="Resolva primeiro o Teste de Tolerância"' : '')+'>Rolar próximo Teste de Morte</button><button type="button" class="notes-btn" id="dying-register-stabilized">Fui estabilizado</button></div><ol class="death-test-log">'+deathLog+'</ol></section>'+
+        '<p class="rule-footnote">A estabilização é rolada por quem presta o cuidado. “Fui estabilizado” apenas registra o resultado nesta ficha e recupera 1 PF.</p>';
     } else if(model.critical.status === 'stabilized'){
       actions = '<section class="rule-step success-step"><strong>Estabilizado</strong><p>Os Testes de Morte foram encerrados. A estabilização recuperou exatamente 1 PF; continue o tratamento normalmente.</p></section>';
     } else if(model.critical.status === 'dead'){
@@ -1285,19 +1303,17 @@
     saveModel();
   }
 
-  function resolveStabilization(success, roll){
-    addRuleLog('morrendo','Estabilização: '+(success ? 'sucesso' : 'falha')+'.',roll || null);
-    if(success){
-      model.critical.status = 'stabilized';
-      model.critical.stabilizationWindow = false;
-      changePF(-1,{source:'estabilização'});
-    }
+  function registerExternalStabilization(){
+    if(model.critical.status !== 'dying') return;
+    model.critical.status = 'stabilized';
+    addRuleLog('morrendo','Cuidado externo bem-sucedido registrado.',{recoveredPf:1});
+    changePF(-1,{source:'cuidado recebido'});
     refreshDyingPanel();
     saveModel();
   }
 
   function rollDeathTest(){
-    if(model.critical.status !== 'dying' || model.critical.stabilizationWindow) return;
+    if(model.critical.status !== 'dying' || model.critical.tolerance === 'pending') return;
     var round = model.critical.deathRound + 1;
     var roll = 1+Math.floor(Math.random()*6);
     var result = ENGINE.deathTest(round,roll);
@@ -1310,11 +1326,6 @@
     saveModel();
   }
 
-  var STRESS_RECOVERY = {
-    rest:{name:'Descanso',min:1,max:3}, conversation:{name:'Conversas',min:2,max:5}, hobby:{name:'Hobbies',min:1,max:4},
-    solitude:{name:'Solitude',min:1,max:5}, social:{name:'Momentos sociais',min:2,max:4}, beauty:{name:'Beleza no caos',min:2,max:4}, support:{name:'Apoio e companheirismo',min:1,max:3}
-  };
-
   function renderStressToolStatus(){
     var status = $('#stress-tool-status');
     if(!status) return;
@@ -1326,31 +1337,31 @@
   function determinationChoiceHtml(pending){
     if(!pending) return '';
     var range = pending.range;
-    if(range.undefinedByBook){
-      return '<div class="rule-result warning-step">'+diceFaces(pending.results,pending.threshold)+'<strong>'+pending.successes+' sucessos · '+range.deficit+' níveis abaixo</strong><p>O livro não define 4 ou mais níveis abaixo. O MP deve informar o ganho; use “Aplicar outro evento” abaixo.</p></div>';
-    }
     var buttons = '';
     for(var value=range.min;value<=range.max;value++) buttons += '<button type="button" class="notes-btn" data-determination-pe="'+value+'">'+value+' PE</button>';
-    return '<div class="rule-result">'+diceFaces(pending.results,pending.threshold)+'<strong>'+pending.successes+' sucessos · '+range.label+'</strong><p>O MP escolhe o valor exato dentro da faixa.</p><div class="inline-actions">'+buttons+'</div></div>';
+    return '<div class="rule-result">'+diceFaces(pending.results,pending.threshold)+'<strong>'+pending.successes+' sucessos · '+range.deficit+' '+(range.deficit === 1 ? 'nível' : 'níveis')+' abaixo · '+range.label+'</strong><p>'+(range.sameAsFourth ? 'Cinco níveis abaixo usa a mesma faixa de quatro níveis abaixo. ' : '')+'O MP escolhe o valor exato dentro da faixa.</p><div class="inline-actions">'+buttons+'</div></div>';
   }
 
   function stressPanelHtml(){
     var limits = bloodLimits();
     var state = model.stress.breaking ? {key:'breaking',name:'Enlouquecendo',eventCap:Infinity} : stressState();
+    var determinationTarget = model.stress.pendingDetermination ? clamp(model.stress.pendingDetermination.target,1,5) : 3;
+    var determinationTargets = ['Sofrido','Gangrenado','Dilacerante','Profano','Absoluto'].map(function(label,index){
+      var value = index+1;
+      return '<option value="'+value+'" '+(value === determinationTarget ? 'selected' : '')+'>'+label+'</option>';
+    }).join('');
     var crises = model.stress.crises.slice(-8).reverse().map(function(crisis){
       return '<li><div><strong>'+escapeHtml(crisis.name)+'</strong><span>'+crisis.rolls.join(' + ')+' = '+crisis.sum+(crisis.shift ? ' · ajuste +'+crisis.shift : '')+' · resultado '+crisis.adjusted+'</span></div><small>'+escapeHtml(crisis.description)+'</small></li>';
     }).join('') || '<li class="empty-state">Nenhuma Crise registrada.</li>';
-    var recoveryOptions = Object.keys(STRESS_RECOVERY).map(function(key){ var item=STRESS_RECOVERY[key]; return '<option value="'+key+'">'+item.name+' · '+item.min+'–'+item.max+' PE</option>'; }).join('');
-    var cap = state.eventCap === Infinity ? 'sem teto adicional' : 'máximo '+state.eventCap+' PE por evento';
+    var cap = state.eventCap === Infinity ? 'sem teto na Determinação' : 'máximo '+state.eventCap+' PE por Determinação';
     return '<div class="rule-dashboard"><div class="rule-state-banner stress-'+state.key+'"><span>'+state.name+'</span><strong>'+peTotal()+'/'+limits.pe+' PE</strong><small>'+cap+'</small></div>'+
       (model.stress.breaking ? '<section class="rule-step death-step"><strong>Surto em andamento</strong><p>O MP controla o personagem. Reduzir PE não encerra o estado sozinho.</p><button type="button" class="notes-btn" id="stress-resolve-breaking">O MP encerrou o surto</button></section>' : '')+
-      '<section class="rule-step"><div><span>1</span><strong>Rolagem de Determinação</strong></div><p>Role Espírito + Determinação contra o NS escolhido pelo MP.</p><div class="inline-form"><label>NS<select id="determination-target"><option value="1">Sofrido</option><option value="2">Gangrenado</option><option value="3" selected>Dilacerante</option><option value="4">Profano</option><option value="5">Absoluto</option></select></label><button type="button" class="primary-action" id="determination-roll">Rolar Determinação</button></div>'+determinationChoiceHtml(model.stress.pendingDetermination)+'</section>'+
-      '<section class="rule-step"><div><span>2</span><strong>Aplicar outro evento de Estresse</strong></div><div class="inline-form"><label>PE<input id="stress-manual-amount" type="number" min="0" max="9" value="1"></label><label>Causa<select id="stress-cause"><option value="other">Outro</option><option value="guilt">Culpa por ferir alguém</option><option value="ally-wound">Aliado ferido</option><option value="ally-crisis">Crise de um aliado</option><option value="ally-breaking">Aliado enlouquecendo</option></select></label><button type="button" class="notes-btn" id="stress-manual-apply">Aplicar</button><button type="button" class="notes-btn danger" id="stress-crisis-manual">Disparar Crise sem PE</button></div><p class="rule-footnote">Ganhos de 4+ PE disparam Crise automaticamente. Determinado e Verdugo aplicam suas imunidades conforme a causa.</p></section>'+
-      '<section class="rule-step"><div><span>3</span><strong>Recuperação</strong></div><p>Uma Recuperação oferece duas Ações e não permite repetir o mesmo benefício.</p><div class="inline-form"><label>Método<select id="stress-recovery-method">'+recoveryOptions+'</select></label><label>PE a reduzir<input id="stress-recovery-amount" type="number" min="1" max="5" value="1"></label><button type="button" class="notes-btn" id="stress-recovery-apply">Recuperar</button></div></section>'+
-      '<section class="rule-step"><div><strong>Histórico de Crises</strong><button type="button" class="text-action" id="stress-acknowledge-crisis">Limpar aviso</button></div><ul class="crisis-log">'+crises+'</ul></section></div>';
+      '<section class="rule-step"><div><span>1</span><strong>Rolagem de Determinação</strong></div><p>Role Espírito + Determinação contra o NS escolhido pelo MP.</p><div class="inline-form"><label>NS<select id="determination-target">'+determinationTargets+'</select></label><button type="button" class="primary-action" id="determination-roll">Rolar Determinação</button></div>'+determinationChoiceHtml(model.stress.pendingDetermination)+'</section>'+
+      '<section class="rule-step"><div><span>2</span><strong>Crise de Estresse</strong></div><p>Quando uma Crise ocorrer, role automaticamente 3D6 — ou 5D6 para um personagem Determinado — e consulte o resultado abaixo.</p><button type="button" class="primary-action" id="stress-crisis-roll">Rolar Crise</button></section>'+
+      '<section class="rule-step"><div><strong>Histórico de Crises</strong><button type="button" class="text-action" id="stress-acknowledge-crisis" '+(model.stress.pendingCrisis ? '' : 'disabled')+'>Marcar como resolvida</button></div><ul class="crisis-log">'+crises+'</ul></section></div>';
   }
 
-  function openStressPanel(){ openRuleModal('Determinação, Estresse & Crises',stressPanelHtml(),'stress'); }
+  function openStressPanel(){ openRuleModal('Determinação & Crises',stressPanelHtml(),'stress'); }
   function refreshStressPanel(){ if($('#rule-action-modal').dataset.modalName === 'stress') $('#rule-action-content').innerHTML = stressPanelHtml(); }
 
   function recordCrisisPain(name){
@@ -1550,6 +1561,7 @@
     if(!occupation){
       $('#occupation-hint').textContent = '';
       detail.innerHTML = '<p class="empty-state">Selecione uma Ocupação na Ficha Principal.</p>';
+      renderConsolidatedPowers();
       return;
     }
     var warning = occupation.requiresBlood && model.fields.sangue !== occupation.requiresBlood;
@@ -1560,6 +1572,7 @@
         var item = typeof power === 'string' ? {name:power,description:''} : power;
         return '<details class="occupation-power"><summary>'+escapeHtml(item.name)+'</summary><p>'+escapeHtml(item.description || 'Descrição preservada para compatibilidade; consulte o livro para a redação integral.')+'</p></details>';
       }).join('')+'</div>'+occupationChoiceControls(name);
+    renderConsolidatedPowers();
   }
 
   function occupationChoiceControls(name){
@@ -1610,7 +1623,9 @@
     if(summary){
       var selectedName=select.value||model.fields['reputacao-select'];
       var paradigm=(DATA.paradigms||[]).filter(function(item){return item.name===selectedName;})[0];
-      summary.innerHTML=paradigm?'<span><b>'+escapeHtml(paradigm.path)+' · '+escapeHtml(paradigm.name)+'</b>'+escapeHtml(paradigm.positive)+'</span><button type="button" class="text-action" id="paradigm-info-button">Ver efeitos</button>':'<span>Selecione um Paradigma para ver seus efeitos.</span><button type="button" class="text-action" id="paradigm-info-button">Ver todos</button>';
+      summary.classList.remove('paradigm-summary-sublime','paradigm-summary-sintese','paradigm-summary-abissal');
+      if(group) summary.classList.add('paradigm-summary-'+group);
+      summary.innerHTML=paradigm?'<div class="paradigm-summary-content"><div class="paradigm-summary-heading"><b>'+escapeHtml(paradigm.path)+' · '+escapeHtml(paradigm.name)+'</b><small>Selecionado</small></div><div class="paradigm-summary-effect positive"><strong aria-label="Aspecto positivo">+</strong><span>'+escapeHtml(paradigm.positive)+'</span></div><div class="paradigm-summary-effect negative"><strong aria-label="Aspecto negativo">−</strong><span>'+escapeHtml(paradigm.negative)+'</span></div></div><button type="button" class="text-action" id="paradigm-info-button">Ver matriz</button>':'<div class="paradigm-summary-content"><span>Selecione um Paradigma para consultar sua descrição e seus efeitos.</span></div><button type="button" class="text-action" id="paradigm-info-button">Ver matriz</button>';
     }
   }
 
@@ -1618,8 +1633,15 @@
     var selected=model.fields['reputacao-select'];
     var rules=DATA.reputationRules||{};
     var paths=['Sublime','Síntese','Abissal'];
-    return '<div class="rule-dashboard paradigm-reference"><section class="rule-step"><strong>Como a Reputação funciona</strong><ul><li>'+escapeHtml(rules.consistentAction||'')+'</li><li>'+escapeHtml(rules.inconsistentAction||'')+'</li><li>'+escapeHtml(rules.change||'')+'</li></ul><p class="rule-footnote">A Reputação é regional e não possui pontuação numérica no livro.</p></section><div class="paradigm-matrix">'+paths.map(function(path){
-      return '<section class="paradigm-path paradigm-'+paradigmGroup(path==='Sublime'?'Guardião':path==='Síntese'?'Sobrevivente':'Ceifador')+'"><div class="subsection-heading">'+path+'</div>'+(DATA.paradigms||[]).filter(function(item){return item.path===path;}).map(function(item){return '<article class="paradigm-card '+(item.name===selected?'selected':'')+'"><div><strong>'+escapeHtml(item.name)+'</strong><span>'+escapeHtml(item.focus)+'</span></div><p>'+escapeHtml(item.description)+'</p><dl><dt>Favorece</dt><dd>'+escapeHtml(item.positive)+'</dd><dt>Cobra</dt><dd>'+escapeHtml(item.negative)+'</dd></dl></article>';}).join('')+'</section>';
+    var ruleCards=[
+      {icon:'◎',title:'Fama pública',text:rules.paradigms},
+      {icon:'3×3',title:'A matriz',text:(rules.matrix||'')+' '+(rules.verticalAxis||'')+' '+(rules.horizontalAxis||'')},
+      {icon:'+',title:'Confirmar a fama',text:rules.consistentAction,kind:'positive'},
+      {icon:'−',title:'Contrariar a fama',text:rules.inconsistentAction,kind:'negative'}
+    ];
+    return '<div class="rule-dashboard paradigm-reference"><section class="reputation-intro"><span>Reputação regional</span><strong>O que contam sobre você quando não está presente.</strong><p>'+escapeHtml(rules.overview||'')+'</p></section><div class="reputation-rule-grid">'+ruleCards.map(function(card){return '<article class="reputation-rule-card '+(card.kind||'')+'"><b aria-hidden="true">'+card.icon+'</b><div><strong>'+escapeHtml(card.title)+'</strong><p>'+escapeHtml(card.text||'')+'</p></div></article>';}).join('')+'<article class="reputation-rule-card reputation-change"><b aria-hidden="true">↻</b><div><strong>Mudando sua Reputação</strong><p>'+escapeHtml((rules.change||'')+' '+(rules.connections||''))+'</p></div></article></div><div class="paradigm-matrix">'+paths.map(function(path,index){
+      var pathGroup=path==='Sublime'?'sublime':path==='Síntese'?'sintese':'abissal';
+      return '<section class="paradigm-path paradigm-'+pathGroup+'"><header class="paradigm-path-heading"><span>0'+(index+1)+'</span><div><strong>'+escapeHtml(path)+'</strong><p>'+escapeHtml((rules.paths||{})[path]||'')+'</p></div></header>'+(DATA.paradigms||[]).filter(function(item){return item.path===path;}).map(function(item){var isSelected=item.name===selected;return '<article class="paradigm-card '+(isSelected?'selected':'')+'"'+(isSelected?' aria-current="true"':'')+'><header><div><strong>'+escapeHtml(item.name)+'</strong><span>'+escapeHtml(item.focus)+'</span></div>'+(isSelected?'<em>Selecionado</em>':'')+'</header><p class="paradigm-description">'+escapeHtml(item.description)+'</p><div class="paradigm-effects"><div class="paradigm-effect positive"><b aria-label="Aspecto positivo">+</b><span>'+escapeHtml(item.positive)+'</span></div><div class="paradigm-effect negative"><b aria-label="Aspecto negativo">−</b><span>'+escapeHtml(item.negative)+'</span></div></div></article>';}).join('')+'</section>';
     }).join('')+'</div></div>';
   }
   function openParadigmMatrix(){openRuleModal('Paradigmas & Reputação',paradigmMatrixHtml(),'paradigms');}
@@ -1719,64 +1741,23 @@
     return usage;
   }
 
-  function powerLimit(description){
-    var match = String(description || '').match(/(?:m[aá]ximo(?: de)?|at[eé])\s+(\d+)/i);
-    return match ? Math.max(1,parseInt(match[1],10) || 1) : 1;
-  }
-
-  function detectedPowerCosts(description){
-    var costs = {pf:0,pe:0,pc:0,permanentPf:0,permanentPe:0};
-    var text = String(description || '');
-    var pattern = /(?:gaste|sofra|sofre|sofrendo|receba|recebe|recebendo|aceite|perca|perde|perdendo)\s*\+?(\d+)\s*(PF|PE|PC)(?:'s)?(?:\s+permanentes?)?/gi;
-    var match;
-    while((match = pattern.exec(text))){
-      var value = parseInt(match[1],10) || 0;
-      var resource = match[2].toUpperCase();
-      var permanent = /permanente/i.test(match[0]);
-      if(resource === 'PF') costs[permanent ? 'permanentPf' : 'pf'] += value;
-      if(resource === 'PE') costs[permanent ? 'permanentPe' : 'pe'] += value;
-      if(resource === 'PC') costs.pc += value;
-    }
-    var pairedPattern = /(?:gaste|sofra|sofre|sofrendo|receba|recebe|recebendo|aceite|perca|perde|perdendo)\s*\+?\d+\s*(?:PF|PE|PC)(?:'s)?(?:\s+permanentes?)?\s+e\s+\+?(\d+)\s*(PF|PE|PC)(?:'s)?(?:\s+permanentes?)?/gi;
-    while((match = pairedPattern.exec(text))){
-      var pairedValue = parseInt(match[1],10) || 0;
-      var pairedResource = match[2].toUpperCase();
-      var pairedPermanent = new RegExp(match[2]+"(?:'s)?\\s+permanente",'i').test(match[0].slice(match[0].lastIndexOf(match[2])));
-      if(pairedResource === 'PF') costs[pairedPermanent ? 'permanentPf' : 'pf'] += pairedValue;
-      if(pairedResource === 'PE') costs[pairedPermanent ? 'permanentPe' : 'pe'] += pairedValue;
-      if(pairedResource === 'PC') costs.pc += pairedValue;
-    }
-    var actionCostPattern = /(?:gaste|gastando)[^.]{0,80}a[cç][oõ]es\s+e\s+\+?(\d+)\s*(PF|PE|PC)(?:'s)?(?:\s+permanentes?)?/gi;
-    while((match = actionCostPattern.exec(text))){
-      var actionValue = parseInt(match[1],10) || 0;
-      var actionResource = match[2].toUpperCase();
-      var actionPermanent = /permanente/i.test(match[0]);
-      if(actionResource === 'PF') costs[actionPermanent ? 'permanentPf' : 'pf'] += actionValue;
-      if(actionResource === 'PE') costs[actionPermanent ? 'permanentPe' : 'pe'] += actionValue;
-      if(actionResource === 'PC') costs.pc += actionValue;
-    }
-    return costs;
-  }
-
-  function hasDetectedCost(costs){ return Object.keys(costs).some(function(key){ return costs[key] > 0; }); }
-
-  function activePowerList(){
+  function consolidatedPowerList(){
     var list = [];
     var occupationName = model.fields['ocupacao-select'];
     var occupation = getOccupation();
     if(occupation){
       occupation.powers.forEach(function(power){
         var item = typeof power === 'string' ? {name:power,description:''} : power;
-        list.push({key:ENGINE.powerKey('occupation',occupationName,item.name),sourceType:'Ocupação',sourceName:occupationName,name:item.name,description:item.description || ''});
+        list.push({key:ENGINE.powerKey('occupation',occupationName,item.name),sourceGroup:'Ocupação',sourceType:'Ocupação',sourceName:occupationName,name:item.name,description:item.description || ''});
       });
     }
     var originName = model.fields['origem-select'];
     var origin = getOrigin();
     if(origin){
       var initial = origin.initial || {name:'Poder Inicial',description:''};
-      list.push({key:ENGINE.powerKey('origin',originName,initial.name),sourceType:'Origem · Inicial',sourceName:originName,name:initial.name,description:initial.description || ''});
+      list.push({key:ENGINE.powerKey('origin',originName,initial.name),sourceGroup:'Origem',sourceType:'Origem · Inicial',sourceName:originName,name:initial.name,description:initial.description || ''});
       origin.powers.filter(function(power){ return model.originPowers.indexOf(power.name) >= 0; }).forEach(function(power){
-        list.push({key:ENGINE.powerKey('origin',originName,power.name),sourceType:'Origem',sourceName:originName,name:power.name,description:power.description || ''});
+        list.push({key:ENGINE.powerKey('origin',originName,power.name),sourceGroup:'Origem',sourceType:'Origem',sourceName:originName,name:power.name,description:power.description || ''});
       });
     }
     model.growth.unlockedOrigins.forEach(function(extraOriginName){
@@ -1784,7 +1765,7 @@
       var selected = model.growth.powerSelections[extraOriginName] || [];
       if(!extraOrigin) return;
       extraOrigin.powers.filter(function(power){ return selected.indexOf(power.name) >= 0; }).forEach(function(power){
-        list.push({key:ENGINE.powerKey('growth-origin',extraOriginName,power.name),sourceType:'Origem',sourceName:extraOriginName,name:power.name,description:power.description || ''});
+        list.push({key:ENGINE.powerKey('growth-origin',extraOriginName,power.name),sourceGroup:'Origem',sourceType:'Origem · Crescimento',sourceName:extraOriginName,name:power.name,description:power.description || ''});
       });
     });
     var flowerName = model.fields['flor-select'];
@@ -1793,100 +1774,55 @@
       var effectiveIndex = effectiveFlowerIndex();
       flower.stages.forEach(function(stage,index){
         if(index > effectiveIndex) return;
-        list.push({key:ENGINE.powerKey('flower',flowerName,stage.name),sourceType:'Flor · '+stage.stage,sourceName:flowerName,name:stage.name,description:stage.description || ''});
+        list.push({key:ENGINE.powerKey('flower',flowerName,stage.name),sourceGroup:'Flor',sourceType:'Flor · '+stage.stage,sourceName:flowerName,name:stage.name,description:stage.description || ''});
       });
     }
     var track = currentGrowthTrack();
     if(track){
       track.stages.forEach(function(stage){
         if(!hasGrowthStage(stage.stage)) return;
-        (stage.effects || []).forEach(function(effect,index){
-          list.push({key:ENGINE.powerKey('growth',DATA.archetypes[originName],stage.name+'-'+index),sourceType:'Crescimento · '+stage.roman,sourceName:stage.name,name:stage.name,description:effect});
-        });
+        var effects = stage.effects || [];
+        if(effects.length) list.push({key:ENGINE.powerKey('growth',DATA.archetypes[originName],stage.name),sourceGroup:'Crescimento',sourceType:'Crescimento · '+stage.roman,sourceName:DATA.archetypes[originName] || '',name:stage.name,description:effects.join(' '),effects:effects.slice()});
       });
     }
-    return list.map(function(power){
-      power.scope = ENGINE.usageScope(power.description);
-      power.limit = power.scope.key === 'manual' ? Infinity : powerLimit(power.description);
-      power.costs = detectedPowerCosts(power.description);
-      return power;
-    });
+    return list;
   }
 
-  function renderScopeClock(){
-    var clock = $('#scope-clock');
-    if(!clock) return;
-    var labels = {round:'Rodada/Cena clínica',scene:'Cena',conflict:'Conflito',cycle:'Ciclo',session:'Sessão',arc:'Arco',survivor:'Sobrevivente'};
-    clock.innerHTML = Object.keys(labels).map(function(scope){ return '<button type="button" class="scope-clock-button" data-advance-scope="'+scope+'"><span>'+labels[scope]+'</span><b>'+model.clock[scope]+'</b><small>avançar</small></button>'; }).join('');
-  }
-
-  function powerCenterHtml(){
-    var powers = activePowerList();
-    var groups = ['Ocupação','Origem · Inicial','Origem','Flor','Crescimento'];
-    if(!powers.length) return '<p class="empty-state">Selecione Ocupação, Origem e, se for Sangue Novo, uma Flor.</p>';
-    var expiryLabels = {use:'próximo teste',round:'fim da Rodada',scene:'fim da Cena',conflict:'fim do Conflito',cycle:'fim do Ciclo',session:'fim da Sessão',arc:'fim do Arco',survivor:'troca de Sobrevivente'};
-    var effects = model.effects.length ? '<section class="power-source-group active-effects"><div class="subsection-heading">Efeitos temporários</div>'+model.effects.map(function(effect){
-      return '<article class="power-use-card effect-card"><div class="power-use-heading"><div><span>Bônus ativo</span><strong>'+escapeHtml(effect.name)+'</strong></div><b>+'+effect.bonus+'</b></div><p>'+(effect.allTests ? 'Todos os testes' : escapeHtml([effect.attribute,effect.skill].filter(Boolean).join(' + ')))+' · até '+escapeHtml(expiryLabels[effect.expires] || effect.expires)+'</p></article>';
-    }).join('')+'</section>' : '';
-    var feedback = model.ui.powerFeedback ? '<div class="status-line power-feedback">'+escapeHtml(model.ui.powerFeedback)+'</div>' : '';
-    return '<div class="power-center">'+feedback+'<p class="rule-footnote">O marcador controla limites explícitos de uso. Custos numéricos pessoais detectados na descrição podem ser aplicados junto do registro.</p>'+effects+groups.map(function(group){
-      var entries = powers.filter(function(power){ return group === 'Flor' || group === 'Crescimento' ? power.sourceType.indexOf(group) === 0 : power.sourceType === group; });
-      if(!entries.length) return '';
-      return '<section class="power-source-group"><div class="subsection-heading">'+group+'</div>'+entries.map(function(power){
-        var usage = powerUsageState(power.key,power.scope.key);
-        var exhausted = power.limit !== Infinity && usage.count >= power.limit;
-        var costText = Object.keys(power.costs).filter(function(key){ return power.costs[key] > 0; }).map(function(key){ return power.costs[key]+' '+({pf:'PF',pe:'PE',pc:'PC',permanentPf:'PF permanentes',permanentPe:'PE permanentes'}[key]); }).join(' · ');
-        return '<article class="power-use-card '+(exhausted ? 'used' : '')+'" data-power-key="'+escapeHtml(power.key)+'"><div class="power-use-heading"><div><span>'+escapeHtml(power.sourceType)+' · '+escapeHtml(power.sourceName)+'</span><strong>'+escapeHtml(power.name)+'</strong></div><b>'+(power.scope.key === 'manual' ? usage.count+' usos' : usage.count+'/'+power.limit+' por '+power.scope.label)+'</b></div><p>'+escapeHtml(power.description)+'</p>'+(costText ? '<div class="detected-cost">Custo pessoal detectado: '+escapeHtml(costText)+'</div>' : '')+'<div class="inline-actions"><button type="button" class="notes-btn" data-power-use="'+escapeHtml(power.key)+'" '+(exhausted ? 'disabled' : '')+'>'+(costText ? 'Usar e aplicar custo' : 'Registrar uso')+'</button>'+(costText ? '<button type="button" class="text-action" data-power-use-free="'+escapeHtml(power.key)+'" '+(exhausted ? 'disabled' : '')+'>Registrar por outro gatilho</button>' : '')+'</div></article>';
-      }).join('')+'</section>';
-    }).join('')+'</div>';
-  }
-
-  function openPowerCenter(){ openRuleModal('Central de Poderes',powerCenterHtml(),'powers'); }
-  function refreshPowerCenter(){ if($('#rule-action-modal').dataset.modalName === 'powers') $('#rule-action-content').innerHTML = powerCenterHtml(); }
-
-  function usePower(key, skipCosts){
-    var power = activePowerList().filter(function(item){ return item.key === key; })[0];
-    if(!power) return;
-    var usage = powerUsageState(power.key,power.scope.key);
-    if(power.limit !== Infinity && usage.count >= power.limit) return;
-    if(!skipCosts){
-      if(power.costs.permanentPf){ var previous=pfTotal();model.health.permanentPf += power.costs.permanentPf;reconcileCriticalState(previous,{source:power.name}); }
-      if(power.costs.permanentPe){ model.health.permanentPe += power.costs.permanentPe;if(peTotal()>=bloodLimits().pe)model.stress.breaking=true; }
-      if(power.costs.pf) changePF(power.costs.pf,{source:power.name});
-      if(power.costs.pe) applyStress(power.costs.pe,{source:power.name});
-      if(power.costs.pc) addPC(power.costs.pc);
-    }
-    markPowerUsed(power.key,power.scope.key);
-    model.ui.powerFeedback = 'Uso registrado: '+power.name+'.';
-    if(power.sourceType === 'Ocupação' && power.sourceName === 'Masoquista' && power.name === 'Carne Voluntária'){
-      addTemporaryEffect({sourceKey:power.key,name:power.name,bonus:1,expires:'scene',allTests:true});
-      model.ui.powerFeedback = 'Carne Voluntária: Bônus ativo em todos os testes até o fim da Cena.';
-    }
-    if(power.sourceType === 'Ocupação' && power.sourceName === 'Preparado' && power.name === 'Eu Sei Usar Isso'){
-      addTemporaryEffect({sourceKey:power.key,name:power.name,bonus:2,expires:'use',allTests:true});
-      model.ui.powerFeedback = 'Eu Sei Usar Isso: 2 Bônus preparados para o próximo teste auxiliado por um item.';
-    }
-    if(power.sourceType === 'Ocupação' && power.sourceName === 'Estudioso' && power.name === 'Eu Sempre Tenho um Plano'){
-      var planRoll = characterTest('Intelecto','Planejar',0);
-      if(planRoll.successes >= 1){
-        addTemporaryEffect({sourceKey:power.key,name:power.name,bonus:1,expires:'use',allTests:true});
-        model.ui.powerFeedback = 'Plano bem-sucedido ('+planRoll.successes+' sucesso'+(planRoll.successes === 1 ? '' : 's')+'): Bônus preparado para o primeiro teste da Cena.';
-      } else {
-        model.ui.powerFeedback = 'O teste de Planejar não obteve sucessos; nenhum Bônus foi preparado.';
-      }
-      addRuleLog('poder','Teste de Planejar para Eu Sempre Tenho um Plano.',{results:planRoll.results,successes:planRoll.successes});
-    }
-    addRuleLog('poder','Poder usado: '+power.name+'.',{source:power.sourceType+' · '+power.sourceName,scope:power.scope.key,costs:skipCosts ? {} : power.costs});
-    renderHealth();renderPC();renderScopeClock();refreshPowerCenter();renderPowerCenterStatus();saveModel();
-  }
-
-  function renderPowerCenterStatus(){
-    var status = $('#power-center-status');
+  function renderDurationStatus(){
+    var status = $('#duration-status');
     if(!status) return;
-    var powers = activePowerList();
-    var limited = powers.filter(function(power){ return power.scope.key !== 'manual'; }).length;
-    status.textContent = powers.length+' poderes disponíveis · '+limited+' com limite rastreado · '+model.effects.length+' efeitos ativos';
-    renderScopeClock();
+    var expiryLabels = {use:'próximo teste',round:'fim da Rodada',scene:'fim da Cena',conflict:'fim do Conflito'};
+    var effects = model.effects.map(function(effect){
+      return '<span><b>'+escapeHtml(effect.name)+'</b> · +'+effect.bonus+' até '+escapeHtml(expiryLabels[effect.expires] || effect.expires)+'</span>';
+    });
+    var continuous = 0;
+    Object.keys(model.wounds).forEach(function(zoneId){
+      woundsForBodyZone(zoneId).forEach(function(wound){
+        if(wound.conditionApplied && !wound.armorBlocked && ['Sangrando','Ferida Profunda','Ferida Severa','Atordoado'].indexOf(wound.condition) >= 0) continuous += 1;
+      });
+    });
+    status.innerHTML = effects.length ? '<div><strong>Efeitos temporários ativos</strong>'+effects.join('')+'</div>' : '<span class="empty-state">Nenhum efeito temporário ativo.</span>';
+    if(continuous) status.innerHTML += '<small>'+continuous+' '+(continuous === 1 ? 'condição contínua será processada' : 'condições contínuas serão processadas')+' em “Próxima Rodada”.</small>';
+  }
+
+  function renderConsolidatedPowers(){
+    var container = $('#consolidated-power-list');
+    var status = $('#consolidated-power-status');
+    if(!container || !status) return;
+    var powers = consolidatedPowerList();
+    var groups = ['Ocupação','Origem','Flor','Crescimento'];
+    status.textContent = powers.length ? powers.length+' poder'+(powers.length === 1 ? '' : 'es')+' reunido'+(powers.length === 1 ? '' : 's') : 'Nenhum poder disponível';
+    container.innerHTML = powers.length ? groups.map(function(group){
+      var entries = powers.filter(function(power){ return power.sourceGroup === group; });
+      if(!entries.length) return '';
+      return '<section class="consolidated-power-group"><div class="subsection-heading"><span>'+group+'</span><b>'+entries.length+'</b></div><div class="consolidated-power-cards">'+entries.map(function(power){
+        var body = power.effects && power.effects.length ? '<ul>'+power.effects.map(function(effect){ return '<li>'+escapeHtml(effect)+'</li>'; }).join('')+'</ul>' : '<p>'+escapeHtml(power.description || 'Sem descrição registrada.')+'</p>';
+        return '<details class="consolidated-power-card"><summary><span>'+escapeHtml(power.sourceType)+' · '+escapeHtml(power.sourceName)+'</span><strong>'+escapeHtml(power.name)+'</strong><b>+</b></summary>'+body+'</details>';
+      }).join('')+'</div></section>';
+    }).join('') : '<p class="empty-state">Selecione uma Origem e uma Ocupação na Ficha Principal. Sangue Novo também reúne os estágios liberados de sua Flor.</p>';
+    var notes = $('#consolidated-power-notes');
+    if(notes && document.activeElement !== notes) notes.value = model.powerNotes;
+    renderDurationStatus();
   }
 
   function applyContinuousWoundDamage(){
@@ -1918,11 +1854,10 @@
     model.clock[scope] += 1;
     Object.keys(model.powerUsage).forEach(function(key){ if(model.powerUsage[key].scope === scope) model.powerUsage[key].count = 0; });
     model.effects = model.effects.filter(function(effect){ return effect.expires !== scope; });
-    model.ui.powerFeedback = '';
     if(scope === 'round') applyContinuousWoundDamage();
     if(scope === 'conflict' && DATA.archetypes[model.fields['origem-select']] === 'Cães de Guerra' && hasGrowthStage(10)) changePF(-3,{source:'Máquina de Guerra · início do Conflito'});
     addRuleLog('relogio','Avançou '+scope+'.',{value:model.clock[scope]});
-    renderScopeClock();refreshPowerCenter();renderPowerCenterStatus();renderConditions();saveModel();
+    renderConsolidatedPowers();renderConditions();saveModel();
   }
 
   function treatWoundCondition(zoneId, woundId){
@@ -1956,18 +1891,38 @@
     if(!flower){
       $('#flower-overview').innerHTML = '<p class="empty-state">Escolha uma Flor na Ficha Principal.</p>';
       $('#flower-stages').innerHTML = '';
-      renderPowerCenterStatus();
+      renderConsolidatedPowers();
       return;
     }
-    $('#flower-overview').innerHTML = '<h3>'+escapeHtml(name)+'</h3><p>'+escapeHtml(flower.description)+'</p>';
+    var specialRules = '';
+    if(flower.specialRules){
+      specialRules = '<div class="flower-special-rules">'+
+        '<article><span>REGRA ESPECIAL</span><h4>'+escapeHtml(flower.specialRules.title)+'</h4><p>'+escapeHtml(flower.specialRules.description)+'</p></article>'+
+        '<article class="flower-deactivation"><span>AO ENCERRAR</span><h4>'+escapeHtml(flower.specialRules.deactivationTitle)+'</h4><p>'+escapeHtml(flower.specialRules.deactivation)+'</p></article>'+
+      '</div>';
+    }
+    $('#flower-overview').innerHTML = '<h3>'+escapeHtml(name)+'</h3><p class="flower-lore">'+escapeHtml(flower.description)+'</p>'+specialRules;
     var currentIndex = Math.min(4,DATA.corruptionStages.indexOf(currentCorruptionStage()));
     var effectiveIndex = effectiveFlowerIndex();
     $('#flower-stages').innerHTML = flower.stages.map(function(item,index){
       var active = index === effectiveIndex;
       var unlocked = index <= effectiveIndex;
-      return '<article class="flower-stage '+(active ? 'active' : '')+' '+(unlocked ? 'unlocked' : 'locked')+'"><span>'+escapeHtml(item.stage)+'</span><h4>'+escapeHtml(item.name)+'</h4><p>'+escapeHtml(item.description)+'</p>'+(active && effectiveIndex !== currentIndex ? '<em>Ativa um estágio acima por Devoto.</em>' : '')+'</article>';
+      var details = '<p>'+escapeHtml(item.description)+'</p>';
+      if(item.stats){
+        var stats = [
+          ['ALTURA',item.stats.height+' m'],
+          ['REDUÇÃO',item.stats.reduction+' PF'],
+          item.stats.bonus ? ['BÔNUS',String(item.stats.bonus)] : null,
+          ['PF FIXO',String(item.stats.fixedPf)],
+          ['POR RODADA',item.stats.pePerRound+' PE · '+item.stats.pcPerRound+' PC']
+        ].filter(Boolean);
+        details = '<dl class="flower-stage-stats">'+stats.map(function(stat){
+          return '<div><dt>'+stat[0]+'</dt><dd>'+stat[1]+'</dd></div>';
+        }).join('')+'</dl><small class="flower-condition-note">A Redução de PF impede Condições.</small>';
+      }
+      return '<article class="flower-stage '+(item.stats ? 'flower-stage-titan ' : '')+(active ? 'active' : '')+' '+(unlocked ? 'unlocked' : 'locked')+'"><span>'+escapeHtml(item.stage)+'</span><h4>'+escapeHtml(item.name)+'</h4>'+details+(active && effectiveIndex !== currentIndex ? '<em>Ativa um estágio acima por Devoto.</em>' : '')+'</article>';
     }).join('');
-    renderPowerCenterStatus();
+    renderConsolidatedPowers();
   }
 
   function growthRewardText(stage){
@@ -2007,7 +1962,7 @@
     if(missingUnlocks) $('#growth-ledger').innerHTML += '<button type="button" class="notes-btn danger" id="growth-complete-choices">Escolher '+missingUnlocks+' Origem'+(missingUnlocks === 1 ? '' : 's')+' pendente'+(missingUnlocks === 1 ? '' : 's')+'</button>';
     $('#growth-future-arc').disabled = stage < 10;
     $('#growth-future-status').textContent = stage < 10 ? 'Disponível após a etapa X.' : model.growth.postCapArcs+' Arco'+(model.growth.postCapArcs === 1 ? '' : 's')+' após X · +'+(model.growth.postCapArcs*2)+' PO / +'+(model.growth.postCapArcs*2)+' PP';
-    renderPowerCenterStatus();
+    renderConsolidatedPowers();
   }
 
   function growthUnlockOptions(unlock, selectedValues){
@@ -2135,13 +2090,24 @@
     renderEquipment();refreshItemCatalog();saveModel();
   }
 
+  function catalogUseHtml(item){
+    var uses=item.uses||{};
+    var limited=uses.max!=null;
+    var amount=limited?String(uses.max):'∞';
+    var unit=limited?(uses.unit||((Number(uses.max)||0)===1?'Uso':'Usos')):'Contínuo';
+    var label=uses.label||(limited?amount+' '+unit:'Uso ilimitado.');
+    return '<div class="catalog-use-badge '+(limited?'limited':'unlimited')+'" aria-label="'+escapeHtml(label)+'" title="'+escapeHtml(label)+'"><span>Usos</span><strong>'+escapeHtml(amount)+'</strong><small>'+escapeHtml(unit)+'</small></div>';
+  }
+
   function itemCatalogHtml(){
     var itemCards = DATA.commonItems.map(function(item){
-      return '<article class="catalog-card" data-catalog-search-text="'+escapeHtml((item.name+' '+item.description).toLocaleLowerCase('pt-BR'))+'"><div><span>ITEM COMUM</span><strong>'+escapeHtml(item.name)+'</strong></div><p>'+escapeHtml(item.description)+'</p><ul>'+item.effects.map(function(effect){ return '<li><b>'+escapeHtml(effect.name)+'</b> · '+escapeHtml(effect.description)+'</li>'; }).join('')+'</ul><small>'+escapeHtml(item.uses.label)+'</small><button type="button" class="notes-btn" data-catalog-item="'+item.id+'">Adicionar ao Inventário</button></article>';
+      var effectSearch=item.effects.map(function(effect){return effect.name+' '+effect.description;}).join(' ');
+      var searchText=(item.name+' '+item.description+' '+effectSearch+' '+item.uses.label+' '+(item.uses.unit||'')).toLocaleLowerCase('pt-BR');
+      return '<article class="catalog-card" data-catalog-search-text="'+escapeHtml(searchText)+'"><header class="catalog-card-heading"><div class="catalog-card-title"><span>ITEM COMUM</span><strong>'+escapeHtml(item.name)+'</strong></div>'+catalogUseHtml(item)+'</header><p>'+escapeHtml(item.description)+'</p><ul>'+item.effects.map(function(effect){ return '<li><b>'+escapeHtml(effect.name)+'</b> · '+escapeHtml(effect.description)+'</li>'; }).join('')+'</ul><div class="catalog-use-note"><b>Regra de uso</b><span>'+escapeHtml(item.uses.label)+'</span></div><button type="button" class="notes-btn" data-catalog-item="'+item.id+'">Adicionar ao Inventário</button></article>';
     }).join('');
     var ammoCards = DATA.ammunitionTypes.map(function(ammo){
       var controls = ammo.storage === 'container' ? '<label>Compatível com<select data-ammo-weapon-select="'+ammo.id+'">'+ammoCompatibleWeaponOptions(ammo)+'</select></label><div class="inline-actions"><button type="button" class="notes-btn" data-catalog-ammo="'+ammo.id+'" data-ammo-mode="full">Adicionar cheio</button><button type="button" class="text-action" data-catalog-ammo="'+ammo.id+'" data-ammo-mode="initial">Adicionar inicial · metade</button></div>' : '<div class="inline-actions"><button type="button" class="notes-btn" data-catalog-ammo="'+ammo.id+'" data-ammo-mode="single">Adicionar 1</button>'+(ammo.initialAmount ? '<button type="button" class="text-action" data-catalog-ammo="'+ammo.id+'" data-ammo-mode="initial">Adicionar inicial · '+ammo.initialAmount+'</button>' : '')+'</div>';
-      return '<article class="catalog-card ammo-catalog-card" data-catalog-search-text="'+escapeHtml((ammo.name+' '+ammo.description+' '+ammo.compatibleWeapons.join(' ')).toLocaleLowerCase('pt-BR'))+'"><div><span>MUNIÇÃO · '+escapeHtml(ammo.storage)+'</span><strong>'+escapeHtml(ammo.name)+'</strong></div><p>'+escapeHtml(ammo.description)+'</p><small>'+escapeHtml(ammo.reload)+'</small>'+controls+'</article>';
+      return '<article class="catalog-card ammo-catalog-card" data-catalog-search-text="'+escapeHtml((ammo.name+' '+ammo.description+' '+ammo.compatibleWeapons.join(' ')+' '+ammo.reload).toLocaleLowerCase('pt-BR'))+'"><header class="catalog-card-heading"><div class="catalog-card-title"><span>MUNIÇÃO · '+escapeHtml(ammo.storage)+'</span><strong>'+escapeHtml(ammo.name)+'</strong></div></header><p>'+escapeHtml(ammo.description)+'</p><small>'+escapeHtml(ammo.reload)+'</small>'+controls+'</article>';
     }).join('');
     return '<div class="catalog-shell"><label class="catalog-search">Buscar no catálogo<input id="catalog-search" type="search" placeholder="Nome, efeito ou arma..." value="'+escapeHtml(model.ui.itemCatalogFilter)+'"></label><div class="subsection-heading">Itens comuns · '+DATA.commonItems.length+'</div><div class="catalog-grid">'+itemCards+'</div><div class="subsection-heading">Munições · '+DATA.ammunitionTypes.length+'</div><div class="catalog-grid">'+ammoCards+'</div></div>';
   }
@@ -2525,7 +2491,6 @@
     return '<option value="">Todas as categorias</option>'+CONDITION_CATEGORIES.map(function(category){
       return '<option value="'+category.id+'" '+(selected === category.id ? 'selected' : '')+'>'+category.label+'</option>';
     }).join('');
-    renderPowerCenterStatus();
   }
   function renderConditionPicker(){
     var categorySelect = $('#condition-category');
@@ -3105,11 +3070,12 @@
     buildLists();
     renderWounds();
     renderGrowth();
-    renderPowerCenterStatus();
+    renderConsolidatedPowers();
     renderNeeds();
     renderRelationships();
     setModifier('roll-bonus',0);
     setModifier('roll-penalty',0);
+    setModifier('roll-plague',0);
     activatePage(model.ui.activePage || 'principal');
   }
 
@@ -3214,13 +3180,11 @@
         var die = 1 + Math.floor(Math.random()*6); results.push(die); if(die <= skillValue) successes++;
       }
     }
-    var plagueResult = null, symptom = false;
+    var plagueCount = clamp($('#roll-plague').value,0,3);
+    var plagueRoll = ENGINE.rollPlagueDice(plagueCount,currentCorruptionStage().plagueThreshold);
+    var plagueResults = plagueRoll.results;
     var againstDevotee = model.fields['ocupacao-select'] === 'Devoto' && $('#roll-devotee').checked;
-    if($('#roll-plague').checked){
-      plagueResult = 1 + Math.floor(Math.random()*6);
-      symptom = plagueResult <= currentCorruptionStage().plagueThreshold;
-      if(againstDevotee) successes++;
-    }
+    if(againstDevotee) successes += plagueRoll.count;
     var target = parseInt($('#roll-target').value,10) || 0;
     var labels = ['Falha','Sofrido','Gangrenado','Dilacerante','Profano','Absoluto'];
     var nsIndex = Math.min(5,successes);
@@ -3242,18 +3206,19 @@
         skill:skill
       });
     }
+    var plagueHtml = plagueResults.length ? '<div class="plague-roll-result"><div><strong>Dados da Praga</strong><span>Faixa de Sintoma: 1–'+plagueRoll.threshold+'</span></div><div class="dice-faces">'+plagueResults.map(function(die){ return '<span class="die plague-die '+(die <= plagueRoll.threshold ? 'symptom' : 'safe')+'">'+die+'</span>'; }).join('')+'</div><p>'+(plagueRoll.symptomCount ? plagueRoll.symptomCount+' Sintoma'+(plagueRoll.symptomCount === 1 ? '' : 's')+' provocado'+(plagueRoll.symptomCount === 1 ? '' : 's')+' — resolva cada dado separadamente.' : 'Nenhum Sintoma provocado.')+(againstDevotee ? ' Cada Dado da Praga também conta como sucesso; os Sintomas se manifestam apenas no fim da Cena.' : '')+'</p></div>' : '';
     var html = '<div class="roll-summary"><strong>'+labels[nsIndex]+'</strong><span>'+successes+' sucesso'+(successes === 1 ? '' : 's')+'</span>'+(passed === null ? '' : '<span class="'+(passed ? 'budget-ok' : 'over')+'">'+(passed ? 'NS alcançado' : 'NS não alcançado')+'</span>')+'</div>'+
       '<div class="dice-faces">'+results.map(function(die){ return '<span class="die '+(penalized ? (desperateSuccess ? 'success' : 'fail') : (die <= skillValue ? 'success' : 'fail'))+'">'+die+'</span>'; }).join('')+'</div>'+
+      plagueHtml+
       (prodigyBonus ? '<p>Dom Superior aplicou 1 Bônus a esta Perícia.</p>' : '')+
       (rollEffects.length ? '<p>Efeito temporário aplicado: '+escapeHtml(rollEffects.map(function(effect){ return effect.name+' (+'+effect.bonus+')'; }).join(' · '))+'.</p>' : '')+
       (rapidLearning ? '<p>Aprendizado Rápido preparou Bônus para o próximo teste igual.</p>' : '')+
       (penalized ? '<p>Teste penalizado: o número escolhido era '+$('#roll-guess').value+'.</p>' : '')+
-      (plagueResult != null ? '<p>Dado da Praga: <b>'+plagueResult+'</b> · '+(symptom ? 'provoca Sintoma de '+currentCorruptionStage().name : 'sem Sintoma')+(againstDevotee ? ' · conta como sucesso adicional; o Sintoma só se manifesta ao fim da Cena' : '')+'.</p>' : '')+
       (stress ? '<p>Aposta de Estresse: +1 dado e +'+stressCost+' PE.</p>' : '')+
       (crisis ? '<p class="over">A Aposta de Estresse falhou: ocorre uma Crise de Estresse.</p>' : '');
     $('#roll-result').innerHTML = html;
-    model.ui.lastRoll = { attribute:attribute, skill:skill, results:results, successes:successes, plague:plagueResult, at:new Date().toISOString() };
-    refreshPowerCenter();renderPowerCenterStatus();
+    model.ui.lastRoll = { attribute:attribute, skill:skill, results:results, successes:successes, plague:plagueResults, plagueSymptoms:plagueRoll.symptomCount, at:new Date().toISOString() };
+    renderConsolidatedPowers();
     saveModel();
   }
 
@@ -3335,29 +3300,21 @@
     if(event.target.id==='rule-action-modal'){closeRuleModal();return;}
     if(event.target.closest('#open-dying-panel')){openDyingPanel();return;}
     if(event.target.closest('#open-stress-panel')){openStressPanel();return;}
-    if(event.target.closest('#open-power-center')){openPowerCenter();return;}
     if(event.target.closest('#open-item-catalog')){openItemCatalog();return;}
     if(event.target.closest('#paradigm-info-button')){openParadigmMatrix();return;}
     if(event.target.closest('#dying-tolerance-roll')){var toleranceRoll=characterTest('Físico','Tolerância',0);resolveDyingTolerance(toleranceRoll.successes>=3,toleranceRoll);return;}
-    var manualTolerance=event.target.closest('[data-dying-tolerance]');if(manualTolerance){resolveDyingTolerance(manualTolerance.dataset.dyingTolerance==='success',null);return;}
-    if(event.target.closest('#dying-stabilize-roll')){var medicineRoll=characterTest('Intelecto','Medicina',0);resolveStabilization(medicineRoll.successes>=3,medicineRoll);return;}
-    if(event.target.closest('#dying-stabilize-success')){resolveStabilization(true,{manual:true});return;}
-    if(event.target.closest('#dying-end-window')){model.critical.stabilizationWindow=false;addRuleLog('morrendo','Janela de salvamento encerrada sem cuidado.',null);refreshDyingPanel();saveModel();return;}
+    if(event.target.closest('#dying-register-stabilized')){registerExternalStabilization();return;}
     if(event.target.closest('#death-test-roll')){rollDeathTest();return;}
     if(event.target.closest('#dying-correct-state')){if(confirm('Corrigir o estado com base no total atual de PF?')){model.critical.status='stable';reconcileCriticalState(pfTotal(),{source:'correção manual'});renderHealth();refreshDyingPanel();saveModel();}return;}
     if(event.target.closest('#determination-roll')){rollDetermination();return;}
     var determinationGain=event.target.closest('[data-determination-pe]');if(determinationGain){var pendingDetermination=model.stress.pendingDetermination;if(!pendingDetermination)return;var chosenPE=parseInt(determinationGain.dataset.determinationPe,10)||0;model.stress.pendingDetermination=null;applyStress(chosenPE,{source:'Rolagem de Determinação',determination:true,range:pendingDetermination.range});refreshStressPanel();return;}
-    if(event.target.closest('#stress-manual-apply')){var stressAmount=Math.max(0,parseInt($('#stress-manual-amount').value,10)||0);applyStress(stressAmount,{source:'Evento de Estresse',cause:$('#stress-cause').value});refreshStressPanel();return;}
-    if(event.target.closest('#stress-crisis-manual')){triggerStressCrisis({source:'Crise definida pelo MP'});refreshStressPanel();return;}
-    if(event.target.closest('#stress-recovery-apply')){var recoveryKey=$('#stress-recovery-method').value;var recoveryRule=STRESS_RECOVERY[recoveryKey];var recoveryAmount=clamp($('#stress-recovery-amount').value,recoveryRule.min,recoveryRule.max);if(model.fields['ocupacao-select']==='Verdugo'&&['conversation','social','support'].indexOf(recoveryKey)>=0){alert('Coração de Pedra impede reduzir PE por vínculos, conexões ou afeto.');return;}changePE(-recoveryAmount,{source:'Recuperação · '+recoveryRule.name});model.stress.recoveryLog.push({method:recoveryKey,amount:recoveryAmount,at:new Date().toISOString()});refreshStressPanel();saveModel();return;}
+    if(event.target.closest('#stress-crisis-roll')){triggerStressCrisis({source:'Crise de Estresse'});refreshStressPanel();return;}
     if(event.target.closest('#stress-resolve-breaking')){if(peTotal()>=bloodLimits().pe){alert('Reduza os PE abaixo do limite antes de encerrar o Surto.');return;}changePE(0,{source:'Resolução narrativa',resolveBreaking:true});refreshStressPanel();return;}
     if(event.target.closest('#stress-acknowledge-crisis')){model.stress.pendingCrisis=null;renderStressToolStatus();refreshStressPanel();saveModel();return;}
     if(event.target.closest('#growth-confirm')){confirmGrowth();return;}
     if(event.target.closest('#growth-complete-choices')){openGrowthApply(model.growth.stage,true);return;}
     if(event.target.closest('#growth-future-arc')){if(model.growth.stage===10){model.growth.postCapArcs+=1;addRuleLog('crescimento','Arco após a Etapa X registrado.',{arc:model.growth.postCapArcs});renderAttributes();renderOrigin();renderGrowth();saveModel();}return;}
     var scopeAdvance=event.target.closest('[data-advance-scope]');if(scopeAdvance){advanceScope(scopeAdvance.dataset.advanceScope);return;}
-    var powerUse=event.target.closest('[data-power-use]');if(powerUse){usePower(powerUse.dataset.powerUse,false);return;}
-    var powerUseFree=event.target.closest('[data-power-use-free]');if(powerUseFree){usePower(powerUseFree.dataset.powerUseFree,true);return;}
     var catalogItemButton=event.target.closest('[data-catalog-item]');if(catalogItemButton){addCatalogItem(catalogItemButton.dataset.catalogItem);return;}
     var catalogAmmoButton=event.target.closest('[data-catalog-ammo]');if(catalogAmmoButton){var ammoId=catalogAmmoButton.dataset.catalogAmmo;var ammoWeaponSelect=$('[data-ammo-weapon-select="'+ammoId+'"]',$('#rule-action-content'));addAmmunition(ammoId,catalogAmmoButton.dataset.ammoMode,ammoWeaponSelect?ammoWeaponSelect.value:'');return;}
     var woundSource=event.target.closest('[data-wound-source]');if(woundSource){var sourceZone=$('#'+woundSource.dataset.woundSource);if(sourceZone){openWoundModal(sourceZone);editWound(woundSource.dataset.woundId);}return;}
@@ -3399,7 +3356,7 @@
     if(event.target.closest('#wound-save')){ applyWound(); return; }
     if(event.target.closest('#wound-cancel')){ closeWoundModal(); return; }
     if(event.target.closest('#roll-button')){ rollDice(); return; }
-    if(event.target.closest('#roll-reset-modifiers')){ setModifier('roll-bonus',0); setModifier('roll-penalty',0); return; }
+    if(event.target.closest('#roll-reset-modifiers')){ setModifier('roll-bonus',0); setModifier('roll-penalty',0); setModifier('roll-plague',0); return; }
     var pcControl = event.target.closest('.pc-control-btn[data-action]');
     if(pcControl){
       var pcGain = Math.max(0, parseInt($('#pc-gain-input').value,10) || 0);
@@ -3410,7 +3367,7 @@
       addCondition($('#condition-custom').value || $('#condition-select').value); $('#condition-custom').value=''; return;
     }
     if(event.target.closest('#masoquista-voluntary')){
-      usePower(ENGINE.powerKey('occupation','Masoquista','Carne Voluntária'),false); return;
+      useMasoquistVoluntary(); return;
     }
     var conditionRemove = event.target.closest('[data-condition-index]');
     if(conditionRemove){ model.conditions.splice(parseInt(conditionRemove.dataset.conditionIndex,10),1); renderConditions(); saveModel(); return; }
@@ -3476,6 +3433,7 @@
     if(target.classList.contains('modifier-number')){ setModifier(target.id,target.value); return; }
     if(target.id==='catalog-search'){model.ui.itemCatalogFilter=target.value;filterCatalogCards(target.value);saveModel();return;}
     if(target.id==='dying-final-wound'){model.critical.finalWound=target.value;saveModel();return;}
+    if(target.id==='consolidated-power-notes'){model.powerNotes=target.value;saveModel();return;}
     if(target.dataset.modelField){
       if(target.tagName === 'SELECT') return;
       model.fields[target.dataset.modelField] = target.value;
@@ -3571,10 +3529,10 @@
       if(!model.growth.powerSelections[extraOriginName])model.growth.powerSelections[extraOriginName]=[];
       var extraSelected=model.growth.powerSelections[extraOriginName];var extraIndex=extraSelected.indexOf(extraPower.name);var extraOccupation=getOccupation();var extraTotal=7+(extraOccupation&&extraOccupation.originPointsBonus||0)+currentGrowthTotals().originPoints;
       if(target.checked&&extraIndex<0){if(originPowerSpent()+extraOriginPowerCost(extraOriginName,extraPower)>extraTotal){target.checked=false;alert('Pontos de Origem insuficientes. Poderes de Origem fora do Arquétipo custam +1 PO.');return;}extraSelected.push(extraPower.name);}else if(!target.checked&&extraIndex>=0)extraSelected.splice(extraIndex,1);
-      renderOrigin();renderPowerCenterStatus();saveModel();return;
+      renderOrigin();renderConsolidatedPowers();saveModel();return;
     }
     if(target.classList.contains('origin-power-check')){
-      var origin=getOrigin();if(!origin)return;var power=origin.powers.filter(function(item){return item.name===target.dataset.power;})[0];var index=model.originPowers.indexOf(power.name);if(target.checked&&index<0){var occ=getOccupation();var total=7+(occ&&occ.originPointsBonus||0)+currentGrowthTotals().originPoints;var spent=originPowerSpent();if(spent+power.cost>total){target.checked=false;alert('Pontos de Origem insuficientes.');return;}model.originPowers.push(power.name);}else if(!target.checked&&index>=0)model.originPowers.splice(index,1);renderOrigin();renderPowerCenterStatus();saveModel();return;
+      var origin=getOrigin();if(!origin)return;var power=origin.powers.filter(function(item){return item.name===target.dataset.power;})[0];var index=model.originPowers.indexOf(power.name);if(target.checked&&index<0){var occ=getOccupation();var total=7+(occ&&occ.originPointsBonus||0)+currentGrowthTotals().originPoints;var spent=originPowerSpent();if(spent+power.cost>total){target.checked=false;alert('Pontos de Origem insuficientes.');return;}model.originPowers.push(power.name);}else if(!target.checked&&index>=0)model.originPowers.splice(index,1);renderOrigin();renderConsolidatedPowers();saveModel();return;
     }
     if(target.classList.contains('inventory-weapon-select')){var storedCard=target.closest('.inv-slot');var storedItem=model.inventory.filter(function(item){return item.id===storedCard.dataset.itemId;})[0];if(!storedItem||!isInventoryWeapon(storedItem))return;var storedWeaponState=storedItem.weapon;storedWeaponState.weaponId=target.value;storedWeaponState.mods=[];storedWeaponState.current=weaponMax(storedWeaponState);if(target.value!=='custom'){storedWeaponState.customName='';storedWeaponState.customDamage='';storedWeaponState.customRange='';storedWeaponState.customMax=0;}renderInventory();renderRecipes();saveModel();return;}
     if(target.classList.contains('inventory-weapon-mod-select')){var storedModCard=target.closest('.inv-slot');var storedModItem=model.inventory.filter(function(item){return item.id===storedModCard.dataset.itemId;})[0];if(!storedModItem||!isInventoryWeapon(storedModItem))return;var storedModState=storedModItem.weapon;var storedModIndex=parseInt(target.dataset.modIndex,10);var storedOldMod=storedModState.mods[storedModIndex]||'';var storedNextMod=target.value;if(storedOldMod&&storedNextMod!==storedOldMod){alert('Modificações são permanentes. Apenas poderes específicos permitem removê-las.');renderInventory();return;}if(storedNextMod){var storedMod=DATA.modifications.filter(function(item){return item.id===storedNextMod;})[0];var storedModCost=modificationCost(storedMod);if(model.parts<storedModCost){alert('Partes insuficientes para instalar esta modificação.');renderInventory();return;}model.parts-=storedModCost;storedModState.mods[storedModIndex]=storedNextMod;storedModState.current=Math.min(storedModState.current,weaponMax(storedModState));renderEquipment();saveModel();}return;}

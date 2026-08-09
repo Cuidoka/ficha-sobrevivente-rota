@@ -433,9 +433,15 @@
     reputationRules: {
       initialParadigm: "Sobrevivente",
       regional: true,
-      consistentAction: "Uma ação pública que confirma claramente o Paradigma concede Bônus ao teste relacionado.",
-      inconsistentAction: "Uma ação pública contrária ao comportamento esperado pelo Paradigma impõe Penalidade ao teste relacionado.",
-      change: "A Reputação muda apenas quando ações públicas consistentes formam um novo padrão ao longo do tempo.",
+      overview: "A Reputação é pública, impessoal e pode ser inexata: ela representa quem uma região, facção ou comunidade acredita que você seja, não necessariamente quem você é.",
+      paradigms: "Os nove Paradigmas são sínteses sociais construídas pelo que as pessoas veem, ouvem e contam sobre você. Eles refletem sua fama, não suas intenções ou seu verdadeiro caráter.",
+      matrix: "A matriz 3×3 combina como o mundo se sente em relação a você com o foco das suas ações. Todo Sobrevivente começa no centro, no Paradigma Sobrevivente.",
+      verticalAxis: "No eixo vertical, Sublime representa inspiração, proteção e transformação; Síntese representa ambiguidade, humanidade e sobrevivência; Abissal representa temor, ruptura, violência e punição.",
+      horizontalAxis: "No eixo horizontal, a esquerda age sobre grupos, territórios e instituições; o centro age por sobrevivência ou convicções internas; a direita busca a raiz das coisas, afetando crenças, dogmas, ciclos e sistemas inteiros.",
+      consistentAction: "Você recebe Bônus quando uma ação confirma seu Paradigma de forma pública e inequívoca. Apenas sobreviver, respirar ou fazer o óbvio não é suficiente para evocar sua fama.",
+      inconsistentAction: "Você recebe Penalidade quando age contra o que sua própria Reputação construiu, especialmente quando todos esperavam de você o comportamento típico do Paradigma.",
+      change: "A Reputação não muda por um único gesto. Ações públicas repetidas precisam formar um padrão claro e reconhecível ao longo do tempo.",
+      connections: "Relacionamentos com pessoas influentes podem alterar sua Reputação em uma região. Da mesma forma, sua fama molda a predisposição de quem ainda nem conheceu você.",
       paths: {
         "Sublime": "Inspiração, proteção, transformação, heroísmo ou justiça.",
         "Síntese": "Ambiguidade, humanidade e sobrevivência sem glória.",
@@ -451,9 +457,9 @@
         row: 0,
         column: 0,
         focus: "Estruturas sociais, grupos, territórios e instituições.",
-        description: "É visto como alguém que assume responsabilidade por algo além de si e funciona como uma barreira contra o fim. Comunidades esperam proteção e firmeza, mas também cobram cada falha.",
-        positive: "Acolhido por comunidades; visto como confiável, firme e necessário.",
-        negative: "Alvo de cobrança constante; pode ser chamado de controlador, autoritário ou opressor."
+        description: "Você é visto como alguém que assume responsabilidade por algo além de si. Talvez proteja um assentamento, um pequeno grupo, uma ideia ou apenas um pedaço de terra onde a vida ainda resiste. As pessoas enxergam em você uma barreira contra o fim; por isso, respeitam você, esperam por você e exigem mais do que você pode dar. Toda muralha tem rachaduras, e quando você falha em proteger, é julgado.",
+        positive: "Acolhido por comunidades. Visto como confiável, firme e necessário.",
+        negative: "Alvo de cobrança constante. Chamado de controlador, autoritário ou opressor."
       },
       {
         id: "justo",
@@ -462,9 +468,9 @@
         row: 0,
         column: 1,
         focus: "Convicções pessoais, ética e escolhas morais.",
-        description: "É visto como alguém que ainda acredita em ética, justiça e escolhas difíceis com peso moral. Sua postura inspira alguns e irrita aqueles que consideram seus ideais ingênuos.",
-        positive: "Respeitado moralmente; ganha confiança onde outros seriam recusados.",
-        negative: "Alvo de vigilância, inveja ou frustração; rejeitado por quem não suporta ideais."
+        description: "Você é visto como alguém que ainda acredita em ética, justiça e escolhas difíceis com peso moral. Não é perfeito, mas se importa. Num mundo onde a maioria aceitou fazer o necessário para sobreviver, essa atitude brilha ou irrita. Alguns veem você como inspiração; outros, como um ingênuo condenado. Todos observam e esperam sua queda para dizer que avisaram.",
+        positive: "Respeitado moralmente. Ganha confiança onde outros seriam recusados.",
+        negative: "Alvo de vigilância, inveja ou frustração. Rejeitado por quem não suporta ideais."
       },
       {
         id: "messias",
@@ -473,7 +479,7 @@
         row: 0,
         column: 2,
         focus: "Crenças, dogmas, ciclos e transformação profunda.",
-        description: "É visto como uma resposta extraordinária para o mundo. Pessoas passam a seguir seus atos e palavras, transformando sua imagem em esperança coletiva, tenha ele pedido isso ou não.",
+        description: "Talvez você tenha dito ou feito algo; talvez apenas tenha sobrevivido de um jeito que outros consideraram extraordinário. Alguém seguiu você, outro repetiu suas palavras e um grupo passou a agir como se você fosse a resposta que esperava. Você não pediu isso — ou talvez tenha pedido. Não importa: a imagem foi criada e agora você é a última esperança dessas pessoas.",
         positive: "Atrai seguidores, lealdade e admiração intensa.",
         negative: "Atrai fanatismo, desconfiança institucional e perseguição religiosa ou política."
       },
@@ -484,9 +490,9 @@
         row: 1,
         column: 0,
         focus: "Estruturas sociais, grupos, territórios e instituições.",
-        description: "É visto como alguém que não pertence a lugar algum e carrega notícias, histórias, comércio e, às vezes, perigos. Sua liberdade intriga, mas sua passagem também desperta cautela.",
-        positive: "Acesso a múltiplas comunidades; facilidade para negociar e vender.",
-        negative: "Desconfiança crônica; dificuldade em formar laços profundos."
+        description: "Você é visto como alguém que não pertence a lugar algum e, por isso, carrega notícias, histórias e às vezes perigos. Pode ser comerciante, andarilho, caçador de ruínas ou exilado; para o mundo, é um rosto que vem de fora e segue adiante. Sua liberdade intriga, mas também incomoda. As pessoas nunca sabem se você carrega ajuda ou desgraça.",
+        positive: "Acesso a múltiplas comunidades. Facilidade para negociar e/ou vender.",
+        negative: "Desconfiança crônica. Dificuldade em formar laços profundos."
       },
       {
         id: "sobrevivente",
@@ -495,8 +501,8 @@
         row: 1,
         column: 1,
         focus: "Sobrevivência, convicções internas e necessidades imediatas.",
-        description: "É visto como uma pessoa comum que faz o necessário para chegar ao próximo dia. Não é ameaça nem salvador, mas alguém que sabe quando lutar, correr ou se calar.",
-        positive: "Lido como um dos nossos por quase qualquer grupo; acesso simples e baixo risco de rejeição imediata.",
+        description: "Você está vivo. Num mundo onde isso já é vitória, o resto é detalhe. Aos olhos dos outros, é um rosto comum que faz o necessário para chegar ao próximo dia — talvez com honra, culpa ou apenas cansaço. Não há glória nem terror: você não é ameaça nem salvador, apenas alguém que sabe quando lutar, correr ou se calar. Por isso, portas se abrem para você, mas raramente os corações.",
+        positive: "Lido como “um dos nossos” por quase qualquer grupo. Acesso simples e baixo risco de rejeição imediata.",
         negative: "Dificuldade para inspirar alianças ou devoção."
       },
       {
@@ -506,7 +512,7 @@
         row: 1,
         column: 2,
         focus: "Crenças, dogmas, ciclos e transformação profunda.",
-        description: "É visto como alguém que já escolheu entre o ruim e o pior e segue um código próprio. Age quando os outros hesitam, mas sua imprevisibilidade torna a confiança difícil.",
+        description: "Você não é puro nem vilão. Já precisou escolher entre o ruim e o pior, e o mundo não esqueceu. Alguns dizem que você falhou; outros, que teve coragem de fazer o que ninguém faria. Você segue seu próprio código, então as pessoas nunca sabem exatamente de que lado está. Age quando todos hesitam, mas paga com confiança difícil, amizades frágeis e fama de imprevisível.",
         positive: "Atrai quem busca ação, pragmatismo e força moral própria.",
         negative: "Visto como instável, perigoso ou antiético pelos mais idealistas."
       },
@@ -517,9 +523,9 @@
         row: 2,
         column: 0,
         focus: "Estruturas sociais, grupos, territórios e instituições.",
-        description: "É visto como alguém que escolhe matar rapidamente quando há conflito. Mesmo que considere a violência apenas o método mais simples ou eficaz, portas se fecham e o medo o acompanha.",
-        positive: "Intimidação natural; poucos ousam confrontar ou enganar você.",
-        negative: "Conflitos ao redor escalam rápido; pessoas reagem primeiro contra você, e rendições ou negociações ficam mais difíceis."
+        description: "Você não é um psicopata — ao menos é o que jura. O mundo vê alguém que, quando surge um conflito, escolhe matar muito rapidamente: puxa a arma, quebra o pescoço, corta a garganta. Talvez não goste de matar, mas matará se considerar o método mais simples ou eficaz. Isso basta para fechar portas, destruir alianças e fazer o medo seguir você.",
+        positive: "Intimidação natural. Poucos ousam confrontar ou enganar você.",
+        negative: "Conflitos ao seu redor escalam rapidamente. Pessoas tendem a reagir primeiro contra você; rendições e negociações ficam mais difíceis quando sua presença é conhecida."
       },
       {
         id: "mercenario",
@@ -528,9 +534,9 @@
         row: 2,
         column: 1,
         focus: "Sobrevivência, convicções internas e necessidades imediatas.",
-        description: "É visto como alguém cuja lealdade depende do preço do dia. Pode ter feito grandes coisas, mas ninguém sabe se voltará suas armas contra os mesmos aliados no próximo contrato.",
-        positive: "Alta eficácia e versatilidade; acesso fácil a trabalhos e círculos perigosos.",
-        negative: "Profundamente desconfiado; facções raramente entregam informações, autoridade ou posições sensíveis, e aliados esperam que sua lealdade tenha prazo ou preço."
+        description: "Você luta pelo que vale seu preço naquele dia, e o mundo inteiro sabe. Talvez já tenha feito grandes coisas ou salvado vidas, mas ninguém sabe se você se voltará contra essas mesmas pessoas no próximo contrato. Sua presença gera respeito cauteloso e muito medo. Para alguns, você é útil; para todos, é traiçoeiro.",
+        positive: "Alta eficácia e versatilidade. Acesso fácil a trabalhos e círculos perigosos.",
+        negative: "Profundamente desconfiado. Facções raramente entregam informações, autoridade ou posições sensíveis a você; até aliados esperam que sua lealdade tenha prazo ou preço."
       },
       {
         id: "inquisidor",
@@ -539,9 +545,9 @@
         row: 2,
         column: 2,
         focus: "Crenças, dogmas, ciclos e transformação profunda.",
-        description: "É visto como uma ferramenta de opressão que resolve problemas sem limites aceitáveis aos olhos dos outros. Aceita que inocentes sofram ou morram como preço para eliminar uma ameaça maior.",
-        positive: "Inspira obediência forçada; possui poder político ou militar.",
-        negative: "Sua presença gera resistência, revolta ou paranoia; grupos independentes e civis evitam colaborar enquanto estiver envolvido."
+        description: "Você é visto como uma ferramenta de opressão: braço de uma facção autoritária ou agente solitário. Diante de um problema, traidor, grupo corrupto ou ameaça crescente, você resolve — como um amputador. Derruba um vilarejo que abriga um criminoso e apaga uma rede de informantes inteira. Não é cruel por prazer, mas não possui limites aceitáveis aos olhos dos outros e aceita inocentes mortos como preço da solução.",
+        positive: "Inspira obediência forçada. Possui poder político ou militar.",
+        negative: "Sua simples presença gera resistência, revolta ou paranoia. Grupos independentes e civis evitam colaborar enquanto você estiver envolvido."
       }
     ],
 
@@ -1138,32 +1144,43 @@ Object.assign(window.ROOTS_DATA.flowers,
     ]
   },
   "Jarro-Titã": {
-    "description": "Você nasceu mais alto que todo mundo. Sua família se assustava, seus amigos brincavam sobre você ter comido adubo. Dois metros e ainda crescendo. Mas o problema nunca foi só a altura. Desde criança, uma voz grave vem de dentro do seu peito. \"Mais\", ela diz, \"Cresce.\", \"Quebra.\" Você sabe que, se quiser, pode libertar o Titã. Mas cada vez, a voz fica mais alta. TRANSFORMANDO-SE Gaste Todas suas Ações, sua flor começa a corrompê-lo por inteiro, trazendo vigas e raízes de dentro da sua Carne, te transformando em um Titã Enraizado que se parece com você, mas colossal. Você perde acesso ao seu Inventário e Armas. Seu único modo de ataque é a Briga. Cause PF fixo por estágio já que não pode Mirar em Pontos Vitais. A cada Metro que crescer, Aumente seu Alcance (em uma Categoria a partir de Em Contato até Afastado), Aumente seu Atributo de Físico em +1 e Ganhe Redução de PF (impedindo Condições). Ameaças atacadas por você podem apenas se Esquivar, mas Ameaças ganham Bônus para Atacar você mas podem apenas mirar nas suas Pernas (com Armas Brancas).",
+    "description": "Você nasceu mais alto que todo mundo. Sua família se assustava, seus amigos brincavam sobre você ter comido adubo. Dois metros e ainda crescendo. Mas o problema nunca foi só a altura. Desde criança, uma voz grave vem de dentro do seu peito. \"Mais\", ela diz, \"Cresce.\", \"Quebra.\" Você sabe que, se quiser, pode libertar o Titã. Mas cada vez, a voz fica mais alta.",
+    "specialRules": {
+      "title": "TRANSFORMANDO-SE",
+      "description": "Gaste Todas suas Ações: sua flor começa a corrompê-lo por inteiro, trazendo vigas e raízes de dentro da sua Carne e transformando-o em um Titã Enraizado que se parece com você, mas colossal. Você perde acesso ao Inventário e às Armas, não pode ser manobrado e seu único modo de ataque é a Briga. Cause PF fixo por estágio, pois não pode Mirar em Pontos Vitais. A cada metro que crescer, aumente seu Alcance em uma Categoria, a partir de Em Contato até Afastado; aumente seu Atributo de Físico em +1; e ganhe Redução de PF, impedindo Condições. Ameaças atacadas por você podem apenas se Esquivar. Ameaças ganham Bônus para atacar você ao mirar nas suas Pernas com Armas Brancas.",
+      "deactivationTitle": "DESATIVANDO O TITÃ",
+      "deactivation": "Gaste Todas suas Ações e volte ao seu estado e corpo natural, nu e confuso, com seu Inventário ao seu lado. Sofra Exaustão, Clima Extremo (Calor), Pânico e Desorientado. Perca 1 PP de qualquer Perícia e 3 anos de longevidade, sofrendo cada vez mais cedo por causas naturais de morte. Depois disso, não pode ativar Titã até Dormir por 8 Cenas."
+    },
     "stages": [
       {
         "stage": "Imaculada",
-        "name": "GRANDE (3 METROS / REDUZ 5 PF / 1 BÔNUS)\n○ PF",
-        "description": "11 PF. ○ Sofra por Rodada: 2 PE e 1 PC."
+        "name": "GRANDE",
+        "description": "3 metros; reduz 5 PF e impede Condições; 1 Bônus; causa 11 PF fixos; sofre 2 PE e 1 PC por Rodada.",
+        "stats": { "height": 3, "reduction": 5, "bonus": 1, "fixedPf": 11, "pePerRound": 2, "pcPerRound": 1 }
       },
       {
         "stage": "Incipiente",
-        "name": "ENORME (4 METROS / REDUZ 6 PF / 2 BÔNUS)\n○ PF",
-        "description": "12 PF. ○ Sofra por Rodada: 3 PE e 2 PC."
+        "name": "ENORME",
+        "description": "4 metros; reduz 6 PF e impede Condições; 2 Bônus; causa 12 PF fixos; sofre 3 PE e 2 PC por Rodada.",
+        "stats": { "height": 4, "reduction": 6, "bonus": 2, "fixedPf": 12, "pePerRound": 3, "pcPerRound": 2 }
       },
       {
         "stage": "Alarmante",
-        "name": "GIGANTE (5 METROS / REDUZ 7 PF / 3 BÔNUS…)\n○ PF",
-        "description": "13 PF. ○ Sofra por Rodada: 4 PE e 3 PC."
+        "name": "GIGANTE",
+        "description": "5 metros; reduz 7 PF e impede Condições; 3 Bônus; causa 13 PF fixos; sofre 4 PE e 3 PC por Rodada.",
+        "stats": { "height": 5, "reduction": 7, "bonus": 3, "fixedPf": 13, "pePerRound": 4, "pcPerRound": 3 }
       },
       {
         "stage": "Severa",
-        "name": "COLOSSO (6 METROS / REDUZ 8 PF)\n○ PF",
-        "description": "14 PF. ○ Sofra por Rodada: 5 PE e 4 PC."
+        "name": "COLOSSO",
+        "description": "6 metros; reduz 8 PF e impede Condições; causa 14 PF fixos; sofre 5 PE e 4 PC por Rodada.",
+        "stats": { "height": 6, "reduction": 8, "fixedPf": 14, "pePerRound": 5, "pcPerRound": 4 }
       },
       {
         "stage": "Crítica",
-        "name": "TITÃ (7 METROS / REDUZ 9 PF)\n○ PF",
-        "description": "15 PF. ○ Sofra por Rodada: 6 PE e 4 PC. Quando desativar Titã, gaste Todas suas Ações, volte ao seu estado e corpo natural, nu e confuso, seu Inventário ao seu lado. Sofra Exaustão, Clima Extremo (Calor), Pânico e Desorientado. Perca 1 PP de qualquer Perícia e 3 anos de \"longevidade\", sofrendo cada vez mais cedo por causas naturais de morte. Após isso, não consiga ativar Titã até Dormir por 8 Cenas."
+        "name": "TITÃ",
+        "description": "7 metros; reduz 9 PF e impede Condições; causa 15 PF fixos; sofre 6 PE e 4 PC por Rodada.",
+        "stats": { "height": 7, "reduction": 9, "fixedPf": 15, "pePerRound": 6, "pcPerRound": 4 }
       }
     ]
   },
@@ -1318,6 +1335,190 @@ Object.assign(window.ROOTS_DATA.flowers,
         "stage": "Crítica",
         "name": "VENHAM ATÉ MIM",
         "description": "Você crava as mãos no solo e sussurra uma única palavra de comando pelas fundações do mundo. Sofra +5 PC e sofra 1 PE Permanente. Seu chamado é perceptível apenas pela vida corrompida e enraizada, atraindo para a sua localização TODAS as Ameaças Enraizadas em um raio Distante."
+      }
+    ]
+  }
+}
+);
+Object.assign(window.ROOTS_DATA.flowers,
+{
+  "Raflésia": {
+    "description": "No começo você achou que era só a sua cabeça. Pensamentos intrusivos, você disse a si mesmo, todo mundo tem, não significa nada. O impulso de empurrar, morder ou esfaquear alguém. Você aprendeu a ignorar. Achou que fosse cansaço, algum resquício sombrio que toda mente carrega e finge não carregar. Convenceu-se disso durante toda sua vida. Até que ele disse \"oi\".",
+    "stages": [
+      {
+        "stage": "Imaculada",
+        "name": "INQUILINO",
+        "description": "Agora vocês conversam, nas duas direções; ele tem respostas quase sempre brutais e animalescas. Quando quiser, feche os olhos e empreste-os a ele por uma Cena. Ele enxerga através de paredes e obstáculos até Afastado, sentindo a pulsação de corações Humanos, Bestiais e Enraizados. Se fizer isso mais de uma vez no mesmo Ciclo, receba +1 PC para cada uso extra."
+      },
+      {
+        "stage": "Incipiente",
+        "name": "BRAÇOS",
+        "description": "Gaste sua Ação Secundária, uma Reação e sofra +2 PC: dois tentáculos brotam das suas costas até o fim da Cena. Use sua Ação Principal com Armas Brancas ou Briga para golpear com seus tentáculos; o direito causa Ferimentos de Perfuração e o esquerdo, Corte. Golpeie até 2 vezes, com tentáculos diferentes, o mesmo Alvo ou Alvos diferentes em até Perto. Se acertar ambos os ataques, faça um ataque extra com suas mãos."
+      },
+      {
+        "stage": "Alarmante",
+        "name": "PERNAS",
+        "description": "Gaste sua Ação Secundária, uma Reação e sofra +2 PC: dois tentáculos brotam da lombar até o fim da Cena. Com sua Ação Secundária, agarre até 2 Alvos Perto pelas pernas e suspenda-os de cabeça para baixo; eles recebem Preso e Vulnerável, sem gastar Ação para mantê-los assim. Você pode atacá-los enquanto pendurados. A qualquer momento, gaste uma Reação para arremessar um Alvo suspenso até Perto, causando +6 PF de Impacto e Caído. Receber qualquer PF solta imediatamente qualquer Alvo suspenso. Braços + Pernas ativos juntos permitem escalar superfícies como uma aranha, sem Testes."
+      },
+      {
+        "stage": "Severa",
+        "name": "GANCHO",
+        "description": "Gastando sua Ação Secundária, sofra +1 PC e +2 PF: seu braço se estica, fino e comprido, uma extensão de carne e raiz saindo diretamente de você e alcançando até Longe. Use como gancho para puxar-se até uma superfície, puxar um item até você ou agarrar uma Ameaça e trazê-la para Em Contato."
+      },
+      {
+        "stage": "Crítica",
+        "name": "CINCO BRAÇOS",
+        "description": "Gaste Todas as suas Ações, sofra 1 PE Permanente, +2 PF Permanente e +2 PC. Até o fim da Cena, Braços, Pernas e Gancho ficam permanentemente ativos e prontos ao mesmo tempo, sem precisar gastar Ação ou PC para ativá-los."
+      }
+    ]
+  },
+  "Dama da Noite": {
+    "description": "Sempre houve uma parte de você que queria ser outra pessoa. Não por ódio da própria vida, só curiosidade, um desejo bobo de saber como era caminhar em outros pés, ver o mundo através de outros olhos. A primeira vez que aconteceu de verdade, você achou que tinha sonhado. Acordou com lembranças fragmentadas de correr em quatro patas por um beco que nunca tinha visto, até passar por ele, dias depois, e reconhecer cada pedra... Algo, dentro de você, está satisfazendo aquele velho desejo de tantos anos.",
+    "stages": [
+      {
+        "stage": "Imaculada",
+        "name": "OLHOS DA NOITE",
+        "description": "Seus olhos se adaptam perfeitamente à escuridão: você enxerga em ambientes totalmente escuros como se estivesse à luz do dia."
+      },
+      {
+        "stage": "Incipiente",
+        "name": "PROJEÇÃO",
+        "description": "Gastando Todas as suas Ações e recebendo +2 PC, seu corpo cai desacordado e Vulnerável onde está, e sua consciência salta para dentro de uma Ameaça Humana ou Bestial de até NA 4 em até Afastado. Você passa a agir no Turno dela, com a ficha dela. Se a Ameaça possuída morrer enquanto você estiver dentro dela, sua consciência retorna ao seu corpo imediatamente e você sofre 1 PE Permanente. Você pode encerrar a Projeção a qualquer momento, retornando ao seu corpo, que continua desacordado pelo restante da Rodada após o retorno."
+      },
+      {
+        "stage": "Alarmante",
+        "name": "SALTO LONGO",
+        "description": "Você agora pode possuir Ameaças de até NA 6, e a distância da Projeção sobe: você pode possuir qualquer Ameaça visível em até Distante. Sob luz solar direta, você, no seu corpo, sofre Penalidade em todos os seus Testes."
+      },
+      {
+        "stage": "Severa",
+        "name": "DUAS SOMBRAS",
+        "description": "Você agora pode possuir Ameaças de até NA 8 e manter 2 Ameaças possuídas simultaneamente; a segunda custa +1 PC adicional para dominar. Cada uma age no seu próprio momento na Iniciativa. A Penalidade sob luz solar direta sobe para 2."
+      },
+      {
+        "stage": "Crítica",
+        "name": "TRÊS SOMBRAS",
+        "description": "Gaste Todas as suas Ações, sofra 1 PE Permanente e receba +4 PC. Você agora pode possuir até 3 Ameaças simultaneamente. Seu corpo original permanece desacordado enquanto qualquer uma delas estiver ativa. A terceira custa mais +1 PC adicional, totalizando o custo acumulado das anteriores. A luz solar direta agora é insuportável: você sofre 3 Penalidades em todos os Testes."
+      }
+    ]
+  },
+  "Papoula": {
+    "description": "Quando criança, você nunca ficava doente. Todo mundo ao seu redor pegava gripe, catapora, piolho, você não. As pessoas chamavam de sorte, de saúde de ferro. Você começou a desconfiar quando percebeu um padrão: toda vez que alguém próximo adoecia gravemente, você tinha estado por perto, tinha tocado a mesma maçaneta, respirado o mesmo ar, dias antes de ficar doente. Você nunca ficou doente. Mas alguém sempre fica no seu lugar.",
+    "stages": [
+      {
+        "stage": "Imaculada",
+        "name": "FARO PATOLÓGICO",
+        "description": "Você é imune a todas as Doenças. Além disso, sente quando o ambiente ao redor carrega risco de contágio, avisando Aliados a tempo de se prevenirem."
+      },
+      {
+        "stage": "Incipiente",
+        "name": "SEMENTE DA DOENÇA",
+        "description": "Gaste sua Ação Secundária e sofra +2 PC: você planta uma Doença nova em um Alvo em até Perto que ele não tinha antes. Você escolhe o sintoma inicial, a critério do MP, e ela evolui como qualquer Doença a partir daí."
+      },
+      {
+        "stage": "Alarmante",
+        "name": "TROCA DE SANGUE",
+        "description": "Gastando sua Ação Principal e sofrendo +2 PC, você toca dois Alvos simultaneamente e troca a quantidade de PF atual entre eles. A troca dói ao passar por você: sofra a diferença entre os dois valores, subtraindo o menor do maior. Pode ser usada uma vez por Alvos e por Cena."
+      },
+      {
+        "stage": "Severa",
+        "name": "METABOLISMO AVANÇADO",
+        "description": "Gaste sua Ação Principal e sofra +1 PC: você acessa Feridas, Doenças ou Dores que um Alvo em até Perto já possui e escolhe avançá-las para um estágio mais grave ou retrocedê-las para um mais brando, a critério do MP."
+      },
+      {
+        "stage": "Crítica",
+        "name": "SINTOMA CONTAGIOSO",
+        "description": "Gaste Todas as suas Ações e sofra +1 PE Permanente e +2 PC: você cria uma ligação invisível entre até 3 Alvos em até Longe. Enquanto durar, até o fim da Cena, qualquer coisa que acontecer com um deles se repete integralmente nos outros dois."
+      }
+    ]
+  },
+  "Lírio da Morte": {
+    "description": "Você nunca teve nojo de bicho morto. Quando criança, encontrava passarinhos caídos do ninho e os enterrava com cuidado, sem o enjoo que as outras crianças sentiam, só uma quietude estranha, quase carinhosa. Adulto, isso nunca mudou: um corpo sem vida nunca te assustou, nunca cheirou mal para você, nunca pareceu errado. Era só... descanso. Até o dia em que, ajoelhado ao lado de um cadáver, você sentiu vontade de que ele se levantasse. E ele se levantou.",
+    "stages": [
+      {
+        "stage": "Imaculada",
+        "name": "PRESENÇA DA MORTE",
+        "description": "Cadáveres e corpos em decomposição ao seu redor não cheiram, não perturbam você e nunca atraem Ameaças. Você sente a localização de qualquer cadáver ou corpo morto em até Longe, mesmo sem vê-lo."
+      },
+      {
+        "stage": "Incipiente",
+        "name": "LEVANTA A PAREDE",
+        "description": "Você pode levantar até 3 cadáveres próximos, humanos ou animais, por vez como Mortos-Vivos, sofrendo +2 PC. Cada um realiza uma única ação física simples, como bloquear uma passagem, segurar algo, empilhar-se em escada ou rampa, servir de contrapeso ou formar uma barricada, e cai imediatamente depois. Por Turno, sua Ação Principal comanda até 3 Mortos-Vivos, sua Ação Secundária até 2 e uma Reação até 1. Qualquer PF que recebam os destrói instantaneamente."
+      },
+      {
+        "stage": "Alarmante",
+        "name": "OLHOS MORTOS",
+        "description": "Você agora pode levantar até 6 cadáveres de uma vez, incluindo pequenos animais, sofrendo +3 PC. Cadáveres de animais podem ser usados como sentidos emprestados para farejar uma trilha ou sobrevoar uma área; você percebe o que eles percebem antes de caírem novamente."
+      },
+      {
+        "stage": "Severa",
+        "name": "SACRIFÍCIO",
+        "description": "Você agora pode levantar até 9 cadáveres simultaneamente, sofrendo +4 PC. Uma vez por Conflito, gastando sua Ação Principal, faça toda a horda ativa colapsar de uma vez em uma explosão de carne podre em raio Perto. Cada Ameaça na área sofre +2 PF de Corrosão por cadáver sacrificado e recebe Enraivecido por 1 Rodada."
+      },
+      {
+        "stage": "Crítica",
+        "name": "CAMPO DOS CAÍDOS",
+        "description": "Gaste Todas as suas Ações, sofra 1 PE Permanente e +4 PC. Você levanta até 12 cadáveres visíveis em raio Afastado. Até o fim da Cena, qualquer criatura que morrer na área se levanta automaticamente, sem contar para o limite de 12. Ao fim do efeito, todos colapsam e você sofre Exaustão. Por Turno, sua Ação Principal comanda até 6 Mortos-Vivos, sua Ação Secundária até 4 e uma Reação até 3."
+      }
+    ]
+  },
+  "Margarida": {
+    "description": "Existe uma fragilidade em você que o mundo parece querer devorar ao mesmo ponto que sente que precisa proteger. Sua pele é pálida e seus cabelos e pelos do corpo vão ficando brancos como as pétalas da flor que se enraízam em você, trazendo-lhe uma aura angelical. Essa fragilidade não é apenas um sentimento; para você, é a verdade. Sente que pode quebrar a qualquer instante e não sabe por quanto tempo continuará de pé.",
+    "stages": [
+      {
+        "stage": "Imaculada",
+        "name": "BEM-ME-QUER",
+        "description": "Ninguém quer ser lembrado como a pessoa que machucou você. Ferir você parece, para qualquer um, o tipo de coisa que assombra para sempre."
+      },
+      {
+        "stage": "Incipiente",
+        "name": "DELICADA",
+        "description": "Gaste sua Ação Secundária e escolha um Alvo Humano em até Afastado: ele sente um impulso compulsivo de manter você seguro, não ataca você e fica Desorientado. Gaste uma Reação para manter o efeito nas Rodadas seguintes."
+      },
+      {
+        "stage": "Alarmante",
+        "name": "O ÚLTIMO DESABROCHAR",
+        "description": "Quando você for Alvo de um ataque, gaste uma Reação: um Alvo afetado por Delicada joga-se à sua frente e absorve todo o Ferimento. Quem testemunhar isso ganha Penalidade em Testes para agir contra você pelo resto da Cena. O Alvo que protegeu você rola Determinação (Dilacerante): em falha, permanece devotado; em sucesso, liberta-se. Você sofre +1 PE e +1 PC toda vez que alguém se fere por você."
+      },
+      {
+        "stage": "Severa",
+        "name": "A ÚLTIMA PÉTALA",
+        "description": "Todo Ferimento que você sofreria passa a ser dividido igualmente entre todos os presentes, enquanto você não recebe nada. Sempre que isso acontecer, receba +3 PC. Quem atacar você diretamente sofre +4 PE e fica Paralisado de culpa por uma Rodada."
+      },
+      {
+        "stage": "Crítica",
+        "name": "MAL-ME-QUER",
+        "description": "Sua pele fica translúcida, com veias pulsando como raízes de uma flor moribunda. Todo Humano na Cena que possa ver você deve rolar Determinação (Dilacerante) ou age como devoto, protegendo você acima de qualquer prioridade. Quem causar PF a você recebe PE equivalente enquanto isso durar."
+      }
+    ]
+  },
+  "Lótus": {
+    "description": "A água sempre obedeceu a você, de um jeito que você nunca contou para ninguém. Na banheira, criança, você fazia ondas pequenas sem tocar a superfície. No mar, a correnteza nunca puxava você; parecia empurrá-lo de volta, como se soubesse quem você era antes de você saber. Você aprendeu a nadar antes de andar e nunca precisou aprender a prender a respiração. Seu ar na água simplesmente nunca faltou.",
+    "stages": [
+      {
+        "stage": "Imaculada",
+        "name": "RESPIRO ETERNO",
+        "description": "Você respira debaixo d'água indefinidamente e se move na água como se estivesse em terra firme; pressão ou correnteza não afetam você. Você sente a localização de qualquer fonte de água relevante, como rio, lago, cano ou chuva se aproximando, em até Longe."
+      },
+      {
+        "stage": "Incipiente",
+        "name": "VONTADE DA MARÉ",
+        "description": "Você pode manipular qualquer quantidade de água visível em até Perto, movendo-a de um lugar para outro dentro do alcance, erguendo uma parede, formando uma corrente que empurra ou arrasta algo, enchendo um recipiente a partir de outra fonte ou redirecionando chuva para um ponto específico. A água nunca desaparece, apenas muda de lugar. Gaste sua Ação Principal, Secundária ou ambas, dependendo da complexidade, a critério do MP. Efeitos ofensivos causam Ferimento Leve de Impacto."
+      },
+      {
+        "stage": "Alarmante",
+        "name": "TEMPESTADE",
+        "description": "Enquanto estiver chovendo, sofra +2 PC para amplificar a chuva ao seu redor em raio Longe. Qualquer Alvo exposto à chuva nessa área sofre +2 PF de Impacto por Rodada de exposição. Se houver um rio, lago ou ambiente suficientemente úmido próximo, você pode gastar sua Ação Principal para puxar essa água e criar a chuva. Efeitos ofensivos causam Ferimento Moderado de Impacto."
+      },
+      {
+        "stage": "Severa",
+        "name": "MARÉ ALTA",
+        "description": "O alcance e o volume aumentam até Longe, incluindo corpos de água consideráveis, como um rio, uma piscina ou um andar alagado. Efeitos ofensivos causam Ferimento Grave de Impacto."
+      },
+      {
+        "stage": "Crítica",
+        "name": "SENHOR DAS ÁGUAS",
+        "description": "Gaste Todas as suas Ações e sofra 1 PE Permanente e +4 PC. Até o fim da Cena, você tem domínio quase absoluto sobre toda a água em um raio Distante. Pode redistribuir grandes volumes através do terreno, como inundar uma área transferindo água de um rio próximo ou reverter o curso de uma correnteza, manifestar correntes e mover-se livremente por qualquer corpo de água conectado como se fosse parte dele."
       }
     ]
   }

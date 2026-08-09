@@ -58,7 +58,7 @@
     if(deficit === 1) return {deficit:1,min:1,max:3,label:'1–3 PE'};
     if(deficit === 2) return {deficit:2,min:4,max:6,label:'4–6 PE'};
     if(deficit === 3) return {deficit:3,min:7,max:9,label:'7–9 PE'};
-    return {deficit:deficit,min:null,max:null,label:'Valor definido pelo MP',undefinedByBook:true};
+    return {deficit:deficit,min:10,max:12,label:'10–12 PE',sameAsFourth:deficit >= 5};
   }
 
   function capStressGain(requested, stage, determined){
@@ -136,6 +136,19 @@
     return {results:results,successes:successes};
   }
 
+  function rollPlagueDice(count, threshold, random){
+    count = clamp(Math.floor(number(count)),0,3);
+    threshold = clamp(Math.floor(number(threshold)),0,6);
+    var roll = rollPool(count,threshold,random);
+    return {
+      count:count,
+      threshold:threshold,
+      results:roll.results,
+      symptomCount:roll.successes,
+      symptomResults:roll.results.filter(function(die){ return threshold > 0 && die <= threshold; })
+    };
+  }
+
   function normalizeAmmoName(value){
     var normalized = String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     if(/flecha/.test(normalized)) return 'flechas';
@@ -180,6 +193,7 @@
     usageScope:usageScope,
     powerKey:powerKey,
     rollPool:rollPool,
+    rollPlagueDice:rollPlagueDice,
     normalizeAmmoName:normalizeAmmoName,
     growthTotals:growthTotals
   };
