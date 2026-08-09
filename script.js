@@ -169,6 +169,7 @@
     }
   };
   var model = loadModel();
+  var portraitCropState = null;
 
   function $(selector, root){ return (root || document).querySelector(selector); }
   function $$(selector, root){ return Array.prototype.slice.call((root || document).querySelectorAll(selector)); }
@@ -212,6 +213,7 @@
     return {
       version:4,
       updatedAt:null,
+      portrait:{ dataUrl:'', fileName:'' },
       fields:{
         registro:'', 'nome-sobrevivente':'', jogador:'', idade:'', sangue:'velho', 'genero-select':'masculino',
         'origem-select':'', 'ocupacao-select':'', 'reputacao-select':'',
@@ -278,6 +280,9 @@
     var legacyGrowthStage = clamp(value && value.fields && value.fields['growth-stage'],0,10);
     var base = mergeModel(defaultModel(), value || {});
     base.version = 4;
+    if(!isObject(base.portrait)) base.portrait = clone(defaultModel().portrait);
+    base.portrait.dataUrl = typeof base.portrait.dataUrl === 'string' ? base.portrait.dataUrl : '';
+    base.portrait.fileName = typeof base.portrait.fileName === 'string' ? base.portrait.fileName : '';
     if(!Array.isArray(base.weapons)) base.weapons = [emptyWeapon(), emptyWeapon()];
     while(base.weapons.length < 2) base.weapons.push(emptyWeapon());
     if(!Array.isArray(base.inventory)) base.inventory = [];
@@ -688,10 +693,12 @@
   function closeRuleModal(){
     var overlay = $('#rule-action-modal');
     if(!overlay) return;
+    var closingModalName = overlay.dataset.modalName;
     overlay.style.display = 'none';
     overlay.dataset.modalName = '';
     document.body.classList.remove('modal-open');
     model.ui.activeModal = '';
+    if(closingModalName === 'portrait-crop') cleanupPortraitCrop();
     if(lastModalFocus && typeof lastModalFocus.focus === 'function') lastModalFocus.focus();
     lastModalFocus = null;
     saveModel();
@@ -2841,8 +2848,254 @@
 
   function buildLists(){ renderCharacteristics(); renderPains(); renderNotes(); renderConditions(); }
 
+  function renderPortrait(){
+    var frame = $('#portrait-trigger');
+    var image = $('#portrait-image');
+    var placeholder = $('#portrait-placeholder');
+    var removeButton = $('#portrait-remove');
+    if(!frame || !image || !placeholder || !removeButton) return;
+    var hasPhoto = !!(model.portrait && model.portrait.dataUrl);
+    if(hasPhoto) image.src = model.portrait.dataUrl;
+    else image.removeAttribute('src');
+    image.classList.toggle('hidden',!hasPhoto);
+    placeholder.classList.toggle('hidden',hasPhoto);
+    removeButton.classList.toggle('hidden',!hasPhoto);
+    frame.classList.toggle('has-photo',hasPhoto);
+    frame.setAttribute('aria-label',hasPhoto ? 'Trocar foto do personagem' : 'Adicionar foto do personagem');
+    frame.title = hasPhoto ? 'Trocar foto do personagem' : 'Adicionar foto do personagem';
+  }
+
+  function portraitCropHtml(){
+    return '<div class="portrait-cropper">'+
+      '<p class="portrait-crop-instructions">Arraste a imagem para escolher o enquadramento. Use o zoom para aproximar ou afastar; tudo dentro do círculo será usado na ficha.</p>'+
+      '<div class="portrait-crop-stage"><canvas id="portrait-crop-canvas" width="640" height="640" tabindex="0" aria-label="Área de ajuste da foto. Arraste para reposicionar e use as setas para ajustes finos."></canvas><span class="portrait-crop-badge">Arraste para posicionar</span></div>'+
+      '<div class="portrait-crop-controls"><label class="portrait-zoom-control" for="portrait-crop-zoom"><span>Zoom</span><input type="range" id="portrait-crop-zoom" min="100" max="400" step="1" value="100"><output id="portrait-crop-zoom-value" for="portrait-crop-zoom">100%</output></label>'+
+      '<div class="portrait-crop-toolbar"><button type="button" class="notes-btn" id="portrait-crop-reset">Centralizar</button><button type="button" class="notes-btn" id="portrait-crop-replace">Escolher outra imagem</button></div></div>'+
+      '<div class="portrait-crop-actions"><button type="button" class="primary-action" id="portrait-crop-apply">Aplicar foto</button></div></div>';
+  }
+
+  function cleanupPortraitCrop(){
+    if(portraitCropState && portraitCropState.objectUrl){
+      URL.revokeObjectURL(portraitCropState.objectUrl);
+    }
+    portraitCropState = null;
+    var closeButton = $('#rule-action-close');
+    if(closeButton) closeButton.textContent = 'Fechar';
+  }
+
+  function portraitCropMetrics(canvas){
+    if(!portraitCropState || !portraitCropState.source || !canvas) return null;
+    var source = portraitCropState.source;
+    var baseScale = Math.max(canvas.width/source.naturalWidth,canvas.height/source.naturalHeight);
+    var scale = baseScale * portraitCropState.zoom;
+    var width = source.naturalWidth * scale;
+    var height = source.naturalHeight * scale;
+    var maxOffsetX = Math.max(0,(width-canvas.width)/2);
+    var maxOffsetY = Math.max(0,(height-canvas.height)/2);
+    portraitCropState.offsetX = clamp(portraitCropState.offsetX,-maxOffsetX,maxOffsetX);
+    portraitCropState.offsetY = clamp(portraitCropState.offsetY,-maxOffsetY,maxOffsetY);
+    return {
+      width:width,
+      height:height,
+      x:(canvas.width-width)/2+portraitCropState.offsetX,
+      y:(canvas.height-height)/2+portraitCropState.offsetY
+    };
+  }
+
+  function renderPortraitCrop(){
+    var canvas = $('#portrait-crop-canvas');
+    var metrics = portraitCropMetrics(canvas);
+    if(!canvas || !metrics || !portraitCropState) return;
+    var context = canvas.getContext('2d');
+    var centerX = canvas.width/2;
+    var centerY = canvas.height/2;
+    var radius = canvas.width/2-6;
+    context.clearRect(0,0,canvas.width,canvas.height);
+    context.fillStyle = '#11130f';
+    context.fillRect(0,0,canvas.width,canvas.height);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(portraitCropState.source,metrics.x,metrics.y,metrics.width,metrics.height);
+
+    context.save();
+    context.fillStyle = 'rgba(0,0,0,.58)';
+    context.beginPath();
+    context.rect(0,0,canvas.width,canvas.height);
+    context.arc(centerX,centerY,radius,0,Math.PI*2,true);
+    context.fill('evenodd');
+    context.restore();
+
+    context.save();
+    context.beginPath();
+    context.arc(centerX,centerY,radius,0,Math.PI*2);
+    context.clip();
+    context.strokeStyle = 'rgba(231,228,217,.2)';
+    context.lineWidth = 1;
+    [1/3,2/3].forEach(function(mark){
+      context.beginPath();
+      context.moveTo(canvas.width*mark,0);
+      context.lineTo(canvas.width*mark,canvas.height);
+      context.moveTo(0,canvas.height*mark);
+      context.lineTo(canvas.width,canvas.height*mark);
+      context.stroke();
+    });
+    context.restore();
+
+    context.strokeStyle = '#63805f';
+    context.lineWidth = 6;
+    context.beginPath();
+    context.arc(centerX,centerY,radius,0,Math.PI*2);
+    context.stroke();
+  }
+
+  function setPortraitCropZoom(value){
+    if(!portraitCropState) return;
+    var zoomValue = clamp(value,100,400);
+    portraitCropState.zoom = zoomValue/100;
+    var slider = $('#portrait-crop-zoom');
+    var output = $('#portrait-crop-zoom-value');
+    if(slider) slider.value = String(zoomValue);
+    if(output) output.textContent = zoomValue+'%';
+    renderPortraitCrop();
+  }
+
+  function resetPortraitCrop(){
+    if(!portraitCropState) return;
+    portraitCropState.offsetX = 0;
+    portraitCropState.offsetY = 0;
+    setPortraitCropZoom(100);
+  }
+
+  function bindPortraitCropper(){
+    var canvas = $('#portrait-crop-canvas');
+    var slider = $('#portrait-crop-zoom');
+    if(!canvas || !slider || !portraitCropState) return;
+
+    canvas.addEventListener('pointerdown',function(event){
+      if(event.button != null && event.button !== 0) return;
+      portraitCropState.dragging = true;
+      portraitCropState.pointerId = event.pointerId;
+      portraitCropState.lastX = event.clientX;
+      portraitCropState.lastY = event.clientY;
+      canvas.classList.add('dragging');
+      if(canvas.setPointerCapture) canvas.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    canvas.addEventListener('pointermove',function(event){
+      if(!portraitCropState || !portraitCropState.dragging || event.pointerId !== portraitCropState.pointerId) return;
+      var rect = canvas.getBoundingClientRect();
+      var scaleX = canvas.width/Math.max(1,rect.width);
+      var scaleY = canvas.height/Math.max(1,rect.height);
+      portraitCropState.offsetX += (event.clientX-portraitCropState.lastX)*scaleX;
+      portraitCropState.offsetY += (event.clientY-portraitCropState.lastY)*scaleY;
+      portraitCropState.lastX = event.clientX;
+      portraitCropState.lastY = event.clientY;
+      renderPortraitCrop();
+      event.preventDefault();
+    });
+    var endDrag = function(event){
+      if(!portraitCropState || event.pointerId !== portraitCropState.pointerId) return;
+      portraitCropState.dragging = false;
+      portraitCropState.pointerId = null;
+      canvas.classList.remove('dragging');
+      if(canvas.releasePointerCapture){
+        try{ canvas.releasePointerCapture(event.pointerId); } catch(error){}
+      }
+    };
+    canvas.addEventListener('pointerup',endDrag);
+    canvas.addEventListener('pointercancel',endDrag);
+    canvas.addEventListener('wheel',function(event){
+      event.preventDefault();
+      setPortraitCropZoom((parseInt(slider.value,10)||100)+(event.deltaY<0?10:-10));
+    },{passive:false});
+    canvas.addEventListener('keydown',function(event){
+      var movement = event.shiftKey ? 24 : 8;
+      if(event.key === 'ArrowLeft') portraitCropState.offsetX -= movement;
+      else if(event.key === 'ArrowRight') portraitCropState.offsetX += movement;
+      else if(event.key === 'ArrowUp') portraitCropState.offsetY -= movement;
+      else if(event.key === 'ArrowDown') portraitCropState.offsetY += movement;
+      else return;
+      event.preventDefault();
+      renderPortraitCrop();
+    });
+    slider.addEventListener('input',function(){ setPortraitCropZoom(slider.value); });
+    $('#portrait-crop-reset').addEventListener('click',resetPortraitCrop);
+    $('#portrait-crop-replace').addEventListener('click',function(){
+      closeRuleModal();
+      var input = $('#portrait-file-input');
+      if(input) input.click();
+    });
+    $('#portrait-crop-apply').addEventListener('click',applyPortraitCrop);
+  }
+
+  function openPortraitCropper(source,fileName,objectUrl){
+    cleanupPortraitCrop();
+    portraitCropState = {
+      source:source,
+      fileName:String(fileName || ''),
+      objectUrl:objectUrl,
+      zoom:1,
+      offsetX:0,
+      offsetY:0,
+      dragging:false,
+      pointerId:null,
+      lastX:0,
+      lastY:0
+    };
+    openRuleModal('Ajustar foto do personagem',portraitCropHtml(),'portrait-crop');
+    var closeButton = $('#rule-action-close');
+    if(closeButton) closeButton.textContent = 'Cancelar';
+    bindPortraitCropper();
+    requestAnimationFrame(renderPortraitCrop);
+  }
+
+  function applyPortraitCrop(){
+    var preview = $('#portrait-crop-canvas');
+    var metrics = portraitCropMetrics(preview);
+    if(!portraitCropState || !preview || !metrics) return;
+    try{
+      var output = document.createElement('canvas');
+      output.width = 512;
+      output.height = 512;
+      var outputContext = output.getContext('2d');
+      var ratio = output.width/preview.width;
+      outputContext.fillStyle = '#11130f';
+      outputContext.fillRect(0,0,output.width,output.height);
+      outputContext.imageSmoothingEnabled = true;
+      outputContext.imageSmoothingQuality = 'high';
+      outputContext.drawImage(portraitCropState.source,metrics.x*ratio,metrics.y*ratio,metrics.width*ratio,metrics.height*ratio);
+      model.portrait = { dataUrl:output.toDataURL('image/jpeg',.88), fileName:portraitCropState.fileName };
+      renderPortrait();
+      saveModel(true);
+      closeRuleModal();
+    } catch(error){
+      alert('Não foi possível aplicar esse enquadramento. Tente outra imagem.');
+    }
+  }
+
+  function loadPortrait(file){
+    if(!file) return;
+    if(!/^image\/(png|jpeg|webp)$/i.test(file.type || '')){
+      alert('Escolha uma imagem PNG, JPG ou WEBP.');
+      return;
+    }
+    if(file.size > 15 * 1024 * 1024){
+      alert('A imagem deve ter no máximo 15 MB.');
+      return;
+    }
+    var objectUrl = URL.createObjectURL(file);
+    var source = new Image();
+    source.onload = function(){ openPortraitCropper(source,file.name,objectUrl); };
+    source.onerror = function(){
+      URL.revokeObjectURL(objectUrl);
+      alert('Não foi possível abrir essa imagem.');
+    };
+    source.src = objectUrl;
+  }
+
   function renderAll(){
     applyFields();
+    renderPortrait();
     renderOccupation();
     renderAttributes();
     renderHealth();
@@ -3065,6 +3318,17 @@
   }
 
   function onClick(event){
+    if(event.target.closest('#portrait-remove')){
+      model.portrait = { dataUrl:'', fileName:'' };
+      renderPortrait();
+      saveModel(true);
+      return;
+    }
+    if(event.target.closest('#portrait-trigger')){
+      var portraitInput = $('#portrait-file-input');
+      if(portraitInput) portraitInput.click();
+      return;
+    }
     var tab = event.target.closest('.sheet-tab');
     if(tab){ activatePage(tab.dataset.pageTarget); return; }
     if(event.target.closest('[data-close-rule-modal]')){closeRuleModal();return;}
@@ -3263,6 +3527,11 @@
 
   function onChange(event){
     var target=event.target;
+    if(target.id==='portrait-file-input'){
+      if(target.files&&target.files[0]) loadPortrait(target.files[0]);
+      target.value='';
+      return;
+    }
     if(target.classList.contains('modifier-number')){setModifier(target.id,target.value);return;}
     if(target.id==='condition-category'){renderConditionPicker();return;}
     if(target.id==='condition-select'){renderConditionReference();return;}

@@ -6,7 +6,7 @@
 <title>Ficha de Sobrevivente — Roots of the Abyss</title>
 <link rel="preload" as="image" href="assets/corpos/masculino.png">
 <link rel="preload" as="image" href="assets/corpos/feminino.png">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 
@@ -14,7 +14,18 @@
 
   <!-- ===================== HEADER ===================== -->
   <div class="doc-header" data-section="main-header">
-    <div class="stamp">SOBREVIVENTE<br>REGISTRADO</div>
+    <div class="portrait-shell">
+      <button type="button" class="stamp portrait-frame" id="portrait-trigger" aria-label="Adicionar foto do personagem" title="Adicionar foto do personagem">
+        <img id="portrait-image" class="portrait-image hidden" alt="Foto do personagem">
+        <span class="portrait-placeholder" id="portrait-placeholder">
+          <span>SOBREVIVENTE<br>REGISTRADO</span>
+          <small>+ FOTO</small>
+        </span>
+        <span class="portrait-change-hint no-print" aria-hidden="true">TROCAR</span>
+      </button>
+      <button type="button" class="portrait-remove no-print hidden" id="portrait-remove" aria-label="Remover foto do personagem" title="Remover foto">×</button>
+      <input type="file" id="portrait-file-input" accept="image/png,image/jpeg,image/webp" hidden>
+    </div>
     <div class="title-block">
       <div class="eyebrow">
         <span>ROOTS OF THE ABYSS · DOSSIÊ DE SOBREVIVENTE</span>
@@ -400,10 +411,10 @@
   <input type="file" id="backup-file-input" accept=".json" style="display:none;">
 </div>
 
-<script src="rules-data.js?v=6"></script>
-<script src="weapon-details.js?v=6"></script>
-<script src="automation-engine.js?v=6"></script>
-<script src="script.js?v=6"></script>
+<script src="rules-data.js?v=8"></script>
+<script src="weapon-details.js?v=8"></script>
+<script src="automation-engine.js?v=8"></script>
+<script src="script.js?v=8"></script>
 
 </body>
 </html>
