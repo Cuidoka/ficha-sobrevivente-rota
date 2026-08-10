@@ -72,68 +72,9 @@
     '4':{name:'Aliado',description:'Considera os Sobreviventes amigos valiosos e oferece apoio significativo.'},
     '5':{name:'Irmão',description:'Demonstra lealdade absoluta e aceita grandes sacrifícios.'}
   };
-  var CONDITION_CATEGORIES = [
-    {id:'mental',label:'Mentais',description:'Afetam percepção, raciocínio e emoções.'},
-    {id:'physical',label:'Físicas',description:'Afetam diretamente corpo, músculos e órgãos.'},
-    {id:'treated',label:'Tratadas',description:'Sequelas de uma condição física estancada ou curada.'},
-    {id:'disease',label:'Doenças',description:'Enfermidades, infecções e contaminações.'},
-    {id:'terrain',label:'Terreno',description:'Originam-se da superfície onde o Sobrevivente pisa.'},
-    {id:'environment',label:'Ambiente',description:'Originam-se do clima, atmosfera ou espaço ao redor.'}
-  ];
-  var CONDITION_LIBRARY = [
-    {name:'Atordoado',category:'mental',duration:'Temporária',summary:'Não pode realizar Reações.'},
-    {name:'Desorientado',category:'mental',duration:'Temporária',summary:'Após cada ação, role 1D6; em 1–3, a ação falha.'},
-    {name:'Aterrorizado',category:'mental',duration:'Persistente',summary:'Não pode se aproximar da fonte do medo e sofre Penalidade enquanto estiver Perto dela.'},
-    {name:'Pânico',category:'mental',duration:'Sem duração indicada',summary:'Sofre uma Crise de Estresse.'},
-    {name:'Atraído',category:'mental',duration:'Vinculada / Persistente',summary:'Deve mover-se até a fonte e não pode realizar outras ações durante o efeito.'},
-    {name:'Enraivecido',category:'mental',duration:'Persistente',summary:'Deve aproximar-se e atacar a fonte; Bônus em ações agressivas e Penalidade nas defensivas.'},
-
-    {name:'Envenenado',category:'physical',duration:'Contínua',summary:'Sofre 2 PF no início de cada turno.'},
-    {name:'Cego',category:'physical',duration:'Persistente',summary:'Penalidade em todas as rolagens que dependam da visão.'},
-    {name:'Imune',category:'physical',duration:'Temporária',summary:'Ignora os Ferimentos ou Condições especificados pelo efeito.'},
-    {name:'Caído',category:'physical',duration:'Persistente',summary:'Não pode se mover nem atacar Corpo a Corpo; ataques Corpo a Corpo contra o Alvo recebem Bônus.'},
-    {name:'Surdo',category:'physical',duration:'Persistente',summary:'Penalidade em todas as rolagens que dependam da audição.'},
-    {name:'Exaustão',category:'physical',duration:'Contínua',summary:'Penalidade em todas as rolagens de Físico e impede ações de grande esforço físico.'},
-    {name:'Clima Extremo',category:'physical',duration:'Vinculada',summary:'Penalidade em todos os testes de Destreza e Físico.'},
-    {name:'Corrosão',category:'physical',duration:'Contínua → Tratado',summary:'Sofre 1 PF por turno; a cada turno, 1–2 em 1D6 faz a arma perder 1 de Durabilidade.'},
-    {name:'Paralisado',category:'physical',duration:'Persistente',summary:'Não pode realizar qualquer ação.'},
-    {name:'Em Chamas',category:'physical',duration:'Contínua → Tratado',summary:'Sofre 2 PF por turno e Penalidade em Intelecto, Instinto e Espírito; pode incendiar quem estiver Em Contato.'},
-    {name:'Inconsciente',category:'physical',duration:'Persistente',summary:'Não pode realizar Ações nem Reações.'},
-    {name:'Preso',category:'physical',duration:'Persistente / Vinculada',summary:'Não pode se mover nem realizar Reações.'},
-    {name:'Irritação',category:'physical',duration:'Vinculada',summary:'Perde Ação Principal e Secundária tossindo; nas rodadas seguintes, sofre 1 PF por turno.'},
-    {name:'Vulnerável',category:'physical',duration:'Contínua',summary:'Todas as ações para atacar o Alvo recebem Bônus.'},
-    {name:'Necrose',category:'physical',duration:'Permanente',summary:'A cada 4 Ciclos perde 1 PF Permanente; usar a área afetada sofre Penalidade e pode evoluir para Desmembramento.'},
-    {name:'Insolação',category:'physical',duration:'Contínua',summary:'Sofre 1 PF no início de cada Cena, além de tontura, náusea e confusão; deve esfriar-se para tratar.'},
-    {name:'Sangrando',category:'physical',duration:'Contínua → Tratado',summary:'Sofre 1 PF no início do turno e Penalidade em Espírito; após 4 Cenas/Rodadas, Tolerância (Dilacerante) ou fica Inconsciente.'},
-    {name:'Ferida Profunda',category:'physical',duration:'Contínua → Estabilizado',summary:'Sofre 2 PF no início do turno e Penalidade em Físico, Destreza e Espírito; após 3 Cenas/Rodadas, Tolerância (Dilacerante) ou fica Inconsciente.'},
-    {name:'Ferida Severa',category:'physical',duration:'Contínua → Quebrado',summary:'Sofre 3 PF no início do turno e Penalidade em Destreza, Físico, Intelecto e Espírito; após 2 Cenas/Rodadas, Tolerância (Dilacerante) ou fica Inconsciente.'},
-    {name:'Desmembramento',category:'physical',duration:'Contínua / Permanente',summary:'Perde a função do membro, sofre Penalidade pela dor, perde 4 PF Permanentes e sofre 3 PF por turno até tratar o sangramento.'},
-
-    {name:'Tratado',category:'treated',duration:'Permanente',summary:'Testes que usem a área afetada sofrem Penalidade.'},
-    {name:'Estabilizado',category:'treated',duration:'Permanente',summary:'Testes que usem a área afetada sofrem 2 Penalidades.'},
-    {name:'Quebrado',category:'treated',duration:'Permanente',summary:'Testes que usem a área afetada falham automaticamente; na cabeça, estresse súbito também exige Determinação.'},
-
-    {name:'Gripe',category:'disease',duration:'Contínua',summary:'Penalidade em Instinto e Destreza; Furtividade recebe uma Penalidade extra por tosse e espirros.'},
-    {name:'Virose',category:'disease',duration:'Contínua',summary:'Vomita aleatoriamente durante o Ciclo; em Conflito, perde o turno.'},
-    {name:'Cólera',category:'disease',duration:'Contínua',summary:'Precisa do dobro de Água para saciar-se; fontes de Água contam pela metade.'},
-    {name:'Kuru',category:'disease',duration:'Permanente',summary:'Penalidade em Intelecto e Instinto; no início de cada Ciclo, role 1D6 para os sintomas.'},
-    {name:'Radiação',category:'disease',duration:'Permanente',summary:'Reduz Físico, Destreza e Instinto pela metade; vomita aleatoriamente e, em Conflito, perde o turno.'},
-    {name:'Infecção',category:'disease',duration:'Contínua',summary:'Penalidade em Físico; a recuperação de PF após a cura é reduzida pela metade.'},
-    {name:'Tétano',category:'disease',duration:'Contínua',summary:'Ao realizar ação física intensa, role 1D6; em 1–3, sofre espasmos e Penalidade.'},
-    {name:'Diabetes',category:'disease',duration:'Permanente',summary:'Sofre episódios aleatórios de tontura, tremores, visão embaçada e fraqueza súbita.'},
-
-    {name:'Irregular',category:'terrain',duration:'Vinculada',summary:'Ações que envolvam movimento recebem Penalidade.'},
-    {name:'Alagado',category:'terrain',duration:'Vinculada',summary:'Movimento reduzido pela metade.'},
-    {name:'Cortante',category:'terrain',duration:'Vinculada',summary:'Movimentar-se causa 1 PF.'},
-    {name:'Instável',category:'terrain',duration:'Vinculada',summary:'Cada ação exige Acrobacia (Sofrido) para evitar queda, afundamento ou colapso.'},
-    {name:'Escorregadio',category:'terrain',duration:'Vinculada',summary:'Ao mover-se, teste Acrobacia; em falha, perde o turno e fica Caído.'},
-
-    {name:'Ar Impróprio',category:'environment',duration:'Vinculada',summary:'A cada Rodada, Respiração (Gangrenado); em falha, sofre Irritação.'},
-    {name:'Escuro',category:'environment',duration:'Vinculada',summary:'Penalidade em todas as ações que dependam da visão.'},
-    {name:'Chuvoso',category:'environment',duration:'Vinculada',summary:'Penalidade em Percepção e movimentos rápidos; itens sem proteção ficam inutilizados até secarem.'},
-    {name:'Ventania',category:'environment',duration:'Vinculada',summary:'Ao fim de cada Rodada, role 1D6 para determinar o efeito da rajada.'},
-    {name:'Raízes Vivas',category:'environment',duration:'Vinculada',summary:'Ao movimentar-se, role 1D6 para determinar a reação das raízes.'}
-  ];
+  var CONDITION_CATEGORIES = DATA.conditionCategories || [];
+  var CONDITION_DURATIONS = DATA.conditionDurations || [];
+  var CONDITION_LIBRARY = DATA.conditions || [];
   var BODY_MAPS = {
     feminino:{
       label:'Feminino',image:'assets/corpos/feminino.png',zones:{
@@ -211,12 +152,12 @@
     var armor = {};
     DATA.armors.forEach(function(item){ armor[item.id] = { equipped:false, remaining:0 }; });
     return {
-      version:5,
+      version:6,
       updatedAt:null,
       portrait:{ dataUrl:'', fileName:'' },
       fields:{
         registro:'', 'nome-sobrevivente':'', jogador:'', idade:'', sangue:'velho', 'genero-select':'masculino',
-        'origem-select':'', 'ocupacao-select':'', 'reputacao-select':'',
+        'origem-select':'', 'ocupacao-select':'', 'reputacao-select':'Sobrevivente',
         'flor-select':'', 'pulseira-select':'Verde', 'ponto-partida':'',
         'grupo-estrada':'', 'attr-bonus-manual':0, 'pp-bonus-manual':0,
         'prodigio-skill-1':'', 'prodigio-skill-2':'', 'abutre-resource':'',
@@ -280,7 +221,12 @@
     var hadGrowth = !!(value && isObject(value.growth));
     var legacyGrowthStage = clamp(value && value.fields && value.fields['growth-stage'],0,10);
     var base = mergeModel(defaultModel(), value || {});
-    base.version = 4;
+    base.version = 6;
+    var occupationForParadigm = DATA.occupations[base.fields['ocupacao-select']];
+    var requiredParadigm = occupationForParadigm && occupationForParadigm.paradigm;
+    if(!base.fields['reputacao-select'] && (!requiredParadigm || requiredParadigm === 'Síntese')){
+      base.fields['reputacao-select'] = DATA.reputationRules.initialParadigm || 'Sobrevivente';
+    }
     if(!isObject(base.portrait)) base.portrait = clone(defaultModel().portrait);
     base.portrait.dataUrl = typeof base.portrait.dataUrl === 'string' ? base.portrait.dataUrl : '';
     base.portrait.fileName = typeof base.portrait.fileName === 'string' ? base.portrait.fileName : '';
@@ -622,7 +568,8 @@
       '<select id="condition-select" aria-label="Condição"><option value="">— Selecionar —</option></select>'+
       '<input id="condition-custom" type="text" placeholder="Condição personalizada">'+
       '<button type="button" class="notes-btn" id="condition-add-button">Adicionar</button></div>'+
-      '<div class="condition-reference" id="condition-reference">Selecione uma condição para consultar seu resumo e duração.</div>'+
+      '<div class="condition-reference" id="condition-reference">Selecione uma condição para consultar Descrição, Impacto e Duração.</div>'+
+      conditionGuideHtml()+
       '<div class="condition-groups" id="condition-list"></div></div>';
     var diagram = $('.diagram-section', page);
     if(diagram && diagram.nextSibling) page.insertBefore(conditionSection, diagram.nextSibling);
@@ -788,7 +735,7 @@
       '</div></div>'+
       '<div class="section"><div class="section-title">Crescimento <span class="tag">TRILHA I–X</span></div><div class="section-body growth-row">'+
         '<label>Arquétipo<input id="growth-archetype" type="text" readonly></label><label>Próxima etapa<select id="growth-stage"><option value="0">Ainda não iniciou</option>'+growthOptions()+'</select></label><div id="growth-summary" class="rule-preview"></div>'+
-        '<div class="growth-ledger" id="growth-ledger"></div><div class="growth-track-list" id="growth-track-list"></div><div class="post-growth-controls no-print"><button type="button" class="notes-btn" id="growth-future-arc">Registrar Arco após a etapa X</button><span id="growth-future-status"></span></div>'+
+        '<div class="growth-ledger" id="growth-ledger"></div><div class="growth-track-list" id="growth-track-list"></div><div class="post-growth-controls no-print"><button type="button" class="notes-btn" id="growth-future-arc">Registrar novo Arco · +2 PO / +2 PP</button><span id="growth-future-status"></span></div>'+
       '</div></div>';
   }
 
@@ -938,8 +885,16 @@
     var archetype = DATA.archetypes[model.fields['origem-select']] || '';
     return DATA.growthTracks && DATA.growthTracks[archetype] || null;
   }
+  function growthPostCompletionReward(){
+    var rules = DATA.growthTracks && DATA.growthTracks.rules || {};
+    var rewards = rules.postCompletionRewards || {};
+    return {
+      originPoints:Math.max(0,Number(rewards.originPoints) || 0),
+      skillPoints:Math.max(0,Number(rewards.skillPoints) || 0)
+    };
+  }
   function currentGrowthTotals(){
-    var totals = ENGINE.growthTotals(currentGrowthTrack(),model.growth.claimedStages,model.growth.postCapArcs);
+    var totals = ENGINE.growthTotals(currentGrowthTrack(),model.growth.claimedStages,model.growth.postCapArcs,growthPostCompletionReward());
     model.growth.originPoints = totals.originPoints;
     model.growth.skillPoints = totals.skillPoints;
     model.growth.attributePoints = totals.attributePoints;
@@ -1652,7 +1607,9 @@
     if(occupation && occupation.requiresBlood){ model.fields.sangue = occupation.requiresBlood; }
     if(occupation && occupation.paradigm){
       var allowed = occupation.paradigm === 'Síntese' ? ['Peregrino','Sobrevivente','Imperfeito'] : ['Ceifador','Mercenário','Inquisidor'];
-      if(allowed.indexOf(model.fields['reputacao-select']) < 0) model.fields['reputacao-select'] = '';
+      if(allowed.indexOf(model.fields['reputacao-select']) < 0) model.fields['reputacao-select'] = occupation.paradigm === 'Síntese' ? (DATA.reputationRules.initialParadigm || 'Sobrevivente') : '';
+    } else if(!model.fields['reputacao-select']){
+      model.fields['reputacao-select'] = DATA.reputationRules.initialParadigm || 'Sobrevivente';
     }
     applyFields();
     renderOccupation();
@@ -1960,8 +1917,10 @@
     }).join('');
     var missingUnlocks = Math.max(0,claimedUnlockStages().length-model.growth.unlockedOrigins.length);
     if(missingUnlocks) $('#growth-ledger').innerHTML += '<button type="button" class="notes-btn danger" id="growth-complete-choices">Escolher '+missingUnlocks+' Origem'+(missingUnlocks === 1 ? '' : 's')+' pendente'+(missingUnlocks === 1 ? '' : 's')+'</button>';
+    var arcReward = growthPostCompletionReward();
     $('#growth-future-arc').disabled = stage < 10;
-    $('#growth-future-status').textContent = stage < 10 ? 'Disponível após a etapa X.' : model.growth.postCapArcs+' Arco'+(model.growth.postCapArcs === 1 ? '' : 's')+' após X · +'+(model.growth.postCapArcs*2)+' PO / +'+(model.growth.postCapArcs*2)+' PP';
+    $('#growth-future-arc').textContent = 'Registrar novo Arco · +'+arcReward.originPoints+' PO / +'+arcReward.skillPoints+' PP';
+    $('#growth-future-status').textContent = stage < 10 ? 'Disponível após a etapa X.' : model.growth.postCapArcs+' Arco'+(model.growth.postCapArcs === 1 ? '' : 's')+' registrado'+(model.growth.postCapArcs === 1 ? '' : 's')+' após X · cada novo Arco concede +'+arcReward.originPoints+' PO / +'+arcReward.skillPoints+' PP';
     renderConsolidatedPowers();
   }
 
@@ -2492,6 +2451,25 @@
       return '<option value="'+category.id+'" '+(selected === category.id ? 'selected' : '')+'>'+category.label+'</option>';
     }).join('');
   }
+  function conditionRuleFieldsHtml(definition){
+    return '<p class="condition-description">'+escapeHtml(definition.description || 'Condição personalizada.')+'</p>'+
+      '<dl class="condition-rule-fields">'+
+        '<div class="condition-impact"><dt>Impacto</dt><dd>'+escapeHtml(definition.impact || 'Efeito definido pelo grupo.')+'</dd></div>'+
+        '<div class="condition-duration"><dt>Duração</dt><dd>'+escapeHtml(definition.duration || 'Personalizada')+'</dd></div>'+
+      '</dl>';
+  }
+  function conditionGuideHtml(){
+    var interactions = DATA.conditionInteractions || {};
+    var durations = CONDITION_DURATIONS.map(function(duration){
+      return '<article><strong>'+escapeHtml(duration.name)+'</strong><p>'+escapeHtml(duration.description)+'</p><small>'+escapeHtml(duration.resolution)+'</small></article>';
+    }).join('');
+    var processes = (interactions.processes || []).map(function(rule){ return '<li>'+escapeHtml(rule)+'</li>'; }).join('');
+    var escalations = (interactions.escalations || []).map(function(rule){ return '<li>'+escapeHtml(rule)+'</li>'; }).join('');
+    return '<details class="condition-guide"><summary>Guia de Durações e Escalada <span>'+CONDITION_DURATIONS.length+' durações oficiais</span></summary>'+
+      '<div class="condition-duration-grid">'+durations+'</div>'+
+      '<div class="condition-interaction-grid"><section><strong>Interações</strong><ul>'+processes+'</ul></section><section><strong>Escalada natural</strong><ul>'+escalations+'</ul></section></div>'+
+      (interactions.note ? '<p class="condition-interaction-note">'+escapeHtml(interactions.note)+'</p>' : '')+'</details>';
+  }
   function renderConditionPicker(){
     var categorySelect = $('#condition-category');
     var conditionSelect = $('#condition-select');
@@ -2523,11 +2501,11 @@
     var definition = conditionDefinition($('#condition-select').value);
     if(!definition){
       var category = $('#condition-category').value ? conditionCategory($('#condition-category').value) : null;
-      reference.innerHTML = category ? '<strong>'+category.label+'</strong><span>'+category.description+'</span>' : 'Selecione uma condição para consultar seu resumo e duração.';
+      reference.innerHTML = category ? '<div class="condition-reference-header"><strong>'+category.label+'</strong><span>'+category.description+'</span></div>' : 'Selecione uma condição para consultar Descrição, Impacto e Duração.';
       return;
     }
     var categoryInfo = conditionCategory(definition.category);
-    reference.innerHTML = '<div><strong>'+escapeHtml(definition.name)+'</strong><span>'+categoryInfo.label+' · '+escapeHtml(definition.duration)+'</span></div><p>'+escapeHtml(definition.summary)+'</p>';
+    reference.innerHTML = '<div class="condition-reference-header"><strong>'+escapeHtml(definition.name)+'</strong><span>'+escapeHtml(categoryInfo.label)+'</span></div>'+conditionRuleFieldsHtml(definition);
   }
   function derivedWoundConditions(){
     var entries = [];
@@ -2567,11 +2545,10 @@
       var category = conditionCategory(categoryId);
       return '<section class="condition-category-group"><div class="condition-category-heading"><div><strong>'+category.label+'</strong><span>'+category.description+'</span></div><b>'+entries.length+'</b></div>'+
         '<div class="condition-card-list">'+entries.map(function(entry){
-          var duration = entry.definition ? entry.definition.duration : 'Personalizada';
-          var summary = entry.definition ? entry.definition.summary : 'Efeito definido pelo grupo.';
+          var definition = entry.definition || {description:'Condição personalizada.',impact:'Efeito definido pelo grupo.',duration:'Personalizada'};
           var sources = entry.sources.map(function(source){ return '<div class="condition-source-row"><button type="button" class="condition-source" data-wound-source="'+escapeHtml(source.zoneId)+'" data-wound-id="'+escapeHtml(source.woundId)+'">'+escapeHtml(source.source)+(source.ticks ? ' · '+source.ticks+' avanço'+(source.ticks === 1 ? '' : 's') : '')+'</button>'+(source.tolerancePending ? '<button type="button" class="notes-btn small danger" data-wound-tolerance="'+escapeHtml(source.woundId)+'" data-wound-zone="'+escapeHtml(source.zoneId)+'">Tolerância NS 3</button>' : '')+'<button type="button" class="notes-btn small" data-wound-treat="'+escapeHtml(source.woundId)+'" data-wound-zone="'+escapeHtml(source.zoneId)+'">Tratar</button></div>'; }).join('');
           var remove = entry.manualIndices.length ? '<button type="button" data-condition-index="'+entry.manualIndices[0]+'" title="Remover condição manual '+escapeHtml(entry.name)+'" aria-label="Remover condição manual '+escapeHtml(entry.name)+'">×</button>' : '';
-          return '<article class="condition-card '+(entry.sources.length ? 'derived-condition' : '')+'"><div><strong>'+escapeHtml(entry.name)+'</strong><span>'+escapeHtml(duration)+'</span></div><p>'+escapeHtml(summary)+'</p>'+(sources ? '<div class="condition-sources">'+sources+'</div>' : '')+remove+'</article>';
+          return '<article class="condition-card '+(entry.sources.length ? 'derived-condition' : '')+'"><div class="condition-card-header"><strong>'+escapeHtml(entry.name)+'</strong><span>'+escapeHtml(conditionCategory(entry.definition ? entry.definition.category : 'other').label)+'</span></div>'+conditionRuleFieldsHtml(definition)+(sources ? '<div class="condition-sources">'+sources+'</div>' : '')+remove+'</article>';
         }).join('')+'</div></section>';
     }).join('');
   }
@@ -3313,7 +3290,7 @@
     if(event.target.closest('#stress-acknowledge-crisis')){model.stress.pendingCrisis=null;renderStressToolStatus();refreshStressPanel();saveModel();return;}
     if(event.target.closest('#growth-confirm')){confirmGrowth();return;}
     if(event.target.closest('#growth-complete-choices')){openGrowthApply(model.growth.stage,true);return;}
-    if(event.target.closest('#growth-future-arc')){if(model.growth.stage===10){model.growth.postCapArcs+=1;addRuleLog('crescimento','Arco após a Etapa X registrado.',{arc:model.growth.postCapArcs});renderAttributes();renderOrigin();renderGrowth();saveModel();}return;}
+    if(event.target.closest('#growth-future-arc')){if(model.growth.stage===10){var arcReward=growthPostCompletionReward();model.growth.postCapArcs+=1;addRuleLog('crescimento','Novo Arco após a Etapa X: +'+arcReward.originPoints+' PO e +'+arcReward.skillPoints+' PP.',{arc:model.growth.postCapArcs,originPoints:arcReward.originPoints,skillPoints:arcReward.skillPoints});renderAttributes();renderOrigin();renderGrowth();saveModel();}return;}
     var scopeAdvance=event.target.closest('[data-advance-scope]');if(scopeAdvance){advanceScope(scopeAdvance.dataset.advanceScope);return;}
     var catalogItemButton=event.target.closest('[data-catalog-item]');if(catalogItemButton){addCatalogItem(catalogItemButton.dataset.catalogItem);return;}
     var catalogAmmoButton=event.target.closest('[data-catalog-ammo]');if(catalogAmmoButton){var ammoId=catalogAmmoButton.dataset.catalogAmmo;var ammoWeaponSelect=$('[data-ammo-weapon-select="'+ammoId+'"]',$('#rule-action-content'));addAmmunition(ammoId,catalogAmmoButton.dataset.ammoMode,ammoWeaponSelect?ammoWeaponSelect.value:'');return;}

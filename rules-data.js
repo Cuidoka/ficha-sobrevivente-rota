@@ -12,6 +12,114 @@
 
     resources: ["Pano","Álcool","Recipiente","Sucata","Explosivo","Fita"],
 
+    conditionCategories: [
+      {id:"mental",label:"Mentais",description:"Afetam percepção, raciocínio e emoções."},
+      {id:"physical",label:"Físicas",description:"Afetam diretamente corpo, músculos e órgãos."},
+      {id:"treated",label:"Tratadas",description:"Sequelas de uma condição física estancada ou curada."},
+      {id:"disease",label:"Doenças",description:"Enfermidades, infecções e contaminações."},
+      {id:"terrain",label:"Terreno",description:"Originam-se da superfície onde o Sobrevivente pisa."},
+      {id:"environment",label:"Ambiente",description:"Originam-se do clima, atmosfera ou espaço ao redor."}
+    ],
+
+    conditionDurations: [
+      {
+        name:"Temporária",
+        description:"Efeitos rápidos, instáveis e passageiros, geralmente causados por tensão ou impacto imediato.",
+        resolution:"Termina no fim do próximo Turno ou após 1 Rodada."
+      },
+      {
+        name:"Persistente",
+        description:"Permanece no corpo ou na mente e exige resistência ativa para ser superada.",
+        resolution:"O Alvo faz um Teste apropriado, geralmente no início do Turno, contra uma NS ou em Teste Oposto. Em sucesso, a Condição termina."
+      },
+      {
+        name:"Contínua",
+        description:"Causa impacto recorrente enquanto não for interrompida e não depende apenas de resistência.",
+        resolution:"Só termina com tratamento, recursos, ações, ajuda externa ou passagem de tempo."
+      },
+      {
+        name:"Vinculada",
+        description:"Pertence ao ambiente ou à situação ao redor, não ao próprio Sobrevivente.",
+        resolution:"Termina quando a causa desaparece, o Sobrevivente sai da área ou usa algo que permita aguentá-la."
+      },
+      {
+        name:"Permanente",
+        description:"Mudança profunda e duradoura que marca o Sobrevivente física ou psicologicamente.",
+        resolution:"Permanece até cirurgia, prótese, uso contínuo de remédios ou outra solução definitiva."
+      }
+    ],
+
+    conditions: [
+      {name:"Atordoado",category:"mental",description:"O Alvo é temporariamente incapaz de se concentrar ou agir efetivamente, seja por ataques fortes ou efeitos psicológicos.",impact:"Não pode realizar Reações.",duration:"Temporária"},
+      {name:"Desorientado",category:"mental",description:"O Alvo está confuso ou desestabilizado e tem dificuldade para entender o que acontece ao redor.",impact:"Após cada Ação, role 1D6. Em 1–3, a Ação falha e o Sobrevivente não consegue realizá-la.",duration:"Temporária"},
+      {name:"Aterrorizado",category:"mental",description:"O Alvo é consumido por medo intenso e torna-se incapaz de agir racionalmente.",impact:"Não pode se aproximar da Ameaça que causou a Condição. Sofre Penalidade em todas as rolagens enquanto estiver Perto dela.",duration:"Persistente"},
+      {name:"Pânico",category:"mental",description:"O Alvo entra em pânico e age de forma irracional.",impact:"Sofre uma Crise de Estresse.",duration:"Não indicada no livro"},
+      {name:"Atraído",category:"mental",description:"O Alvo é atraído por uma força externa ou pessoa.",impact:"Deve se mover em direção à fonte da atração e não pode realizar outras Ações. Ao chegar, permanece parado em frente à fonte.",duration:"Vinculada / Persistente"},
+      {name:"Enraivecido",category:"mental",description:"O Alvo é tomado por uma fúria intensa e incontrolável.",impact:"Deve sempre se aproximar e atacar a fonte da raiva. Recebe Bônus em Ações agressivas e Penalidade em Ações defensivas.",duration:"Persistente"},
+
+      {name:"Envenenado",category:"physical",description:"O Alvo foi afetado por veneno, causando efeitos debilitantes.",impact:"Sofre 2 PF contínuos no início de cada Turno.",duration:"Contínua"},
+      {name:"Cego",category:"physical",description:"O Alvo não consegue ver, seja por ferimentos, pactos ou outros efeitos.",impact:"Sofre Penalidade em todas as rolagens que envolvam visão.",duration:"Persistente / Permanente"},
+      {name:"Imune",category:"physical",description:"O Alvo é temporariamente imune a certos tipos de Ferimento ou Condições.",impact:"Ignora Ferimentos de ataques específicos, como fogo ou veneno, por um número determinado de Turnos.",duration:"Temporária"},
+      {name:"Caído",category:"physical",description:"O Alvo caiu no chão por causa de um ataque ou outro efeito.",impact:"Não pode se mover nem realizar Ataques Corpo a Corpo. Ataques Corpo a Corpo contra o Alvo recebem Bônus.",duration:"Persistente"},
+      {name:"Surdo",category:"physical",description:"O Alvo não consegue ouvir por causa de um ataque ou efeito.",impact:"Sofre Penalidade em todas as rolagens que dependam da audição.",duration:"Persistente / Permanente"},
+      {name:"Exaustão",category:"physical",description:"O Alvo está esgotado após uma série de ferimentos ou esforço físico extremo.",impact:"Sofre Penalidade em todas as rolagens de Físico e não pode realizar Ações que exijam grande esforço físico.",duration:"Contínua"},
+      {name:"Clima Extremo",category:"physical",description:"O Alvo foi exposto a temperaturas extremamente baixas ou altas, causando desconforto e perda de capacidade física.",impact:"Sofre Penalidade em todos os testes de Destreza e Físico.",duration:"Vinculada"},
+      {name:"Corrosão",category:"physical",description:"O Alvo foi atingido por substância ácida ou corrosiva, causando Ferimento contínuo e danificando equipamentos ou roupas.",impact:"Sofre 1 PF contínuo a cada Turno. A cada Turno com Corrosão, role 1D6; em 1–2, sua Arma perde 1 de Durabilidade.",duration:"Contínua, substituindo por Tratado"},
+      {name:"Paralisado",category:"physical",description:"O Alvo foi paralisado e tornou-se incapaz.",impact:"Não pode fazer nada e permanece paralisado no lugar.",duration:"Persistente"},
+      {name:"Em Chamas",category:"physical",description:"O Alvo está envolto em chamas, com fogo consumindo sua pele, roupas ou equipamentos.",impact:"Sofre 2 PF contínuos a cada Turno. Testes de Intelecto, Instinto ou Espírito recebem Penalidade. Aliados ou Ameaças Em Contato devem passar em Esquiva (Sofrido) ou também ficam Em Chamas.",duration:"Contínua, substituindo por Tratado"},
+      {name:"Inconsciente",category:"physical",description:"O Alvo está desacordado por causa de ferimento, droga ou exaustão.",impact:"Não pode realizar Ações nem Reações.",duration:"Persistente"},
+      {name:"Preso",category:"physical",description:"O Alvo está fisicamente preso.",impact:"Não pode se mover nem realizar Reações.",duration:"Persistente / Vinculada"},
+      {name:"Irritação",category:"physical",description:"A inalação de gases ou partículas nocivas provoca tosse violenta, olhos lacrimejando e dificuldade respiratória severa.",impact:"Perde a Ação Principal e a Secundária tossindo. A partir da Rodada seguinte, sofre 1 PF por Turno devido à tosse com sangue e à falta de ar.",duration:"Vinculada"},
+      {name:"Vulnerável",category:"physical",description:"O Alvo se expôs por falta de cobertura, ataque mal executado ou outro efeito.",impact:"Todas as Ações que envolvam atacar o Alvo recebem Bônus.",duration:"Contínua"},
+      {name:"Necrose",category:"physical",description:"O tecido do Alvo começou a morrer, tornando-se escuro, rígido e sem vida. Pode surgir de Infecções não tratadas, frio extremo ou radiação.",impact:"A cada 3 Ciclos, perde 1 PF Permanente. Ações que utilizem diretamente a área afetada sofrem Penalidade. Se não for tratada, pode resultar em Desmembramento.",duration:"Permanente"},
+      {name:"Insolação",category:"physical",description:"O Alvo sofreu colapso físico pela exposição ao calor extremo.",impact:"No início de cada Cena, sofre 1 PF, além de tontura, náusea e confusão mental. Para tratar, deve esfriar-se.",duration:"Contínua"},
+      {name:"Sangrando",category:"physical",description:"O Alvo está perdendo sangue.",impact:"Sofre 1 PF no início de cada Turno e Penalidade em testes de Espírito. Após 4 Cenas ou Rodadas, teste Tolerância (Dilacerante); em falha, fica Inconsciente.",duration:"Contínua, substituindo por Tratado"},
+      {name:"Ferida Profunda",category:"physical",description:"O Alvo tem um ferimento sério que exige atenção imediata.",impact:"Sofre 2 PF no início de cada Turno e Penalidade em Físico, Destreza e Espírito. Após 3 Cenas ou Rodadas, teste Tolerância (Dilacerante); em falha, fica Inconsciente.",duration:"Contínua, substituindo por Estabilizado"},
+      {name:"Ferida Severa",category:"physical",description:"O Alvo sofreu um Ferimento Severo, profundo e debilitante.",impact:"Sofre 3 PF no início de cada Turno e Penalidade em Destreza, Físico, Intelecto e Espírito. Após 2 Cenas ou Rodadas, teste Tolerância (Dilacerante); em falha, fica Inconsciente.",duration:"Contínua, substituindo por Quebrado"},
+      {name:"Desmembramento",category:"physical",description:"O Alvo sofre um golpe devastador que causa a perda de um braço, uma perna ou parte significativa do membro.",impact:"Perde a funcionalidade da parte afetada e sofre Penalidade em todas as Ações por Dor Extrema. Se for uma perna, cai e não pode se mover até ser estabilizado. Perde 4 PF Permanentes e sofre 3 PF no início de cada Turno pelo sangramento. Após tratar o sangramento: Braço Perdido reduz Destreza pela metade, arredondada para cima; Perna Perdida reduz Físico pela metade, limita o movimento a 3 metros por Rodada ou a 5 metros com ajuda.",duration:"Contínua / Permanente"},
+
+      {name:"Tratado",category:"treated",description:"O Alvo sofreu um corte ou lesão leve e foi tratado adequadamente.",impact:"Braços ou Pernas: testes que usem a parte afetada sofrem Penalidade. Tronco: testes de força ou esforço físico prolongado sofrem Penalidade. Cabeça: testes de raciocínio ou sentidos sofrem Penalidade.",duration:"Permanente"},
+      {name:"Estabilizado",category:"treated",description:"O Alvo sofreu uma lesão grave, como um corte profundo, e foi estabilizado adequadamente.",impact:"Braços ou Pernas: testes que usem a parte afetada recebem 2 Penalidades. Tronco: testes de força ou esforço físico prolongado recebem 2 Penalidades. Cabeça: testes de raciocínio ou sentidos recebem 2 Penalidades.",duration:"Permanente"},
+      {name:"Quebrado",category:"treated",description:"O Alvo sofreu fratura grave ou lesão extremamente debilitante e foi tratado.",impact:"Braços ou Pernas: testes que usem a parte afetada falham automaticamente. Tronco: testes de força ou esforço físico prolongado falham automaticamente. Cabeça: testes de raciocínio ou sentidos falham automaticamente; sob estresse súbito, teste Determinação para não ficar Aterrorizado.",duration:"Permanente"},
+
+      {name:"Gripe",category:"disease",description:"O Alvo foi exposto a frio, chuva ou mudanças bruscas de temperatura e desenvolveu uma infecção respiratória leve.",impact:"Sofre Penalidade em Instinto e Destreza por dores e fadiga. Furtividade recebe uma Penalidade adicional por tosse e espirros.",duration:"Contínua"},
+      {name:"Virose",category:"disease",description:"O Alvo ingeriu alimento estragado.",impact:"Vomita em um momento aleatório do Ciclo. Se estiver em Conflito, perde seu Turno.",duration:"Contínua"},
+      {name:"Cólera",category:"disease",description:"O Alvo consumiu água suja e desenvolveu uma infecção intestinal severa.",impact:"Precisa consumir o dobro de Água para se saciar em um Ciclo; fontes contam pela metade. Meio Cantil vale 1/3 de Porção, Cantil Cheio vale 1/2 Porção e Fonte Abundante vale 1 Porção.",duration:"Contínua"},
+      {name:"Kuru",category:"disease",description:"O Alvo contraiu uma doença por consumir carne humana em excesso.",impact:"Sofre Penalidade em Intelecto e Instinto. No início de cada Ciclo, role 1D6: 1, perca 1 PA de Físico ou Destreza; 2, perca o controle por Tremores; 3–5, ria incontrolavelmente; 6, aja normalmente.",duration:"Permanente"},
+      {name:"Radiação",category:"disease",description:"O Alvo foi exposto por muito tempo a resíduos radioativos ou zonas afetadas pelas ogivas.",impact:"Reduz Físico, Destreza e Instinto pela metade, arredondando para cima. Vomita aleatoriamente durante o Ciclo; se estiver em Conflito, perde seu Turno.",duration:"Permanente"},
+      {name:"Infecção",category:"disease",description:"A ferida do Alvo foi contaminada por sujeira, bactérias ou substâncias nocivas.",impact:"Sofre Penalidade em Físico pela febre e desgaste. A recuperação de PF quando curado é reduzida pela metade, arredondando para baixo.",duration:"Contínua"},
+      {name:"Tétano",category:"disease",description:"O Alvo sofreu ferimento contaminado por ferrugem ou sujeira profunda, afetando o sistema nervoso.",impact:"Sempre que realizar uma Ação física intensa, role 1D6. Em 1–3, sofre espasmos e recebe Penalidade.",duration:"Contínua"},
+      {name:"Diabetes",category:"disease",description:"O organismo do Alvo foi destruído lentamente por banquetes e exageros constantes.",impact:"Em momentos aleatórios do Ciclo, sofre episódios de tontura, tremores, visão embaçada e fraqueza súbita.",duration:"Permanente"},
+      {name:"Gangrena",category:"disease",description:"Um ferimento grave permaneceu sem tratamento, permitindo que o tecido morresse e a infecção se espalhasse.",impact:"O membro torna-se inutilizável e testes que dependam dele recebem 2 Penalidades. No início de cada Ciclo, perde 1 PF Permanente. Só pode ser removida por amputação do membro ou tratamento adequado, a critério do MP.",duration:"Contínua"},
+
+      {name:"Irregular",category:"terrain",description:"O Alvo se move por terreno irregular, montanhoso, rochoso, escorregadio ou semelhante.",impact:"Todas as Ações que envolvam movimento recebem Penalidade.",duration:"Vinculada"},
+      {name:"Alagado",category:"terrain",description:"O solo está coberto por água, lama ou líquido raso, dificultando o deslocamento.",impact:"O movimento é reduzido pela metade.",duration:"Vinculada"},
+      {name:"Cortante",category:"terrain",description:"O local está repleto de espinhos, vidros, arame farpado ou outros elementos cortantes.",impact:"Movimentar-se causa 1 PF.",duration:"Vinculada"},
+      {name:"Instável",category:"terrain",description:"O solo pode ceder por rachaduras, areia movediça, piso frágil ou gelo fino.",impact:"Cada Ação exige Acrobacia (Sofrido) para evitar afundamento, queda ou colapso da superfície.",duration:"Vinculada"},
+      {name:"Escorregadio",category:"terrain",description:"O solo está coberto por óleo, limo, gelo ou outra substância traiçoeira.",impact:"Ao se mover, teste Acrobacia. Em falha, perde o Turno e recebe Caído.",duration:"Vinculada"},
+
+      {name:"Ar Impróprio",category:"environment",description:"O ar está contaminado por gases tóxicos, poeira espessa ou partículas irritantes, tornando a respiração perigosa.",impact:"A cada Rodada, teste Respiração (Gangrenado). Em falha, recebe Irritação.",duration:"Vinculada"},
+      {name:"Escuro",category:"environment",description:"O ambiente possui iluminação mínima ou nula.",impact:"Sofre Penalidade em todas as Ações que dependam da visão.",duration:"Vinculada"},
+      {name:"Chuvoso",category:"environment",description:"O local é castigado por chuva torrencial e incessante.",impact:"Sofre Penalidade em Percepção ligada a visão e audição e em testes com movimentos rápidos. Itens sem proteção contra água ficam inutilizados até secarem.",duration:"Vinculada"},
+      {name:"Ventania",category:"environment",description:"Rajadas de vento violentas e descontroladas varrem a área.",impact:"Ao fim de cada Rodada, role 1D6: 1 – Desvio, Ações de precisão sofrem Penalidade; 2 – Estilhaços, Reflexos (Gangrenado) evita 2 PF; 3 – Arrastão, Força (Gangrenado) evita ser arrastado 3 metros e ficar Desprevenido até a próxima Rodada; 4 – Vendaval, fica Surdo até o fim da Rodada; 5 – Vórtice, Respiração (Gangrenado) evita perder a Ação Principal; 6 – Lufada, sofre 3 PF e fica Caído.",duration:"Vinculada"},
+      {name:"Raízes Vivas",category:"environment",description:"O ambiente está coberto por raízes pulsantes que reagem ao movimento.",impact:"Ao se movimentar, role 1D6: 1 – Aperto, deslocamento pela metade; 2 – Tentáculos, Acrobacia evita ficar Preso; 3 – Espinhos, sofre 3 PF; 4 – Fome, Tolerância (Dilacerante) evita 2 PF; 5 – Sussurros, Determinação (Gangrenado) evita 3 PE; 6 – Presas, sofre 5 PF.",duration:"Vinculada"}
+    ],
+
+    conditionInteractions: {
+      processes: [
+        "Um Ferimento não tratado pode se tornar uma Infecção.",
+        "Uma Infecção ignorada pode evoluir para Necrose.",
+        "A Necrose pode levar ao Desmembramento."
+      ],
+      escalations: [
+        "Sangrando → Ferida Profunda → Ferida Severa.",
+        "Infecção → Necrose → Desmembramento.",
+        "Clima Extremo (Frio) → Necrose.",
+        "Exaustão → Inconsciente."
+      ],
+      note:"A escalada não precisa ser automática nem rápida; deve surgir do descuido e do tempo gasto sofrendo a Condição."
+    },
+
     commonItems: [
       {
         id: "mochila-resistente",
@@ -684,7 +792,7 @@
           {
             stage: 1, roman: "I", name: "Leitura Inicial",
             rewards: { originPoints: 3, attributePoints: 1 },
-            effects: ["No início de um Conflito, pergunte uma vez ao MP qual é o maior ou o menor Atributo de uma Ameaça visível."]
+            effects: ["Uma vez no início de um Conflito, pergunte ao MP qual é o maior e qual é o menor Atributo de uma Ameaça visível."]
           },
           {
             stage: 2, roman: "II", name: "Padrões",
@@ -747,7 +855,7 @@
           {
             stage: 2, roman: "II", name: "Frase Marcada",
             rewards: { originPoints: 2, skillPoints: 2, attributePoints: 1 },
-            effects: ["Envie uma mensagem curta para qualquer pessoa que já conheceu; ela chega por boatos, sonhos ou coincidências em 1D4 dias."]
+            effects: ["Envie uma mensagem curta para qualquer pessoa que já conheceu; ela chega por boatos, sonhos ou coincidências em 1D6 Ciclos."]
           },
           {
             stage: 3, roman: "III", name: "Primeiro Ato",
@@ -768,8 +876,8 @@
           {
             stage: 6, roman: "VI", name: "Segundo Ato",
             rewards: { originPoints: 3 },
-            unlockOrigin: { scope: "any-archetype", amount: 1 },
-            effects: ["Desbloqueie uma nova Origem de qualquer Arquétipo."]
+            unlockOrigin: { scope: "same-archetype", amount: 1 },
+            effects: ["Desbloqueie uma nova Origem de seu Arquétipo."]
           },
           {
             stage: 7, roman: "VII", name: "Minha Fama te Persegue",

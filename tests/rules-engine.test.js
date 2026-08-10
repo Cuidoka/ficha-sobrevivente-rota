@@ -42,6 +42,29 @@ data.commonItems.forEach((item) => {
   assert.ok(item.uses.max === null || Number.isInteger(item.uses.max) && item.uses.max > 0, `${item.name} precisa ter limite positivo ou uso ilimitado`);
   if(item.uses.max !== null) assert.ok(item.uses.unit, `${item.name} precisa informar a unidade de uso`);
 });
+
+assert.equal(data.conditionCategories.length, 6, 'devem existir seis categorias de Condições');
+assert.equal(data.conditionDurations.length, 5, 'devem existir cinco durações oficiais');
+assert.equal(data.conditions.length, 48, 'catálogo oficial de Condições incompleto');
+assert.ok(unique(data.conditions.map((condition) => condition.name)), 'Condições não podem estar duplicadas');
+const conditionCategoryIds = new Set(data.conditionCategories.map((category) => category.id));
+data.conditions.forEach((condition) => {
+  assert.ok(condition.name && condition.description && condition.impact && condition.duration, `${condition.name || 'Condição sem nome'} precisa de Descrição, Impacto e Duração`);
+  assert.ok(conditionCategoryIds.has(condition.category), `${condition.name} usa uma categoria inexistente`);
+});
+const conditionByName = Object.fromEntries(data.conditions.map((condition) => [condition.name, condition]));
+assert.ok(conditionByName.Gangrena, 'Gangrena deve constar entre as Doenças');
+assert.match(conditionByName.Necrose.impact,/3 Ciclos/,'Necrose deve avançar a cada 3 Ciclos');
+assert.doesNotMatch(conditionByName.Necrose.impact,/4 Ciclos/,'a regra antiga de Necrose não pode permanecer');
+assert.match(conditionByName.Cego.duration,/Permanente/,'Cego pode ser Persistente ou Permanente');
+assert.match(conditionByName.Surdo.duration,/Permanente/,'Surdo pode ser Persistente ou Permanente');
+assert.match(conditionByName.Desmembramento.impact,/Braço Perdido/,'Desmembramento precisa descrever a perda de braço');
+assert.match(conditionByName.Desmembramento.impact,/Perna Perdida/,'Desmembramento precisa descrever a perda de perna');
+assert.match(conditionByName.Ventania.impact,/6 – Lufada/,'Ventania precisa conter os seis resultados');
+assert.match(conditionByName['Raízes Vivas'].impact,/6 – Presas/,'Raízes Vivas precisa conter os seis resultados');
+assert.equal(data.conditionInteractions.processes.length,3,'interações de Condições incompletas');
+assert.equal(data.conditionInteractions.escalations.length,4,'escaladas naturais incompletas');
+
 assert.equal(data.ammunitionTypes.length, 6, 'catálogo de munições incompleto');
 assert.ok(unique(data.ammunitionTypes.map((ammo) => ammo.id)), 'IDs de munição devem ser únicos');
 assert.deepEqual(names(data.ammunitionTypes), ['Balas','Cartuchos','Pentes','Flechas','Combustível','Cargas']);
@@ -70,7 +93,10 @@ trackNames.forEach((name) => {
 });
 assert.equal(data.growthTracks['Cães de Guerra'].stages[2].unlockOrigin.scope, 'same-archetype');
 assert.equal(data.growthTracks['Donos da Razão'].stages[2].unlockOrigin.scope, 'any-archetype');
-assert.equal(data.growthTracks['Línguas de Ferro'].stages[5].unlockOrigin.scope, 'any-archetype');
+assert.equal(data.growthTracks['Línguas de Ferro'].stages[5].unlockOrigin.scope, 'same-archetype');
+assert.match(data.growthTracks['Donos da Razão'].stages[0].effects[0], /maior e qual é o menor/, 'Leitura Inicial deve revelar os dois extremos do Atributo');
+assert.match(data.growthTracks['Línguas de Ferro'].stages[1].effects[0], /1D6 Ciclos/, 'Frase Marcada deve usar o prazo da versão atualizada');
+assert.doesNotMatch(data.growthTracks['Línguas de Ferro'].stages[1].effects[0], /1D4 dias/, 'o prazo antigo de Frase Marcada não pode permanecer');
 
 let woundRuleCount = 0;
 Object.values(data.woundTable).forEach((regions) => {
@@ -118,7 +144,12 @@ assert.equal(engine.capStressGain(8,engine.stressStage(12,15,[5,10,15]),false).a
 assert.equal(engine.capStressGain(8,engine.stressStage(12,15,[5,10,15]),true).applied, 4);
 
 assert.equal(engine.crisisOutcome(1,{crisisShift:0}).key, 'desmaio');
-assert.equal(engine.crisisOutcome(1,{crisisShift:2}).key, 'perda-controle');
+assert.equal(engine.crisisOutcome(1,{crisisShift:2}).key, 'descontrole');
+assert.equal(engine.crisisOutcome(7,{crisisShift:0}).name, 'Soltar');
+assert.equal(engine.crisisOutcome(12,{crisisShift:0}).name, 'Tremedeira');
+assert.equal(engine.crisisOutcome(2,{crisisShift:0}).condition, '', 'Descontrole não é uma Condição oficial');
+assert.equal(engine.crisisOutcome(7,{crisisShift:0}).condition, '', 'Soltar não é uma Condição oficial');
+assert.equal(engine.crisisOutcome(13,{crisisShift:0}).condition, 'Vulnerável');
 assert.equal(engine.crisisOutcome(11,{crisisShift:3}).key, 'controle');
 assert.equal(engine.deathTest(1,1).dead, true);
 assert.equal(engine.deathTest(1,2).dead, false);
@@ -139,7 +170,11 @@ assert.equal(engine.usageScope('Use até 2 Provisões por Cena de Recuperação.
 assert.equal(engine.normalizeAmmoName('Tanque de Combustível'), 'tanques');
 assert.equal(engine.normalizeAmmoName('Munição solta'), 'balas');
 
-const growthTotals = engine.growthTotals(data.growthTracks['Cães de Guerra'],[1,2,3,4,5,6,7,8,9,10],2);
+const postCompletionRewards = data.growthTracks.rules.postCompletionRewards;
+const oneArcTotals = engine.growthTotals(data.growthTracks['Cães de Guerra'],[1,2,3,4,5,6,7,8,9,10],1,postCompletionRewards);
+const growthTotals = engine.growthTotals(data.growthTracks['Cães de Guerra'],[1,2,3,4,5,6,7,8,9,10],2,postCompletionRewards);
 assert.deepEqual(growthTotals, {originPoints:25,skillPoints:9,attributePoints:6,postCapArcs:2});
+assert.equal(growthTotals.originPoints-oneArcTotals.originPoints,2,'cada novo Arco após X deve conceder exatamente +2 PO');
+assert.equal(growthTotals.skillPoints-oneArcTotals.skillPoints,2,'cada novo Arco após X deve conceder exatamente +2 PP');
 
 console.log('OK — regras, catálogos e limites validados.');

@@ -1040,11 +1040,31 @@ svg#body-svg{ width:100%; height:auto; display:block; }
 .condition-shell{ display:grid; gap:10px; }
 .condition-add{ display:grid; grid-template-columns:150px 190px minmax(170px,1fr) auto; gap:8px; }
 .condition-add select,.condition-add input{ min-height:34px; padding:6px 8px; border:1px solid var(--line); background:var(--panel-3); }
-.condition-reference{ min-height:46px; padding:9px 10px; border-left:2px solid var(--green); background:var(--panel-3); color:var(--text-dim); font-size:11px; }
-.condition-reference > div{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.condition-reference{ min-height:46px; padding:10px 11px; border-left:2px solid var(--green); background:var(--panel-3); color:var(--text-dim); font-size:11px; }
+.condition-reference-header,.condition-card-header{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
 .condition-reference strong{ color:var(--green-bright); font:500 12px var(--font-display); letter-spacing:.6px; text-transform:uppercase; }
-.condition-reference span{ color:var(--text-faint); font:9px var(--font-mono); text-transform:uppercase; }
-.condition-reference p{ margin:4px 0 0; color:var(--text-dim); }
+.condition-reference-header span,.condition-card-header span{ color:var(--text-faint); font:9px var(--font-mono); text-align:right; text-transform:uppercase; }
+.condition-description{ margin:6px 0 0; color:var(--text-dim); font-size:10px; line-height:1.45; }
+.condition-rule-fields{ display:grid; grid-template-columns:minmax(0,2fr) minmax(120px,1fr); gap:6px; margin:8px 0 0; }
+.condition-rule-fields > div{ display:grid; align-content:start; gap:3px; min-width:0; padding:7px 8px; border:1px solid var(--line); background:rgba(0,0,0,.12); }
+.condition-rule-fields .condition-impact{ border-left:2px solid var(--red); }
+.condition-rule-fields .condition-duration{ border-left:2px solid var(--yellow); }
+.condition-rule-fields dt{ color:var(--text-faint); font:8px var(--font-mono); letter-spacing:.6px; text-transform:uppercase; }
+.condition-rule-fields dd{ margin:0; color:var(--text); font-size:10px; line-height:1.45; }
+.condition-guide{ border:1px solid var(--line); background:var(--panel-3); }
+.condition-guide > summary{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; color:var(--green-bright); cursor:pointer; font:500 10px var(--font-display); letter-spacing:.6px; text-transform:uppercase; }
+.condition-guide > summary span{ color:var(--text-faint); font:8px var(--font-mono); }
+.condition-guide[open] > summary{ border-bottom:1px solid var(--line); }
+.condition-duration-grid{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; padding:9px; }
+.condition-duration-grid article{ display:grid; align-content:start; gap:4px; padding:8px; border-top:2px solid var(--green); background:var(--panel-2); }
+.condition-duration-grid strong{ color:var(--text); font:500 10px var(--font-display); text-transform:uppercase; }
+.condition-duration-grid p{ margin:0; color:var(--text-dim); font-size:9px; line-height:1.4; }
+.condition-duration-grid small{ color:var(--green-bright); font-size:8px; line-height:1.4; }
+.condition-interaction-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; padding:0 9px 9px; }
+.condition-interaction-grid section{ padding:8px; border-left:2px solid var(--yellow); background:var(--panel-2); }
+.condition-interaction-grid strong{ color:var(--yellow); font:500 9px var(--font-display); text-transform:uppercase; }
+.condition-interaction-grid ul{ display:grid; gap:3px; margin:6px 0 0; padding-left:16px; color:var(--text-dim); font-size:9px; }
+.condition-interaction-note{ margin:0 9px 9px; padding:7px 8px; border-left:2px solid var(--red); color:var(--text-faint); font:8px/1.45 var(--font-mono); }
 .condition-groups{ display:grid; gap:9px; }
 .condition-category-group{ display:grid; gap:6px; }
 .condition-category-heading{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:5px; border-bottom:1px solid var(--line); }
@@ -1053,12 +1073,10 @@ svg#body-svg{ width:100%; height:auto; display:block; }
 .condition-category-heading span{ color:var(--text-faint); font-size:10px; }
 .condition-category-heading b{ min-width:22px; padding:2px 5px; border:1px solid var(--line); color:var(--text-dim); font:9px var(--font-mono); text-align:center; }
 .condition-card-list{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
-.condition-card{ position:relative; display:grid; gap:4px; min-height:72px; padding:8px 31px 8px 9px; border:1px solid var(--line); border-left:2px solid var(--red); background:var(--panel-3); }
-.condition-card > div{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.condition-card{ position:relative; display:grid; align-content:start; gap:5px; min-height:72px; padding:9px 31px 9px 9px; border:1px solid var(--line); border-left:2px solid var(--red); background:var(--panel-3); }
 .condition-card strong{ color:var(--text); font:500 11px var(--font-display); letter-spacing:.5px; text-transform:uppercase; }
-.condition-card span{ color:var(--yellow); font:9px var(--font-mono); text-align:right; }
-.condition-card p{ margin:0; color:var(--text-dim); font-size:10px; }
-.condition-card button{ position:absolute; top:7px; right:7px; width:18px; height:18px; padding:0; border:1px solid var(--line); background:transparent; color:var(--red-bright); cursor:pointer; }
+.condition-card .condition-rule-fields{ grid-template-columns:1fr; margin-top:2px; }
+.condition-card > button{ position:absolute; top:7px; right:7px; width:18px; height:18px; padding:0; border:1px solid var(--line); background:transparent; color:var(--red-bright); cursor:pointer; }
 
 /* ===================== EQUIPAMENTOS ===================== */
 .equipment-top{ align-items:start; }
@@ -1468,7 +1486,7 @@ button:disabled{ opacity:.38; cursor:not-allowed !important; }
   .sheet-tab{ font-size:10px; }
   .page-heading{ align-items:flex-start; flex-direction:column; }
   .page-heading p{ text-align:left; }
-  .dice-controls,.condition-add,.condition-card-list,.armor-grid,.recipe-grid,.history-grid,.history-meta-grid,.relationship-list,.filter-grid,.corruption-effects,.weapon-add-bar{ grid-template-columns:1fr; }
+  .dice-controls,.condition-add,.condition-card-list,.condition-rule-fields,.condition-duration-grid,.condition-interaction-grid,.armor-grid,.recipe-grid,.history-grid,.history-meta-grid,.relationship-list,.filter-grid,.corruption-effects,.weapon-add-bar{ grid-template-columns:1fr; }
   .history-field:last-child{ grid-column:auto; }
   .relationship-toolbar,.needs-heading{ align-items:flex-start; flex-direction:column; }
   .needs-heading p{ text-align:left; }

@@ -8,14 +8,14 @@
 
   var CRISIS_TABLE = [
     {min:1,max:1,key:'desmaio',name:'Desmaio',condition:'Inconsciente',description:'Fica Inconsciente temporariamente.'},
-    {min:2,max:3,key:'perda-controle',name:'Perda de Controle',condition:'Perda de Controle',description:'Ataca a pessoa mais próxima com o maior ferimento temporário que puder causar.'},
-    {min:4,max:5,key:'fuga',name:'Fuga',condition:'Fuga',description:'Foge da fonte de estresse; quem presencia recebe +3 PE temporariamente.'},
-    {min:6,max:6,key:'grito',name:'Grito',condition:'Grito',description:'Todos ao redor recebem +2 PE imediatamente.'},
-    {min:7,max:9,key:'derrubar',name:'Derrubar',condition:'Derrubou um Item',description:'Derruba o item ou arma que estiver segurando.'},
-    {min:10,max:11,key:'esconder',name:'Esconder-se',condition:'Escondido',description:'Procura abrigo e tenta se esconder da fonte de estresse.'},
-    {min:12,max:12,key:'tremor',name:'Tremor',condition:'Tremendo',description:'Sofre Penalidade em testes físicos temporariamente.'},
+    {min:2,max:3,key:'descontrole',name:'Descontrole',condition:'',description:'Por um Turno, ataca a pessoa mais próxima com o maior ferimento temporário que puder causar, seja Aliado ou não.'},
+    {min:4,max:5,key:'fuga',name:'Fuga',condition:'',description:'Foge desesperadamente; todos que presenciarem a fuga irracional recebem +3 PE.'},
+    {min:6,max:6,key:'gritar',name:'Gritar',condition:'',description:'Todos ao redor recebem +2 PE imediatamente.'},
+    {min:7,max:9,key:'soltar',name:'Soltar',condition:'',description:'Larga imediatamente um item ou arma de seu Inventário, escolhido pelo MP.'},
+    {min:10,max:11,key:'esconder',name:'Esconder',condition:'',description:'Procura abrigo e tenta se esconder da fonte de estresse.'},
+    {min:12,max:12,key:'tremedeira',name:'Tremedeira',condition:'',description:'Sofre Penalidade em testes físicos temporariamente.'},
     {min:13,max:13,key:'reflexo',name:'Reflexo',condition:'Vulnerável',description:'Fica Vulnerável temporariamente.'},
-    {min:14,max:Infinity,key:'controle',name:'Controle',condition:'',description:'Mantém o controle e não sofre consequência externa.'}
+    {min:14,max:Infinity,key:'controle',name:'Controle',condition:'',description:'Mantém o controle, não sofre consequência externa e conclui uma Rolagem Engatilhada, caso exista.'}
   ];
 
   function number(value, fallback){
@@ -160,7 +160,7 @@
     return normalized.replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   }
 
-  function growthTotals(track, claimedStages, postCapArcs){
+  function growthTotals(track, claimedStages, postCapArcs, postCompletionRewards){
     var claimed = Array.isArray(claimedStages) ? claimedStages.map(Number) : [];
     var totals = {originPoints:0,skillPoints:0,attributePoints:0};
     if(track && Array.isArray(track.stages)){
@@ -174,8 +174,9 @@
       });
     }
     var arcs = Math.max(0,Math.floor(number(postCapArcs)));
-    totals.originPoints += arcs * 2;
-    totals.skillPoints += arcs * 2;
+    var arcRewards = postCompletionRewards || {originPoints:2,skillPoints:2};
+    totals.originPoints += arcs * number(arcRewards.originPoints);
+    totals.skillPoints += arcs * number(arcRewards.skillPoints);
     totals.postCapArcs = arcs;
     return totals;
   }
