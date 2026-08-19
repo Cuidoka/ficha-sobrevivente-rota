@@ -194,7 +194,7 @@
       knownRecipes:[],
       allowCampaignRecipes:false,
       notes:defaultNotes(),
-      ui:{ activePage:'principal', lastRoll:null, filterMode:'', editingInventoryWeaponId:'', activeModal:'', itemCatalogFilter:'' }
+      ui:{ activePage:'principal', activeSkillAttribute:'Físico', lastRoll:null, filterMode:'', editingInventoryWeaponId:'', activeModal:'', itemCatalogFilter:'' }
     };
   }
 
@@ -474,13 +474,26 @@
     var notesSection = $('[data-section="notes"]');
     var nav = document.createElement('nav');
     nav.className = 'sheet-tabs no-print';
-    nav.setAttribute('role','tablist');
-    nav.innerHTML = [
-      ['principal','Ficha Principal'], ['equipamentos','Equipamentos'],
-      ['historia','História & Anotações'], ['origem','Origem & Corrupção']
-    ].map(function(item){
-      return '<button type="button" class="sheet-tab" role="tab" data-page-target="'+item[0]+'">'+item[1]+'</button>';
-    }).join('');
+    nav.setAttribute('aria-label','Navegação do dossiê');
+    var dossierNavigation = [
+      {page:'principal',label:'Identificação',tab:true},
+      {page:'principal',label:'Condição',section:'.condition-section'},
+      {page:'principal',label:'Somático',section:'[data-section="body-map"]'},
+      {page:'principal',label:'Perícias',section:'[data-section="skills"]'},
+      {page:'principal',label:'Características',section:'[data-section="characteristics"]'},
+      {page:'equipamentos',label:'Equipamento',tab:true},
+      {page:'principal',label:'Recursos',section:'[data-ui-section="resources"]'},
+      {page:'historia',label:'Dores',section:'[data-section="pains"]'},
+      {page:'historia',label:'Anotações',tab:true},
+      {page:'origem',label:'Origem & Corrupção',tab:true}
+    ];
+    nav.innerHTML = '<div class="dossier-brand" aria-hidden="true"><span>Roots of the Abyss</span><b>⌁</b></div>'+
+      '<div class="dossier-nav-list">'+dossierNavigation.map(function(item){
+        var className = item.tab ? 'sheet-tab' : 'sheet-anchor';
+        var section = item.section ? ' data-scroll-target="'+item.section.replace(/"/g,'&quot;')+'"' : '';
+        return '<button type="button" class="'+className+'" data-page-target="'+item.page+'"'+section+'>'+item.label+'</button>';
+      }).join('')+'</div>'+
+      '<div class="dossier-classification" aria-hidden="true"><span>Classificação do dossiê</span><small>Nível de sigilo</small><b>03</b><small>Risco de corrupção</small><i>II</i></div>';
     sheet.insertBefore(nav, sheet.firstChild);
 
     var pages = {};
@@ -561,7 +574,7 @@
     else page.appendChild(dice);
 
     var conditionSection = document.createElement('div');
-    conditionSection.className = 'section';
+    conditionSection.className = 'section condition-section';
     conditionSection.innerHTML = '<div class="section-title">Condições Ativas <span class="tag">CATEGORIAS E EFEITOS DO LIVRO</span></div>'+
       '<div class="section-body condition-shell"><div class="condition-add">'+
       '<select id="condition-category" aria-label="Categoria da condição"></select>'+
@@ -613,6 +626,47 @@
       paradigmSummary.innerHTML = '<span>Selecione um Paradigma para ver seus efeitos.</span><button type="button" class="text-action" id="paradigm-info-button">Ver todos</button>';
       paradigmField.appendChild(paradigmSummary);
     }
+    buildDossierLayout(page);
+  }
+
+  function buildDossierLayout(page){
+    if($('.dossier-stage',page)) return;
+    var header = $('[data-section="main-header"]',page);
+    var core = $('[data-section="core-stats"]',page);
+    var diagram = $('[data-section="body-map"]',page);
+    var skills = $('[data-section="skills"]',page);
+    var characteristics = $('[data-section="characteristics"]',page);
+    var dice = $('.dice-section',page);
+    var conditions = $('.condition-section',page);
+
+    var stage = document.createElement('div');
+    stage.className = 'dossier-stage';
+    var identitySheet = document.createElement('div');
+    identitySheet.className = 'dossier-sheet dossier-identity';
+    var medicalSheet = document.createElement('div');
+    medicalSheet.className = 'dossier-sheet dossier-medical';
+    var lower = document.createElement('div');
+    lower.className = 'dossier-lower';
+
+    page.insertBefore(stage,page.firstChild);
+    stage.appendChild(identitySheet);
+    stage.appendChild(medicalSheet);
+    if(header) identitySheet.appendChild(header);
+    if(core) identitySheet.appendChild(core);
+    if(diagram) medicalSheet.appendChild(diagram);
+    if(skills) medicalSheet.appendChild(skills);
+    if(characteristics) medicalSheet.appendChild(characteristics);
+    if(dice) lower.appendChild(dice);
+    if(conditions) lower.appendChild(conditions);
+    page.appendChild(lower);
+
+    var notes = document.createElement('aside');
+    notes.className = 'dossier-margin-notes no-print';
+    notes.setAttribute('aria-label','Lembretes do dossiê');
+    notes.innerHTML = '<article class="margin-note note-quick"><span>Anotação rápida</span><p>Registre sinais, vozes e mudanças antes que os detalhes se percam.</p></article>'+
+      '<article class="margin-note note-reminder"><span>Lembrete</span><p>A ficha é salva automaticamente neste dispositivo.</p><b aria-hidden="true">✾</b></article>'+
+      '<article class="margin-note note-record"><span>Registro</span><p>Use História & Anotações para preservar o diário completo.</p></article>';
+    page.appendChild(notes);
   }
 
   function buildAutomationModal(){
@@ -671,7 +725,7 @@
       '</div>'+
       '<div class="row-2">'+
         '<div class="section"><div class="section-title">Armadura</div><div class="section-body"><div class="armor-grid" id="armor-list"></div></div></div>'+
-        '<div class="section"><div class="section-title">Recursos & Partes</div><div class="section-body">'+
+        '<div class="section" data-ui-section="equipment-resources"><div class="section-title">Recursos & Partes</div><div class="section-body">'+
           '<div class="parts-control"><span>Partes</span><button type="button" data-parts-delta="-1">−</button><input id="parts-input" type="number" min="0" value="0"><button type="button" data-parts-delta="1">+</button></div>'+
           '<div class="weapon-card-title">Bolsa de Recursos (¼ de unidade)</div><div class="res-pips-grid" id="res-pips-grid"></div>'+
         '</div></div>'+
@@ -770,6 +824,7 @@
       tab.classList.toggle('active', active);
       tab.setAttribute('aria-selected', active ? 'true' : 'false');
     });
+    $$('.sheet-anchor').forEach(function(anchor){ anchor.classList.remove('active'); });
     saveModel();
   }
 
@@ -796,6 +851,17 @@
     $('#allow-campaign-recipes').checked = !!model.allowCampaignRecipes;
     renderParadigmStyle();
     renderBodyMap();
+    fitSurvivorName();
+  }
+
+  function fitSurvivorName(){
+    var input = $('#nome-sobrevivente');
+    if(!input) return;
+    var length = Array.from(String(input.value || input.placeholder || '')).length;
+    input.classList.toggle('name-medium',length >= 9 && length < 13);
+    input.classList.toggle('name-long',length >= 13 && length < 18);
+    input.classList.toggle('name-very-long',length >= 18);
+    input.title = input.value || input.placeholder || '';
   }
 
   function renderBodyMap(){
@@ -818,10 +884,26 @@
 
   function buildSkills(){
     var grid = $('#skills-grid');
+    var existingTabs = $('.skill-attribute-tabs',grid.parentNode);
+    if(existingTabs) existingTabs.remove();
     grid.innerHTML = '';
+    var attributes = Object.keys(DATA.skills);
+    var tabs = document.createElement('div');
+    tabs.className = 'skill-attribute-tabs';
+    tabs.setAttribute('role','tablist');
+    tabs.setAttribute('aria-label','Selecionar atributo das perícias');
+    tabs.innerHTML = attributes.map(function(attribute,index){
+      return '<button type="button" class="skill-attribute-tab" id="skill-attribute-tab-'+index+'" role="tab" data-skill-attribute="'+attribute+'" aria-controls="skill-attribute-panel-'+index+'">'+attribute+'</button>';
+    }).join('');
+    grid.parentNode.insertBefore(tabs,grid);
     var skillIndex = 0;
-    Object.keys(DATA.skills).forEach(function(attribute){
+    attributes.forEach(function(attribute,attributeIndex){
       var column = document.createElement('div');
+      column.className = 'skill-attribute-panel';
+      column.id = 'skill-attribute-panel-'+attributeIndex;
+      column.dataset.skillAttributePanel = attribute;
+      column.setAttribute('role','tabpanel');
+      column.setAttribute('aria-labelledby','skill-attribute-tab-'+attributeIndex);
       column.innerHTML = '<div class="skill-col-title">'+attribute+'</div>';
       DATA.skills[attribute].forEach(function(skill){
         skillIndex++;
@@ -837,6 +919,30 @@
     var attrOptions = Object.keys(DATA.skills).map(function(name){ return '<option>'+name+'</option>'; }).join('');
     $('#roll-attribute').innerHTML = attrOptions;
     $('#roll-skill').innerHTML = flattenSkills().map(function(name){ return '<option>'+name+'</option>'; }).join('');
+    renderSkillAttributeTabs();
+  }
+
+  function renderSkillAttributeTabs(){
+    var attribute = DATA.skills[model.ui.activeSkillAttribute] ? model.ui.activeSkillAttribute : 'Físico';
+    model.ui.activeSkillAttribute = attribute;
+    $$('.skill-attribute-tab').forEach(function(tab){
+      var active = tab.dataset.skillAttribute === attribute;
+      tab.classList.toggle('active',active);
+      tab.setAttribute('aria-selected',active ? 'true' : 'false');
+      tab.tabIndex = active ? 0 : -1;
+    });
+    $$('.skill-attribute-panel').forEach(function(panel){
+      var active = panel.dataset.skillAttributePanel === attribute;
+      panel.classList.toggle('active',active);
+      panel.setAttribute('aria-hidden',active ? 'false' : 'true');
+    });
+  }
+
+  function selectSkillAttribute(attribute){
+    if(!DATA.skills[attribute]) return;
+    model.ui.activeSkillAttribute = attribute;
+    renderSkillAttributeTabs();
+    saveModel();
   }
 
   function flattenSkills(){
@@ -3050,6 +3156,8 @@
     renderConsolidatedPowers();
     renderNeeds();
     renderRelationships();
+    renderSkillAttributeTabs();
+    fitSurvivorName();
     setModifier('roll-bonus',0);
     setModifier('roll-penalty',0);
     setModifier('roll-plague',0);
@@ -3272,13 +3380,33 @@
       return;
     }
     var tab = event.target.closest('.sheet-tab');
-    if(tab){ activatePage(tab.dataset.pageTarget); return; }
+    if(tab){
+      activatePage(tab.dataset.pageTarget);
+      requestAnimationFrame(function(){
+        var pageTop = $('#page-'+tab.dataset.pageTarget);
+        if(pageTop) pageTop.scrollIntoView({block:'start'});
+      });
+      return;
+    }
+    var sheetAnchor = event.target.closest('.sheet-anchor');
+    if(sheetAnchor){
+      activatePage(sheetAnchor.dataset.pageTarget);
+      $$('.sheet-anchor').forEach(function(anchor){anchor.classList.toggle('active',anchor===sheetAnchor);});
+      requestAnimationFrame(function(){
+        var activePage = $('#page-'+sheetAnchor.dataset.pageTarget);
+        var scrollTarget = activePage && sheetAnchor.dataset.scrollTarget ? $(sheetAnchor.dataset.scrollTarget,activePage) : activePage;
+        if(scrollTarget) scrollTarget.scrollIntoView({block:'start'});
+      });
+      return;
+    }
     if(event.target.closest('[data-close-rule-modal]')){closeRuleModal();return;}
     if(event.target.id==='rule-action-modal'){closeRuleModal();return;}
     if(event.target.closest('#open-dying-panel')){openDyingPanel();return;}
     if(event.target.closest('#open-stress-panel')){openStressPanel();return;}
     if(event.target.closest('#open-item-catalog')){openItemCatalog();return;}
     if(event.target.closest('#paradigm-info-button')){openParadigmMatrix();return;}
+    var skillAttributeTab = event.target.closest('.skill-attribute-tab');
+    if(skillAttributeTab){selectSkillAttribute(skillAttributeTab.dataset.skillAttribute);return;}
     if(event.target.closest('#dying-tolerance-roll')){var toleranceRoll=characterTest('Físico','Tolerância',0);resolveDyingTolerance(toleranceRoll.successes>=3,toleranceRoll);return;}
     if(event.target.closest('#dying-register-stabilized')){registerExternalStabilization();return;}
     if(event.target.closest('#death-test-roll')){rollDeathTest();return;}
@@ -3414,6 +3542,7 @@
     if(target.dataset.modelField){
       if(target.tagName === 'SELECT') return;
       model.fields[target.dataset.modelField] = target.value;
+      if(target.id === 'nome-sobrevivente') fitSurvivorName();
       if(target.id === 'attr-bonus-manual' || target.id === 'pp-bonus-manual'){ renderAttributes(); renderOrigin(); }
       if(target.id === 'growth-stage') renderGrowth();
       saveModel(); return;
@@ -3528,6 +3657,16 @@
   }
 
   function onKeyDown(event){
+    var skillTab = event.target.closest && event.target.closest('.skill-attribute-tab');
+    if(skillTab && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')){
+      event.preventDefault();
+      var skillTabs = $$('.skill-attribute-tab');
+      var currentSkillTab = skillTabs.indexOf(skillTab);
+      var nextSkillTab = (currentSkillTab + (event.key === 'ArrowRight' ? 1 : -1) + skillTabs.length) % skillTabs.length;
+      selectSkillAttribute(skillTabs[nextSkillTab].dataset.skillAttribute);
+      skillTabs[nextSkillTab].focus();
+      return;
+    }
     if(event.key === 'Escape' && $('#rule-action-modal') && $('#rule-action-modal').style.display !== 'none'){event.preventDefault();closeRuleModal();return;}
     var zone = event.target.closest && event.target.closest('.zone');
     if(zone && (event.key === 'Enter' || event.key === ' ')){
