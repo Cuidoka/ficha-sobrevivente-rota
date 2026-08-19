@@ -477,17 +477,11 @@
     nav.setAttribute('aria-label','Navegação do dossiê');
     var dossierNavigation = [
       {page:'principal',label:'Identificação',tab:true},
-      {page:'principal',label:'Condição',section:'.condition-section'},
-      {page:'principal',label:'Somático',section:'[data-section="body-map"]'},
-      {page:'principal',label:'Perícias',section:'[data-section="skills"]'},
-      {page:'principal',label:'Características',section:'[data-section="characteristics"]'},
       {page:'equipamentos',label:'Equipamento',tab:true},
-      {page:'principal',label:'Recursos',section:'[data-ui-section="resources"]'},
-      {page:'historia',label:'Dores',section:'[data-section="pains"]'},
-      {page:'historia',label:'Anotações',tab:true},
+      {page:'historia',label:'História & Anotações',tab:true},
       {page:'origem',label:'Origem & Corrupção',tab:true}
     ];
-    nav.innerHTML = '<div class="dossier-brand" aria-hidden="true"><span>Roots of the Abyss</span><b>⌁</b></div>'+
+    nav.innerHTML = '<div class="dossier-brand"><span>Roots of the Abyss</span><img src="assets/ui/icone-rota.png" alt="Emblema de Roots of the Abyss"></div>'+
       '<div class="dossier-nav-list">'+dossierNavigation.map(function(item){
         var className = item.tab ? 'sheet-tab' : 'sheet-anchor';
         var section = item.section ? ' data-scroll-target="'+item.section.replace(/"/g,'&quot;')+'"' : '';
@@ -659,14 +653,6 @@
     if(dice) lower.appendChild(dice);
     if(conditions) lower.appendChild(conditions);
     page.appendChild(lower);
-
-    var notes = document.createElement('aside');
-    notes.className = 'dossier-margin-notes no-print';
-    notes.setAttribute('aria-label','Lembretes do dossiê');
-    notes.innerHTML = '<article class="margin-note note-quick"><span>Anotação rápida</span><p>Registre sinais, vozes e mudanças antes que os detalhes se percam.</p></article>'+
-      '<article class="margin-note note-reminder"><span>Lembrete</span><p>A ficha é salva automaticamente neste dispositivo.</p><b aria-hidden="true">✾</b></article>'+
-      '<article class="margin-note note-record"><span>Registro</span><p>Use História & Anotações para preservar o diário completo.</p></article>';
-    page.appendChild(notes);
   }
 
   function buildAutomationModal(){

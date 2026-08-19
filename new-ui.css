@@ -4,9 +4,18 @@
 /* arquivos originais.                                                        */
 /* ========================================================================== */
 
+@font-face{
+  font-family:"I Know A Ghost";
+  src:url("assets/fonts/i-know-a-ghost.ttf") format("truetype");
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+}
+
 html{ overflow-x:clip; }
 
 body.dossier-ui{
+  --font-hand:"I Know A Ghost","Segoe Print","Bradley Hand",cursive;
   min-height:100vh;
   overflow-x:clip;
   background-color:#060605;
@@ -18,6 +27,20 @@ body.dossier-ui{
   background-position:center;
   background-attachment:fixed;
 }
+
+.dossier-ui input[type="text"],
+.dossier-ui input[type="number"],
+.dossier-ui input[type="search"],
+.dossier-ui input:not([type]),
+.dossier-ui select,
+.dossier-ui textarea{
+  font-family:var(--font-hand);
+  font-size:max(16px,1em);
+  font-weight:400;
+  letter-spacing:.015em;
+}
+
+.dossier-ui textarea{ line-height:1.55; }
 
 body.dossier-ui::before{
   display:block;
@@ -31,9 +54,9 @@ body.dossier-ui::before{
 
 .dossier-ui .sheet{
   width:100%;
-  max-width:1540px;
+  max-width:1680px;
   min-height:100vh;
-  padding:44px 190px 110px 168px;
+  padding:44px 38px 110px 168px;
   overflow:visible;
 }
 
@@ -41,7 +64,7 @@ body.dossier-ui::before{
 .dossier-ui .sheet-tabs{
   position:fixed;
   top:24px;
-  left:max(14px,calc(50vw - 760px));
+  left:max(14px,calc(50vw - 830px));
   z-index:25;
   display:block;
   width:138px;
@@ -55,10 +78,10 @@ body.dossier-ui::before{
 .dossier-brand{
   display:grid;
   justify-items:center;
-  gap:15px;
-  min-height:112px;
+  gap:8px;
+  min-height:124px;
   margin-bottom:9px;
-  padding:4px 8px 13px;
+  padding:2px 8px 10px;
   color:#806d52;
   text-align:center;
   text-transform:uppercase;
@@ -70,15 +93,12 @@ body.dossier-ui::before{
   white-space:nowrap;
 }
 
-.dossier-brand b{
-  display:grid;
-  place-items:center;
-  width:72px;
-  height:48px;
-  color:#a99a7f;
-  font:300 50px/1 var(--font-display);
-  text-shadow:-16px 2px 0 rgba(169,154,127,.42),16px -2px 0 rgba(169,154,127,.42);
-  transform:rotate(-8deg);
+.dossier-brand img{
+  display:block;
+  width:92px;
+  height:92px;
+  object-fit:contain;
+  filter:drop-shadow(0 5px 7px rgba(0,0,0,.72)) drop-shadow(0 0 8px rgba(153,51,20,.16));
 }
 
 .dossier-nav-list{ display:grid; gap:9px; }
@@ -395,8 +415,8 @@ body.dossier-ui::before{
   width:76px;
   border:0;
   color:#73352e;
-  font-size:14px;
-  font-weight:700;
+  font-size:16px;
+  font-weight:400;
 }
 
 #page-principal .name-input{
@@ -404,9 +424,9 @@ body.dossier-ui::before{
   padding:6px 2px 7px;
   border-bottom:1px solid rgba(54,39,27,.45);
   color:#120c08;
-  font-family:"Segoe Print","Bradley Hand",cursive;
+  font-family:var(--font-hand);
   font-size:30px;
-  font-weight:600;
+  font-weight:400;
   letter-spacing:1px;
 }
 
@@ -437,8 +457,8 @@ body.dossier-ui::before{
   border-bottom:1px solid rgba(58,42,29,.43);
   color:#0e0906;
   background:transparent;
-  font-family:"Segoe Print","Bradley Hand",var(--font-body),cursive;
-  font-size:13px;
+  font-family:var(--font-hand);
+  font-size:16px;
 }
 
 #page-principal .meta-field select option{ background:#b4a181; color:#241b14; }
@@ -613,9 +633,11 @@ body.dossier-ui::before{
   letter-spacing:1px;
 }
 
-#page-principal #wound-summary{ color:#17100a; font-size:11px; line-height:1.5; }
+#page-principal #wound-summary{ color:#17100a; font-family:var(--font-hand); font-size:16px; line-height:1.5; }
 #page-principal .wound-region-summary{ border-color:rgba(58,42,29,.23); }
 #page-principal .wound-summary-entry{ background:rgba(54,40,29,.05); }
+#page-principal .wound-summary-entry span{ font-size:16px; }
+#page-principal .wound-summary-entry small{ color:#3b2c20; font-size:15px; }
 
 /* Perícias: livro contábil escuro ----------------------------------------- */
 #page-principal [data-section="skills"]{
@@ -688,7 +710,7 @@ body.dossier-ui::before{
 #page-principal [data-section="characteristics"]{ margin-top:8px !important; }
 #page-principal .chars-grid{ gap:11px; }
 #page-principal .chars-col-title{ color:#21170f; border-color:rgba(55,41,29,.45); font-size:10px; font-weight:700; }
-#page-principal .list-input-row input{ color:#160f0a; border-color:rgba(54,39,28,.45); font-family:"Segoe Print","Bradley Hand",cursive; font-size:10px; }
+#page-principal .list-input-row input{ color:#160f0a; border-color:rgba(54,39,28,.45); font-family:var(--font-hand); font-size:15px; }
 #page-principal .list-num{ color:#33251a; }
 #page-principal .add-char-btn{ color:#34261b; border-color:rgba(49,34,22,.55); font-size:8px; font-weight:700; }
 #page-principal .character-status{ color:#302217; font-size:9px; line-height:1.45; }
@@ -742,86 +764,6 @@ body.dossier-ui::before{
 #page-principal .condition-reference,#page-principal .condition-guide,#page-principal .condition-card{ color:#302319; background:rgba(54,39,27,.05); border-color:rgba(55,40,28,.32); }
 #page-principal .condition-card-list{ grid-template-columns:1fr; }
 
-/* Notas na margem direita -------------------------------------------------- */
-.dossier-margin-notes{
-  position:absolute;
-  top:110px;
-  right:-168px;
-  display:grid;
-  gap:32px;
-  width:146px;
-}
-
-.margin-note{
-  position:relative;
-  min-height:146px;
-  padding:18px 14px 22px;
-  color:#30241b;
-  background:#aa956c url("assets/ui/textures/paper-aged.png") center/520px;
-  background-blend-mode:multiply;
-  border:1px solid rgba(65,46,30,.48);
-  clip-path:polygon(2% 1%,96% 0,100% 95%,93% 100%,3% 97%,0 8%);
-  box-shadow:0 11px 18px rgba(0,0,0,.48),inset 0 0 20px rgba(72,44,23,.18);
-  transform:rotate(3.2deg);
-}
-
-.margin-note:nth-child(2){ transform:rotate(-2.4deg); }
-.margin-note:nth-child(3){ transform:rotate(2deg); }
-
-.margin-note::before{
-  content:"";
-  position:absolute;
-  top:-13px;
-  right:16px;
-  width:13px;
-  height:38px;
-  border:2px solid #6d6456;
-  border-bottom-color:transparent;
-  border-radius:9px;
-  transform:rotate(8deg);
-  filter:drop-shadow(1px 2px 1px rgba(0,0,0,.35));
-}
-
-.margin-note span{
-  display:block;
-  padding-bottom:6px;
-  border-bottom:1px solid rgba(55,40,28,.42);
-  color:#4b3828;
-  font:500 9px var(--font-display);
-  letter-spacing:.7px;
-  text-transform:uppercase;
-}
-
-.margin-note p{
-  margin:12px 0 0;
-  font:400 11px/1.5 "Segoe Print","Bradley Hand",cursive;
-}
-
-.margin-note b{
-  position:absolute;
-  right:14px;
-  bottom:8px;
-  color:rgba(66,61,40,.72);
-  font:28px/1 serif;
-}
-
-.note-record{
-  min-height:196px;
-  background-color:#8f795a;
-}
-
-.note-record::after{
-  content:"";
-  position:absolute;
-  right:-15px;
-  bottom:-20px;
-  width:95px;
-  height:58px;
-  border-radius:52% 48% 40% 55%;
-  background:radial-gradient(ellipse,rgba(91,24,21,.45),rgba(74,16,15,.18) 43%,transparent 68%);
-  transform:rotate(-14deg);
-}
-
 /* Barra de ações e modais -------------------------------------------------- */
 .dossier-ui .toolbar{
   right:20px;
@@ -865,7 +807,6 @@ body.dossier-ui::before{
 /* Responsividade ---------------------------------------------------------- */
 @media (max-width:1320px){
   .dossier-ui .sheet{ padding-right:28px; padding-left:150px; }
-  .dossier-margin-notes{ display:none; }
 }
 
 @media (max-width:1100px){
@@ -882,7 +823,7 @@ body.dossier-ui::before{
     border-bottom:1px solid #302a22;
   }
   .dossier-brand,.dossier-classification{ display:none; }
-  .dossier-nav-list{ grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; }
+  .dossier-nav-list{ grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; }
   .dossier-ui .sheet-tab,.dossier-ui .sheet-anchor{
     justify-content:center;
     min-height:38px;
