@@ -476,18 +476,17 @@
     nav.className = 'sheet-tabs no-print';
     nav.setAttribute('aria-label','Navegação do dossiê');
     var dossierNavigation = [
-      {page:'principal',label:'Identificação',tab:true},
-      {page:'equipamentos',label:'Equipamento',tab:true},
-      {page:'historia',label:'História & Anotações',tab:true},
-      {page:'origem',label:'Origem & Corrupção',tab:true}
+      {page:'principal',label:'Player',icon:'✦',tab:true},
+      {page:'equipamentos',label:'Bolsa',icon:'▣',tab:true},
+      {page:'historia',label:'Social',icon:'♙',tab:true},
+      {page:'origem',label:'Corrupção',icon:'✣',tab:true}
     ];
-    nav.innerHTML = '<div class="dossier-brand"><span>Roots of the Abyss</span><img src="assets/ui/icone-rota.png" alt="Emblema de Roots of the Abyss"></div>'+
+    nav.innerHTML = '<div class="dossier-brand"><img src="assets/ui/icone-rota.png" alt=""><span>ROTA</span></div>'+
       '<div class="dossier-nav-list">'+dossierNavigation.map(function(item){
         var className = item.tab ? 'sheet-tab' : 'sheet-anchor';
         var section = item.section ? ' data-scroll-target="'+item.section.replace(/"/g,'&quot;')+'"' : '';
-        return '<button type="button" class="'+className+'" data-page-target="'+item.page+'"'+section+'>'+item.label+'</button>';
-      }).join('')+'</div>'+
-      '<div class="dossier-classification" aria-hidden="true"><span>Classificação do dossiê</span><small>Nível de sigilo</small><b>03</b><small>Risco de corrupção</small><i>II</i></div>';
+        return '<button type="button" class="'+className+'" data-page-target="'+item.page+'"'+section+'><span class="dashboard-nav-icon" aria-hidden="true">'+item.icon+'</span><span>'+item.label+'</span></button>';
+      }).join('')+'</div>';
     sheet.insertBefore(nav, sheet.firstChild);
 
     var pages = {};
@@ -624,9 +623,11 @@
   }
 
   function buildDossierLayout(page){
-    if($('.dossier-stage',page)) return;
+    if($('.rota-dashboard',page)) return;
     var header = $('[data-section="main-header"]',page);
     var core = $('[data-section="core-stats"]',page);
+    var attributes = core && $('[data-ui-section="attributes"]',core);
+    var resources = $('[data-ui-section="resources"]',page);
     var diagram = $('[data-section="body-map"]',page);
     var skills = $('[data-section="skills"]',page);
     var characteristics = $('[data-section="characteristics"]',page);
@@ -634,25 +635,301 @@
     var conditions = $('.condition-section',page);
 
     var stage = document.createElement('div');
-    stage.className = 'dossier-stage';
-    var identitySheet = document.createElement('div');
-    identitySheet.className = 'dossier-sheet dossier-identity';
-    var medicalSheet = document.createElement('div');
-    medicalSheet.className = 'dossier-sheet dossier-medical';
-    var lower = document.createElement('div');
-    lower.className = 'dossier-lower';
+    stage.className = 'dossier-stage rota-dashboard';
+
+    var brandRail = document.createElement('aside');
+    brandRail.className = 'rota-brand-rail';
+    brandRail.setAttribute('aria-label','Roots of the Abyss · ROTA');
+    brandRail.innerHTML = '<div class="rota-brand-copy"><span>Roots of the</span><strong>Abyss</strong><b>ROTA</b></div>'+
+      '<img src="assets/ui/icone-rota.png" alt="Emblema de Roots of the Abyss">'+
+      '<div class="rota-brand-motto"><span>Sobreviva</span><i></i><span>Recorde</span></div>';
+
+    var leftColumn = document.createElement('div');
+    leftColumn.className = 'rota-dashboard-column rota-dashboard-left';
+    var centerColumn = document.createElement('div');
+    centerColumn.className = 'rota-dashboard-column rota-dashboard-center';
+    var rightColumn = document.createElement('div');
+    rightColumn.className = 'rota-dashboard-column rota-dashboard-right';
 
     page.insertBefore(stage,page.firstChild);
-    stage.appendChild(identitySheet);
-    stage.appendChild(medicalSheet);
-    if(header) identitySheet.appendChild(header);
-    if(core) identitySheet.appendChild(core);
-    if(diagram) medicalSheet.appendChild(diagram);
-    if(skills) medicalSheet.appendChild(skills);
-    if(characteristics) medicalSheet.appendChild(characteristics);
-    if(dice) lower.appendChild(dice);
-    if(conditions) lower.appendChild(conditions);
-    page.appendChild(lower);
+    stage.appendChild(brandRail);
+    stage.appendChild(leftColumn);
+    stage.appendChild(centerColumn);
+    stage.appendChild(rightColumn);
+
+    if(header){
+      var identityPanel = document.createElement('section');
+      identityPanel.className = 'rota-identity-panel';
+      identityPanel.innerHTML = '<div class="rota-panel-heading rota-paper-heading"><span></span><strong>Identificação</strong><span></span></div>';
+      identityPanel.appendChild(header);
+      var growthTrack = document.createElement('button');
+      growthTrack.type = 'button';
+      growthTrack.className = 'rota-growth-track sheet-anchor';
+      growthTrack.dataset.pageTarget = 'origem';
+      growthTrack.dataset.scrollTarget = '[data-ui-section="growth"]';
+      growthTrack.innerHTML = '<span>Trilha de Crescimento</span><div>'+['I','II','III','IV','V','VI','VII','VIII','IX','X'].map(function(roman,index){
+        return '<i data-dashboard-growth="'+(index+1)+'">'+roman+'</i>';
+      }).join('')+'</div>';
+      identityPanel.appendChild(growthTrack);
+      leftColumn.appendChild(identityPanel);
+    }
+    if(characteristics) leftColumn.appendChild(characteristics);
+
+    var pfTrack = $('#pf-boxes') && $('#pf-boxes').closest('.track-block');
+    var peTrack = $('#pe-boxes') && $('#pe-boxes').closest('.track-block');
+    var pcTrack = $('#pc-bar') && $('#pc-bar').closest('.track-block');
+    var vitals = document.createElement('section');
+    vitals.className = 'section rota-vitals-panel';
+    vitals.setAttribute('data-ui-section','vitals-compact');
+    vitals.innerHTML = '<div class="rota-panel-heading"><span></span><strong>Estado Atual</strong><span></span></div><div class="section-body"><div class="resources-list rota-vitals-list"></div></div>';
+    var vitalsList = $('.rota-vitals-list',vitals);
+    function decorateVital(track,code,label,iconPath){
+      if(!track) return;
+      track.classList.add('vital-track','rota-vital-'+code.toLowerCase());
+      var title = $('.track-header > span:first-child',track);
+      if(title) title.innerHTML = '<b>'+code+'</b><img src="'+iconPath+'" alt=""><small>'+label+'</small>';
+      vitalsList.appendChild(track);
+    }
+    decorateVital(pfTrack,'PF','Pontos de Ferimento','assets/ui/icons/coracao-pf.png');
+    decorateVital(peTrack,'PE','Pontos de Estresse','assets/ui/icons/cerebro-pe.png');
+    centerColumn.appendChild(vitals);
+
+    var statePanel = document.createElement('section');
+    statePanel.className = 'section rota-state-panel';
+    statePanel.innerHTML = '<div class="rota-panel-heading"><span></span><strong>Ferimentos e Condições</strong><span></span></div>'+
+      '<div class="rota-state-content"><div id="dashboard-condition-list" class="dashboard-condition-list"></div>'+
+      '<button type="button" class="dashboard-pain-link sheet-anchor" data-page-target="historia" data-scroll-target="[data-section=&quot;pains&quot;]"><span>Dores</span><strong id="dashboard-pain-count">0 / 3</strong></button></div>';
+    centerColumn.appendChild(statePanel);
+
+    if(resources){
+      resources.classList.add('rota-needs-panel');
+      var resourcesTitle = $('.section-title',resources);
+      if(resourcesTitle) resourcesTitle.innerHTML = '<span></span><strong>Necessidades</strong><span></span>';
+      if(pcTrack) pcTrack.classList.add('rota-pc-track');
+      centerColumn.appendChild(resources);
+    }
+
+    if(attributes){
+      var attributeOrder = ['Físico','Destreza','Intelecto','Instinto','Espírito'];
+      var attributeList = $('.attrs-list',attributes);
+      attributeOrder.forEach(function(attribute){
+        var row = $$('.attr-row',attributes).filter(function(item){ return $('.attr-name',item).textContent.trim() === attribute; })[0];
+        if(!row) return;
+        row.dataset.attributeCard = attribute;
+        attributeList.appendChild(row);
+        var attributeLabel = $('.attr-name',row);
+        var attributePips = $('.pips',row);
+        var attributeReadout = $('.readout',row);
+        var glyphs = {Destreza:'✥',Instinto:'◉',Intelecto:'⌘','Espírito':'✧','Físico':'♥'};
+        var selectButton = document.createElement('button');
+        selectButton.type = 'button';
+        selectButton.className = 'attribute-select-button';
+        selectButton.dataset.selectSkillAttribute = attribute;
+        selectButton.setAttribute('aria-label','Mostrar perícias de '+attribute);
+        selectButton.appendChild(attributeLabel);
+        var glyph = document.createElement('span');
+        glyph.className = 'attribute-glyph';
+        glyph.setAttribute('aria-hidden','true');
+        glyph.textContent = glyphs[attribute] || '✥';
+        selectButton.appendChild(glyph);
+        row.insertBefore(selectButton,row.firstChild);
+
+        var stepper = document.createElement('div');
+        stepper.className = 'attribute-stepper';
+        stepper.setAttribute('role','group');
+        stepper.setAttribute('aria-label','Ajustar atributo '+attribute);
+        stepper.innerHTML = '<button type="button" class="attribute-step-button" data-attribute-name="'+attribute+'" data-attribute-delta="-1">−</button>'+
+          '<button type="button" class="attribute-step-button" data-attribute-name="'+attribute+'" data-attribute-delta="1">+</button>';
+        if(attributeReadout){
+          attributeReadout.setAttribute('role','status');
+          attributeReadout.setAttribute('aria-live','polite');
+          stepper.insertBefore(attributeReadout,stepper.lastElementChild);
+        }
+        row.appendChild(stepper);
+        if(attributePips){
+          attributePips.classList.add('attribute-model-pips');
+          attributePips.setAttribute('aria-hidden','true');
+          $$('.pip',attributePips).forEach(function(pip){ pip.tabIndex = -1; });
+        }
+      });
+      var attributeBudgetBar = $('.pp-bar',attributes);
+      if(attributeBudgetBar){ attributeBudgetBar.setAttribute('role','status'); attributeBudgetBar.setAttribute('aria-live','polite'); }
+      rightColumn.appendChild(attributes);
+    }
+    if(skills) rightColumn.appendChild(skills);
+    if(diagram) rightColumn.appendChild(diagram);
+    if(core) core.remove();
+
+    if(dice || conditions){
+      var utilityLaunchers = document.createElement('div');
+      utilityLaunchers.className = 'dossier-utility-launchers no-print';
+      utilityLaunchers.setAttribute('aria-label','Ferramentas rápidas da ficha');
+      utilityLaunchers.innerHTML = (dice ? '<button type="button" class="dossier-utility-button" data-open-dossier-utility="dice">Rolar dados</button>' : '')+
+        (conditions ? '<button type="button" class="dossier-utility-button" data-open-dossier-utility="conditions">Condições</button>' : '');
+      var persistentToolbar = $('.toolbar');
+      if(persistentToolbar){
+        Array.from(utilityLaunchers.children).reverse().forEach(function(button){persistentToolbar.insertBefore(button,persistentToolbar.firstChild);});
+      } else page.appendChild(utilityLaunchers);
+    }
+    if(dice) buildDossierUtilityModal(page,'dice','Rolagem de Testes',dice);
+    if(conditions) buildDossierUtilityModal(page,'conditions','Condições Ativas',conditions);
+    buildSomaticInspector(page,diagram);
+    renderDashboardOverview();
+  }
+
+  function renderDashboardOverview(){
+    if(!$('.rota-dashboard')) return;
+    var growthStage = clamp(model.growth && model.growth.stage,0,10);
+    $$('[data-dashboard-growth]').forEach(function(marker){
+      var stage = Number(marker.dataset.dashboardGrowth);
+      marker.classList.toggle('claimed',stage <= growthStage);
+      marker.classList.toggle('current',stage === growthStage);
+    });
+
+    $$('.attr-row[data-attribute-card]').forEach(function(row){
+      var attribute = row.dataset.attributeCard;
+      var value = Number(model.attributes[attribute]) || 0;
+      var readout = $('.readout',row);
+      if(readout) readout.textContent = String(value);
+      var minus = $('[data-attribute-delta="-1"]',row);
+      var plus = $('[data-attribute-delta="1"]',row);
+      var otherZero = Object.keys(model.attributes).some(function(name){ return name !== attribute && Number(model.attributes[name]) === 0; });
+      var proposed = clone(model.attributes);
+      proposed[attribute] = value + 1;
+      if(minus){
+        minus.disabled = value <= 0 || (value === 1 && otherZero);
+        minus.setAttribute('aria-label','Diminuir '+attribute+'. Valor atual '+value);
+      }
+      if(plus){
+        plus.disabled = value >= 5 || attributeBudget(proposed).remaining < 0;
+        plus.setAttribute('aria-label','Aumentar '+attribute+'. Valor atual '+value);
+      }
+    });
+
+    var painCount = model.pains.filter(function(pain){ return pain.checked; }).length;
+    var painReadout = $('#dashboard-pain-count');
+    if(painReadout) painReadout.textContent = painCount+' / '+model.pains.length;
+
+    var conditionList = $('#dashboard-condition-list');
+    if(conditionList){
+      var entries = model.conditions.map(function(name){ return {name:name,derived:false}; });
+      derivedWoundConditions().forEach(function(entry){ entries.push({name:entry.name,derived:true}); });
+      var seen = {};
+      entries = entries.filter(function(entry){
+        if(!entry.name || seen[entry.name]) return false;
+        seen[entry.name] = true;
+        return true;
+      });
+      if(!entries.length){
+        conditionList.innerHTML = '<button type="button" class="dashboard-condition-empty" data-open-dossier-utility="conditions"><span>Nenhuma condição ativa</span><small>Clique para registrar</small></button>';
+      } else {
+        conditionList.innerHTML = entries.slice(0,3).map(function(entry,index){
+          var definition = conditionDefinition(entry.name);
+          var category = definition ? definition.category : 'other';
+          return '<button type="button" class="dashboard-condition-chip condition-'+category+'" data-open-dossier-utility="conditions"><i>'+(entry.derived ? '◈' : '●')+'</i><span>'+escapeHtml(entry.name)+'</span><b>×</b></button>';
+        }).join('')+(entries.length > 3 ? '<button type="button" class="dashboard-condition-more" data-open-dossier-utility="conditions">+'+(entries.length-3)+'</button>' : '');
+      }
+    }
+  }
+
+  function buildDossierUtilityModal(page,key,title,section){
+    var overlay = document.createElement('div');
+    overlay.id = 'dossier-utility-'+key;
+    overlay.className = 'modal-overlay dossier-utility-overlay no-print';
+    overlay.style.display = 'none';
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-hidden','true');
+    overlay.setAttribute('aria-labelledby','dossier-utility-title-'+key);
+    overlay.innerHTML = '<div class="modal dossier-utility-dialog" tabindex="-1">'+
+      '<div class="dossier-utility-header"><div><span>FERRAMENTA DE CAMPO</span><strong id="dossier-utility-title-'+key+'">'+title+'</strong></div><button type="button" class="modal-close" data-close-dossier-utility aria-label="Fechar '+title+'">×</button></div>'+
+      '<div class="dossier-utility-content"><div class="dossier-lower"></div></div>'+
+    '</div>';
+    $('.dossier-lower',overlay).appendChild(section);
+    page.appendChild(overlay);
+  }
+
+  var lastDossierUtilityFocus = null;
+  function openDossierUtility(key){
+    var overlay = $('#dossier-utility-'+key);
+    if(!overlay) return;
+    $$('.dossier-utility-overlay').forEach(function(item){
+      item.style.display = 'none';
+      item.setAttribute('aria-hidden','true');
+    });
+    lastDossierUtilityFocus = document.activeElement;
+    overlay.style.display = 'flex';
+    overlay.setAttribute('aria-hidden','false');
+    document.body.classList.add('modal-open');
+    var dialog = $('.dossier-utility-dialog',overlay);
+    if(dialog) dialog.focus();
+  }
+
+  function closeDossierUtility(){
+    var openOverlay = $$('.dossier-utility-overlay').filter(function(item){return item.style.display !== 'none';})[0];
+    if(!openOverlay) return;
+    openOverlay.style.display = 'none';
+    openOverlay.setAttribute('aria-hidden','true');
+    document.body.classList.remove('modal-open');
+    if(lastDossierUtilityFocus && typeof lastDossierUtilityFocus.focus === 'function') lastDossierUtilityFocus.focus();
+    lastDossierUtilityFocus = null;
+  }
+
+  var lastSomaticFocus = null;
+  function buildSomaticInspector(page,diagram){
+    if(!page || !diagram || $('#somatic-inspector-modal')) return;
+    var detailBody = $('.section-body',diagram);
+    if(!detailBody) return;
+
+    var titleTag = $('.section-title .tag',diagram);
+    if(titleTag) titleTag.textContent = 'FIG. 01 — CLIQUE PARA INSPECIONAR';
+
+    var summary = document.createElement('div');
+    summary.className = 'somatic-summary-body';
+    summary.innerHTML = '<button type="button" class="somatic-summary-card" id="somatic-inspector-open" aria-haspopup="dialog" aria-controls="somatic-inspector-modal">'+
+      '<span class="somatic-miniature"><img id="somatic-thumbnail-image" src="assets/corpos/masculino.png" alt="Miniatura do corpo para mapeamento somático"></span>'+
+      '<span class="somatic-summary-status"><strong id="somatic-record-total">0 REGISTROS</strong><span class="somatic-severity-summary" id="somatic-severity-summary"><span class="somatic-empty-state">SEM FERIMENTOS REGISTRADOS</span></span></span>'+
+      '<span class="somatic-inspect-label">CLIQUE PARA INSPECIONAR</span>'+
+    '</button>';
+    diagram.appendChild(summary);
+
+    detailBody.classList.add('somatic-detail-body');
+    var overlay = document.createElement('div');
+    overlay.id = 'somatic-inspector-modal';
+    overlay.className = 'modal-overlay somatic-inspector-overlay no-print';
+    overlay.style.display = 'none';
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-hidden','true');
+    overlay.setAttribute('aria-labelledby','somatic-inspector-title');
+    overlay.innerHTML = '<div class="modal somatic-inspector-dialog" tabindex="-1">'+
+      '<div class="somatic-inspector-header"><div><span>FIG. 01 · PRONTUÁRIO CLÍNICO</span><strong id="somatic-inspector-title">Mapeamento Somático</strong></div><button type="button" class="modal-close" data-close-somatic-modal aria-label="Fechar mapeamento somático">×</button></div>'+
+      '<div class="somatic-inspector-content"></div>'+
+    '</div>';
+    $('.somatic-inspector-content',overlay).appendChild(detailBody);
+    page.appendChild(overlay);
+  }
+
+  function openSomaticInspector(){
+    var overlay = $('#somatic-inspector-modal');
+    if(!overlay) return;
+    lastSomaticFocus = document.activeElement;
+    overlay.style.display = 'flex';
+    overlay.setAttribute('aria-hidden','false');
+    document.body.classList.add('modal-open');
+    var dialog = $('.somatic-inspector-dialog',overlay);
+    if(dialog) dialog.focus();
+  }
+
+  function closeSomaticInspector(){
+    var overlay = $('#somatic-inspector-modal');
+    if(!overlay) return;
+    if($('#wound-modal') && $('#wound-modal').style.display !== 'none') closeWoundModal();
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden','true');
+    document.body.classList.remove('modal-open');
+    if(lastSomaticFocus && typeof lastSomaticFocus.focus === 'function') lastSomaticFocus.focus();
+    lastSomaticFocus = null;
   }
 
   function buildAutomationModal(){
@@ -859,6 +1136,11 @@
     if(!svg || !layer || !image) return;
     svg.dataset.gender = gender;
     image.setAttribute('href',body.image);
+    var thumbnail = $('#somatic-thumbnail-image');
+    if(thumbnail){
+      thumbnail.src = body.image;
+      thumbnail.alt = 'Miniatura do corpo '+body.label.toLowerCase()+' para mapeamento somático';
+    }
     $('#body-map-title').textContent = 'Mapeamento somático do corpo ' + body.label.toLowerCase();
     $('#body-map-caption').textContent = 'Vista Frontal — Corpo ' + body.label;
     layer.innerHTML = BODY_ZONE_LABELS.map(function(zone){
@@ -873,7 +1155,8 @@
     var existingTabs = $('.skill-attribute-tabs',grid.parentNode);
     if(existingTabs) existingTabs.remove();
     grid.innerHTML = '';
-    var attributes = Object.keys(DATA.skills);
+    var canonicalAttributeOrder = ['Físico','Destreza','Intelecto','Instinto','Espírito'];
+    var attributes = canonicalAttributeOrder.filter(function(attribute){ return !!DATA.skills[attribute]; });
     var tabs = document.createElement('div');
     tabs.className = 'skill-attribute-tabs';
     tabs.setAttribute('role','tablist');
@@ -897,7 +1180,7 @@
         row.className = 'skill-row';
         row.dataset.skill = skill;
         row.dataset.attribute = attribute;
-        row.innerHTML = '<span class="skill-name">'+skill+'</span><div class="pips skill-pips" id="sk-'+skillIndex+'" data-skill-name="'+skill+'" data-attribute="'+attribute+'" data-max="4">'+pipButtons(5)+'</div>';
+        row.innerHTML = '<span class="skill-name">'+skill+'</span><div class="pips skill-pips" id="sk-'+skillIndex+'" data-skill-name="'+skill+'" data-attribute="'+attribute+'" data-max="4" role="group" aria-label="Nível de '+skill+'">'+pipButtons(5)+'</div>';
         column.appendChild(row);
       });
       grid.appendChild(column);
@@ -921,6 +1204,12 @@
       var active = panel.dataset.skillAttributePanel === attribute;
       panel.classList.toggle('active',active);
       panel.setAttribute('aria-hidden',active ? 'false' : 'true');
+    });
+    $$('.attr-row[data-attribute-card]').forEach(function(row){
+      var active = row.dataset.attributeCard === attribute;
+      row.classList.toggle('skill-source-active',active);
+      var selector = $('.attribute-select-button',row);
+      if(selector) selector.setAttribute('aria-pressed',active ? 'true' : 'false');
     });
   }
 
@@ -950,7 +1239,8 @@
     var stages = options.stages || [];
     $$('.pip', group).forEach(function(pip){
       var index = parseInt(pip.dataset.i,10);
-      var stageClass = stages.length ? (index <= stages[0] ? 'stage-ok' : (index <= stages[1] ? 'stage-warn' : 'stage-crit')) : '';
+      var stageIndex = stages.length ? (index <= stages[0] ? 0 : (index <= stages[1] ? 1 : 2)) : -1;
+      var stageClass = stageIndex === 0 ? 'stage-ok' : (stageIndex === 1 ? 'stage-warn' : (stageIndex === 2 ? 'stage-crit' : ''));
       pip.classList.toggle('filled', index <= value);
       pip.classList.toggle('permanent', !!options.permanentFrom && index >= options.permanentFrom && index <= options.permanentTo);
       pip.classList.toggle('overflow', !!options.safeMax && index > options.safeMax);
@@ -959,9 +1249,15 @@
       pip.classList.toggle('stage-crit', stageClass === 'stage-crit');
       pip.classList.toggle('overflow-start', !!options.separateOverflow && index === options.safeMax + 1);
       pip.classList.toggle('death-direct', !!options.separateOverflow && index === options.safeMax + 6);
+      pip.classList.toggle('breaking-point', !!options.breakingAt && index === options.breakingAt);
       if(options.separateOverflow && index > options.safeMax){
         var overflowValue = index - options.safeMax;
         pip.title = overflowValue <= 5 ? 'Morrendo +' + overflowValue : 'Morte Direta +' + overflowValue;
+        pip.setAttribute('aria-label',pip.title);
+      } else if(stageIndex >= 0 && options.stageLabels){
+        var stageLabel = options.stageLabels[stageIndex] || '';
+        if(options.breakingAt === index && options.breakingLabel) stageLabel = options.breakingLabel;
+        pip.title = (options.resourceLabel ? options.resourceLabel + ' ' : '') + index + (stageLabel ? ' — ' + stageLabel : '');
         pip.setAttribute('aria-label',pip.title);
       }
     });
@@ -1023,6 +1319,7 @@
     renderSkills();
     renderInventory();
     renderRecipes();
+    renderDashboardOverview();
   }
 
   function skillAttribute(skill){
@@ -1067,6 +1364,16 @@
       row.classList.toggle('locked', locked);
       row.title = locked ? (origin ? 'Perícia de Origem bloqueada: concede +3 PP.' : 'Bloqueada pela Fraqueza Absoluta.') : '';
       renderPips(group,value,origin ? 5 : 4);
+      group.setAttribute('aria-label',skill+': nível '+value+(origin && !locked ? ', concedido pela Origem' : ''));
+      $$('.pip',group).forEach(function(pip){
+        var rank = parseInt(pip.dataset.i,10);
+        var reserved = !origin && rank === 5;
+        pip.disabled = locked || origin || reserved;
+        pip.classList.toggle('rank-reserved',reserved);
+        pip.setAttribute('aria-pressed',rank <= value ? 'true' : 'false');
+        pip.setAttribute('aria-label',reserved ? 'Quinto grau reservado para Perícia de Origem' : (origin ? skill+', grau '+rank+', concedido pela Origem' : 'Definir '+skill+' como nível '+rank));
+        pip.title = reserved ? '5º grau reservado para Perícia de Origem' : (origin ? 'Perícia de Origem · grau '+rank : 'Definir nível '+rank);
+      });
     });
     var budget = skillBudget();
     $('#pp-bonus').textContent = budget.bonus + (budget.blockedBonus ? ' + ' + budget.blockedBonus : '') + (budget.growthBonus ? ' + ' + budget.growthBonus + ' Cresc.' : '');
@@ -1248,8 +1555,8 @@
     buildTrackPips(peGroup, limits.pe);
     var permanentPfFrom = model.health.permanentPf ? limits.pf - model.health.permanentPf + 1 : 0;
     var permanentPeFrom = model.health.permanentPe ? limits.pe - model.health.permanentPe + 1 : 0;
-    renderPips(pfGroup,pfTotal,limits.pf+6,{ safeMax:limits.pf, stages:limits.pfSegments, separateOverflow:true, permanentFrom:permanentPfFrom, permanentTo:limits.pf });
-    renderPips(peGroup,peTotal,limits.pe,{ safeMax:limits.pe, stages:limits.peSegments, permanentFrom:permanentPeFrom, permanentTo:limits.pe });
+    renderPips(pfGroup,pfTotal,limits.pf+6,{ safeMax:limits.pf, stages:limits.pfSegments, stageLabels:['Machucado','Ferido','Crítico'], resourceLabel:'PF', separateOverflow:true, permanentFrom:permanentPfFrom, permanentTo:limits.pf });
+    renderPips(peGroup,peTotal,limits.pe,{ safeMax:limits.pe, stages:limits.peSegments, stageLabels:['Estável','Instável','Desequilibrado'], resourceLabel:'PE', breakingAt:limits.pe, breakingLabel:'Enlouquecendo', permanentFrom:permanentPeFrom, permanentTo:limits.pe });
     $('#pf-max-label').textContent = '/' + limits.pf + ' (+' + Math.max(0,pfTotal-limits.pf) + ')';
     $('#pe-max-label').textContent = '/' + limits.pe;
     $('#pf-readout').childNodes[0].nodeValue = String(pfTotal).padStart(2,'0');
@@ -1286,6 +1593,7 @@
     }
     renderDyingToolStatus();
     renderStressToolStatus();
+    renderDashboardOverview();
   }
 
   function characterTest(attribute, skill, bonus){
@@ -1447,7 +1755,7 @@
   function renderNeeds(){
     var grid = $('#needs-grid');
     if(!grid) return;
-    grid.innerHTML = ['hunger','sleep','thirst'].map(function(key){
+    grid.innerHTML = ['hunger','thirst','sleep'].map(function(key){
       var rule = NEED_RULES[key];
       var delayed = DATA.archetypes[model.fields['origem-select']] === 'Terra Viva' && hasGrowthStage(10);
       var max = rule.max + (delayed ? 2 : 0);
@@ -1476,6 +1784,7 @@
       warning.textContent = ignored === 1 ? 'Uma necessidade pendente deve ser obrigatoriamente saciada no próximo Ciclo.' : 'Corpo estável: as três necessidades estão atendidas.';
       warning.className = 'needs-cycle-alert';
     }
+    renderDashboardOverview();
   }
 
   function renderTrackZones(type, segments, max){
@@ -2526,6 +2835,7 @@
     }).join('');
     var checked = model.pains.filter(function(pain){ return pain.checked; }).length;
     $('#dores-list').closest('.section').classList.toggle('pain-exhausted',checked >= 3);
+    renderDashboardOverview();
   }
 
   function conditionCategory(categoryId){
@@ -2612,6 +2922,7 @@
   }
   function renderConditions(){
     renderConditionPicker();
+    renderDashboardOverview();
     var list = $('#condition-list');
     if(!list) return;
     var grouped = {};
@@ -2687,6 +2998,36 @@
       }
     });
     $('#wound-summary').innerHTML = lines.length ? lines.join('') : 'Nenhum ferimento registrado.';
+    renderSomaticSummary();
+    renderDashboardOverview();
+  }
+
+  function renderSomaticSummary(){
+    var totalElement = $('#somatic-record-total');
+    var severityElement = $('#somatic-severity-summary');
+    var openButton = $('#somatic-inspector-open');
+    if(!totalElement || !severityElement) return;
+    var entries = [];
+    Object.keys(model.wounds || {}).forEach(function(zoneId){
+      if(Array.isArray(model.wounds[zoneId])) entries = entries.concat(model.wounds[zoneId]);
+    });
+    var counts = {1:0,2:0,3:0};
+    entries.forEach(function(detail){
+      var severity = Number(detail.severity) || 0;
+      if(counts[severity] != null) counts[severity] += 1;
+    });
+    totalElement.textContent = entries.length+' REGISTRO'+(entries.length === 1 ? '' : 'S');
+    var labels = {
+      3:{className:'severe',single:'Grave',plural:'Graves'},
+      2:{className:'medium',single:'Moderado',plural:'Moderados'},
+      1:{className:'light',single:'Leve',plural:'Leves'}
+    };
+    var rows = [3,2,1].filter(function(severity){ return counts[severity] > 0; }).map(function(severity){
+      var label = counts[severity] === 1 ? labels[severity].single : labels[severity].plural;
+      return '<span class="somatic-severity-row '+labels[severity].className+'"><i aria-hidden="true"></i><b>'+counts[severity]+'</b> '+label+'</span>';
+    });
+    severityElement.innerHTML = rows.length ? rows.join('') : '<span class="somatic-empty-state">SEM FERIMENTOS REGISTRADOS</span>';
+    if(openButton) openButton.setAttribute('aria-label','Inspecionar mapeamento somático. '+entries.length+' registro'+(entries.length === 1 ? '' : 's')+'.');
   }
 
   function woundRegion(zoneId){
@@ -3147,14 +3488,13 @@
     setModifier('roll-bonus',0);
     setModifier('roll-penalty',0);
     setModifier('roll-plague',0);
+    renderDashboardOverview();
     activatePage(model.ui.activePage || 'principal');
   }
 
-  function handleAttributeClick(group, index){
-    var name = Object.keys(model.attributes).filter(function(attribute){ return attributeId(attribute) === group.id; })[0];
-    if(!name) return;
+  function applyAttributeValue(name,target){
+    if(!Object.prototype.hasOwnProperty.call(model.attributes,name)) return;
     var current = model.attributes[name];
-    var target = current === index ? index-1 : index;
     target = clamp(target,0,5);
     if(target === 0 && Object.keys(model.attributes).some(function(other){ return other !== name && model.attributes[other] === 0; })){
       alert('Só é possível ter uma Fraqueza Absoluta por vez.'); return;
@@ -3166,6 +3506,18 @@
       DATA.skills[name].forEach(function(skill){ if(model.originSkills.indexOf(skill) < 0) model.skills[skill] = 1; });
     }
     renderAttributes(); renderHealth(); renderOrigin(); renderEquipment(); saveModel();
+  }
+
+  function handleAttributeClick(group, index){
+    var name = Object.keys(model.attributes).filter(function(attribute){ return attributeId(attribute) === group.id; })[0];
+    if(!name) return;
+    var current = model.attributes[name];
+    applyAttributeValue(name,current === index ? index-1 : index);
+  }
+
+  function handleAttributeStep(name,delta){
+    if(!Object.prototype.hasOwnProperty.call(model.attributes,name)) return;
+    applyAttributeValue(name,(Number(model.attributes[name]) || 0) + delta);
   }
 
   function handleSkillClick(group,index){
@@ -3365,6 +3717,13 @@
       if(portraitInput) portraitInput.click();
       return;
     }
+    if(event.target.closest('#somatic-inspector-open')){openSomaticInspector();return;}
+    if(event.target.closest('[data-close-somatic-modal]')){closeSomaticInspector();return;}
+    if(event.target.id === 'somatic-inspector-modal'){closeSomaticInspector();return;}
+    var utilityTrigger = event.target.closest('[data-open-dossier-utility]');
+    if(utilityTrigger){openDossierUtility(utilityTrigger.dataset.openDossierUtility);return;}
+    if(event.target.closest('[data-close-dossier-utility]')){closeDossierUtility();return;}
+    if(event.target.classList.contains('dossier-utility-overlay')){closeDossierUtility();return;}
     var tab = event.target.closest('.sheet-tab');
     if(tab){
       activatePage(tab.dataset.pageTarget);
@@ -3391,6 +3750,10 @@
     if(event.target.closest('#open-stress-panel')){openStressPanel();return;}
     if(event.target.closest('#open-item-catalog')){openItemCatalog();return;}
     if(event.target.closest('#paradigm-info-button')){openParadigmMatrix();return;}
+    var attributeStep = event.target.closest('[data-attribute-delta]');
+    if(attributeStep){handleAttributeStep(attributeStep.dataset.attributeName,parseInt(attributeStep.dataset.attributeDelta,10)||0);return;}
+    var attributeSkillShortcut = event.target.closest('[data-select-skill-attribute]');
+    if(attributeSkillShortcut){selectSkillAttribute(attributeSkillShortcut.dataset.selectSkillAttribute);return;}
     var skillAttributeTab = event.target.closest('.skill-attribute-tab');
     if(skillAttributeTab){selectSkillAttribute(skillAttributeTab.dataset.skillAttribute);return;}
     if(event.target.closest('#dying-tolerance-roll')){var toleranceRoll=characterTest('Físico','Tolerância',0);resolveDyingTolerance(toleranceRoll.successes>=3,toleranceRoll);return;}
@@ -3653,6 +4016,9 @@
       skillTabs[nextSkillTab].focus();
       return;
     }
+    if(event.key === 'Escape' && $('#wound-modal') && $('#wound-modal').style.display !== 'none'){event.preventDefault();closeWoundModal();return;}
+    if(event.key === 'Escape' && $('#somatic-inspector-modal') && $('#somatic-inspector-modal').style.display !== 'none'){event.preventDefault();closeSomaticInspector();return;}
+    if(event.key === 'Escape' && $$('.dossier-utility-overlay').some(function(item){return item.style.display !== 'none';})){event.preventDefault();closeDossierUtility();return;}
     if(event.key === 'Escape' && $('#rule-action-modal') && $('#rule-action-modal').style.display !== 'none'){event.preventDefault();closeRuleModal();return;}
     var zone = event.target.closest && event.target.closest('.zone');
     if(zone && (event.key === 'Enter' || event.key === ' ')){
