@@ -10,7 +10,7 @@
 <link rel="preload" as="image" href="assets/corpos/feminino.png">
 <link rel="stylesheet" href="style.css?v=16">
 <link rel="stylesheet" href="new-ui.css?v=24">
-<link rel="stylesheet" href="dashboard-ui.css?v=6">
+  <link rel="stylesheet" href="dashboard-ui.css?v=37">
 </head>
 <body class="dossier-ui rota-dashboard-ui">
 
@@ -210,23 +210,23 @@
             <div class="track-header">
               <span>Pontos de Corrupção (PC)</span>
               <div class="pc-controls">
+                <span class="readout pc-readout" aria-live="polite"><b id="pc-readout-current">00</b><span class="track-max">/100</span></span>
                 <button type="button" class="pc-control-btn pc-remove-btn" data-action="subtract" title="Diminuir Corrupção" aria-label="Diminuir Corrupção">−</button>
-                <input type="number" id="pc-input" min="0" max="100" value="0" readonly aria-label="Corrupção atual">
                 <input type="number" id="pc-gain-input" min="1" max="100" value="1" aria-label="Quantidade de ajuste da Corrupção">
                 <button type="button" class="pc-control-btn" data-action="add" title="Adicionar Corrupção" aria-label="Adicionar Corrupção">+</button>
               </div>
             </div>
-            <div class="pc-bar" id="pc-bar">
-              <div class="pc-seg" style="flex:19; background:var(--green)"></div>
-              <div class="pc-seg" style="flex:20; background:#5c6b3a"></div>
-              <div class="pc-seg" style="flex:20; background:#7a6a2a"></div>
-              <div class="pc-seg" style="flex:20; background:#8a4a24"></div>
-              <div class="pc-seg" style="flex:20; background:#8a2f24"></div>
-              <div class="pc-seg" style="flex:1; background:var(--red-bright)"></div>
+            <div class="pc-bar" id="pc-bar" role="progressbar" aria-label="Pontos de Corrupção" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="pc-seg pc-seg-imaculada" style="flex:19"></div>
+              <div class="pc-seg pc-seg-incipiente" style="flex:20"></div>
+              <div class="pc-seg pc-seg-alarmante" style="flex:20"></div>
+              <div class="pc-seg pc-seg-severa" style="flex:20"></div>
+              <div class="pc-seg pc-seg-critica" style="flex:20"></div>
+              <div class="pc-seg pc-seg-corrompido" style="flex:1"></div>
               <div class="pc-marker" id="pc-marker"></div>
             </div>
             <div class="pc-labels">
-              <span>Imaculada</span><span>Incipiente</span><span>Alarmante</span><span>Severa</span><span>Crítica</span><span>100</span>
+              <span>Imaculada</span><span>Incipiente</span><span>Alarmante</span><span>Severa</span><span>Crítica</span><span title="Corrompido">100</span>
             </div>
             <div class="pc-stage" id="pc-stage">Estágio atual: Imaculada</div>
           </div>
@@ -420,7 +420,7 @@
 <script src="rules-data.js?v=16"></script>
 <script src="weapon-details.js?v=14"></script>
 <script src="automation-engine.js?v=16"></script>
-<script src="script.js?v=30"></script>
+<script src="script.js?v=41"></script>
 
 </body>
 </html>

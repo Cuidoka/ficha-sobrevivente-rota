@@ -166,6 +166,7 @@ body.rota-dashboard-ui #page-principal.active{ display:block; }
 body.rota-dashboard-ui .rota-dashboard{
   display:grid;
   grid-template-columns:140px minmax(330px,.95fr) minmax(330px,.9fr) minmax(430px,1.28fr);
+  grid-template-rows:minmax(0,1fr);
   gap:7px;
   width:100%;
   height:100%;
@@ -176,8 +177,18 @@ body.rota-dashboard-ui .rota-dashboard{
   display:flex;
   min-width:0;
   min-height:0;
+  height:100%;
   flex-direction:column;
   gap:7px;
+  overflow:hidden;
+}
+
+@media (min-width:1121px){
+  .rota-dashboard-right{
+    display:grid;
+    grid-template-rows:minmax(0,27fr) minmax(0,51fr) minmax(0,22fr);
+  }
+  .rota-dashboard-right > *{ min-height:0; }
 }
 
 .rota-dashboard .section,
@@ -218,7 +229,7 @@ body.rota-dashboard-ui .rota-dashboard{
   border:0;
   color:#c8ab79;
   background:linear-gradient(90deg,transparent,rgba(83,44,20,.13),transparent);
-  font:500 13px var(--font-display);
+  font:500 clamp(15px,1.05vw,17px) var(--font-display);
   letter-spacing:1.1px;
   text-transform:uppercase;
 }
@@ -282,23 +293,30 @@ body.rota-dashboard-ui .rota-dashboard{
 
 body.rota-dashboard-ui .toolbar{
   right:auto;
-  bottom:18px;
+  bottom:14px;
   left:18px;
   z-index:40;
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:minmax(0,1fr);
   width:124px;
-  gap:3px;
-  padding:4px;
+  gap:4px;
+  padding:5px;
   border-color:rgba(120,78,37,.45);
   background:rgba(6,6,4,.92);
 }
-body.rota-dashboard-ui .toolbar button{ min-width:0; min-height:25px; padding:3px 2px; font-size:6.5px; letter-spacing:.15px; }
+body.rota-dashboard-ui .toolbar button{
+  min-width:0;
+  min-height:38px;
+  padding:6px 5px;
+  font-size:clamp(9px,.62vw,10.5px);
+  line-height:1.15;
+  letter-spacing:.45px;
+}
 
 /* Identificação ---------------------------------------------------------- */
 .rota-identity-panel{
   position:relative;
-  flex:1 1 61%;
+  flex:1 1 62%;
   min-height:0;
   padding:5px 8px 7px;
   overflow:hidden;
@@ -313,14 +331,15 @@ body.rota-dashboard-ui .toolbar button{ min-width:0; min-height:25px; padding:3p
   box-shadow:0 5px 13px rgba(0,0,0,.5),inset 0 0 28px rgba(50,29,15,.15);
 }
 
-.rota-paper-heading{ color:#2f2015; background:none; font-size:15px; }
+.rota-paper-heading{ color:#2f2015; background:none; font-size:clamp(19px,1.25vw,22px); }
 .rota-paper-heading > span{ background:linear-gradient(90deg,transparent,rgba(48,31,18,.65)); }
 .rota-paper-heading > span:last-child{ background:linear-gradient(90deg,rgba(48,31,18,.65),transparent); }
 
 body.rota-dashboard-ui #page-principal .doc-header{
   display:grid;
-  grid-template-columns:112px minmax(0,1fr);
-  gap:9px;
+  grid-template-columns:124px minmax(0,1fr);
+  align-items:center;
+  gap:11px;
   min-height:0;
   padding:4px 2px 0;
   border:0;
@@ -332,9 +351,10 @@ body.rota-dashboard-ui #page-principal .doc-header::before,
 body.rota-dashboard-ui #page-principal .doc-header::after{ display:none; }
 
 body.rota-dashboard-ui #page-principal .portrait-shell{
-  width:112px;
-  height:162px;
-  margin:0;
+  width:124px;
+  height:208px;
+  align-self:start;
+  margin:42px 0 0;
   padding:6px;
   border:1px solid rgba(42,28,18,.75);
   background:rgba(36,24,16,.07);
@@ -343,39 +363,41 @@ body.rota-dashboard-ui #page-principal .portrait-shell{
 body.rota-dashboard-ui #page-principal .portrait-shell::before{ display:none; }
 body.rota-dashboard-ui #page-principal .portrait-shell::after{ display:none; }
 body.rota-dashboard-ui #page-principal .portrait-frame{ min-height:100%; border-color:#3e2a1b; }
-body.rota-dashboard-ui #page-principal .portrait-change-hint{ font-size:6px; }
+body.rota-dashboard-ui #page-principal .portrait-change-hint{ font-size:8px; }
 
 body.rota-dashboard-ui #page-principal .title-block{ min-width:0; padding:0; }
 body.rota-dashboard-ui #page-principal .eyebrow{ margin:0 0 3px; color:#39291b; }
 body.rota-dashboard-ui #page-principal .eyebrow > span:first-child{ display:none; }
-body.rota-dashboard-ui #page-principal .eyebrow .reg{ margin-left:auto; font-size:7px; }
-body.rota-dashboard-ui #page-principal .eyebrow input{ width:78px; color:#6f281e; font-size:12px; }
+body.rota-dashboard-ui #page-principal .eyebrow .reg{ margin-left:auto; font-size:10px; }
+body.rota-dashboard-ui #page-principal .eyebrow input{ width:96px; color:#6f281e; font-size:clamp(14px,1vw,17px); }
 body.rota-dashboard-ui #page-principal .name-input{
-  min-height:28px;
+  min-height:40px;
   margin:0 0 3px;
   padding:1px 2px;
   color:#150d08;
   border-color:rgba(46,29,18,.45);
-  font-size:clamp(18px,1.65vw,27px) !important;
+  font-size:clamp(25px,2.05vw,36px) !important;
   line-height:1;
 }
 
 body.rota-dashboard-ui #page-principal .meta-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:2px 7px;
+  gap:2px 9px;
 }
-body.rota-dashboard-ui #page-principal .meta-field{ min-width:0; min-height:29px; padding:1px 0; border-bottom:1px solid rgba(47,31,19,.32); }
-body.rota-dashboard-ui #page-principal .meta-field label{ color:#2b1b11; font-size:7px; font-weight:700; letter-spacing:.45px; }
+body.rota-dashboard-ui #page-principal .meta-field{ min-width:0; min-height:33px; padding:1px 0; border-bottom:1px solid rgba(47,31,19,.32); }
+body.rota-dashboard-ui #page-principal .meta-field label{ color:#2b1b11; font-size:clamp(9px,.68vw,11px); font-weight:700; letter-spacing:.45px; }
 body.rota-dashboard-ui #page-principal .meta-field input,
 body.rota-dashboard-ui #page-principal .meta-field select{
-  min-height:19px;
+  height:clamp(21px,1.35vw,24px);
+  min-height:21px;
   padding:0 1px;
   color:#17100a !important;
   border:0;
   background:transparent;
-  font-size:12px !important;
+  font-size:clamp(15px,1vw,17px) !important;
   font-weight:400;
+  line-height:1 !important;
 }
 body.rota-dashboard-ui #page-principal .meta-field select option{ color:#1d130c; background:#b8a481; }
 body.rota-dashboard-ui #page-principal .origin-hint,
@@ -396,58 +418,120 @@ body.rota-dashboard-ui #page-principal .paradigm-summary{ display:none; }
   box-shadow:none !important;
   text-align:center !important;
 }
-.rota-growth-track > span{ display:block; margin-bottom:4px; font:8px var(--font-display); letter-spacing:.8px; text-transform:uppercase; }
-.rota-growth-track > div{ display:flex; align-items:center; justify-content:center; gap:4px; }
+.rota-growth-track > span{ display:block; margin-bottom:5px; font:clamp(10px,.7vw,12px) var(--font-display); letter-spacing:.8px; text-transform:uppercase; }
+.rota-growth-track > div{ display:flex; align-items:center; justify-content:center; gap:5px; }
 .rota-growth-track i{
   display:grid;
   place-items:center;
-  width:23px;
-  height:23px;
+  width:27px;
+  height:27px;
   border:1px solid rgba(45,28,17,.55);
   border-radius:50%;
   color:#493526;
-  font:normal 8px var(--font-display);
+  font:normal 10px var(--font-display);
 }
 .rota-growth-track i.claimed{ color:#f0d59c; border-color:#783322; background:#63231a; }
 .rota-growth-track i.current{ box-shadow:0 0 0 2px rgba(138,52,29,.2),0 0 9px rgba(136,38,21,.25); }
 
+/* No painel fixo, o conteúdo do papel usa toda a altura disponível. */
+@media (min-width:1121px){
+  .rota-identity-panel{
+    display:grid;
+    grid-template-rows:32px minmax(0,1fr) 58px;
+  }
+  body.rota-dashboard-ui #page-principal .doc-header{ height:100%; padding:5px 2px 4px; }
+  body.rota-dashboard-ui #page-principal .title-block{
+    display:grid;
+    grid-template-rows:auto auto minmax(0,1fr);
+    align-self:stretch;
+    height:auto;
+  }
+  body.rota-dashboard-ui #page-principal .meta-grid{
+    min-height:0;
+    align-content:space-between;
+  }
+  .rota-growth-track{
+    box-sizing:border-box;
+    align-self:end;
+    height:58px;
+    min-height:58px !important;
+    margin-top:0 !important;
+    padding:5px 2px !important;
+  }
+}
+
 /* Características -------------------------------------------------------- */
 body.rota-dashboard-ui #page-principal [data-section="characteristics"]{
-  flex:1 1 39%;
+  flex:1 1 38%;
   min-height:0;
   overflow:hidden;
 }
 body.rota-dashboard-ui #page-principal [data-section="characteristics"] .section-body{ padding:5px 9px 8px; overflow:hidden; }
 body.rota-dashboard-ui #page-principal .character-status{ display:none; }
-body.rota-dashboard-ui #page-principal .chars-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; min-width:0; }
-body.rota-dashboard-ui #page-principal .chars-grid > div{ min-width:0; padding-right:5px; border-right:1px solid rgba(151,98,49,.25); }
+body.rota-dashboard-ui #page-principal .chars-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; min-width:0; }
+body.rota-dashboard-ui #page-principal .chars-grid > div{ min-width:0; padding:0 7px; border-right:1px solid rgba(151,98,49,.25); }
 body.rota-dashboard-ui #page-principal .chars-grid > div:last-child{ border-right:0; }
-body.rota-dashboard-ui #page-principal .chars-col-title{ margin:0 0 4px; padding:2px 0 4px; border-color:rgba(143,91,42,.3); font-size:9px; }
+body.rota-dashboard-ui #page-principal .chars-col-title{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:27px;
+  margin:0 0 7px;
+  padding:3px 2px 5px;
+  border-color:rgba(143,91,42,.4);
+  background:linear-gradient(90deg,transparent,rgba(126,81,36,.08),transparent);
+  font-size:clamp(11.5px,.78vw,13px);
+  line-height:1;
+  text-align:center;
+}
 body.rota-dashboard-ui #page-principal .chars-col-title.vant{ color:#8fa83d; }
 body.rota-dashboard-ui #page-principal .chars-col-title.desv{ color:#c54a38; }
 body.rota-dashboard-ui #page-principal .chars-col-title.cicat{ color:#d78b20; }
 body.rota-dashboard-ui #page-principal .list-input-row{ min-width:0; margin-bottom:2px; }
 body.rota-dashboard-ui #page-principal .list-row-actions{ min-width:0; }
-body.rota-dashboard-ui #page-principal .list-num{ color:#765b3e; font-size:7px; }
+body.rota-dashboard-ui #page-principal .list-num{ color:#765b3e; font-size:9px; }
 body.rota-dashboard-ui #page-principal .list-input-row input{
   width:100%;
   min-width:0;
-  min-height:20px;
+  min-height:28px;
   padding:0 2px;
   border-color:transparent;
   color:#c6b58f;
   background:transparent;
-  font-size:11px !important;
+  font-size:clamp(13px,.9vw,15px) !important;
 }
-body.rota-dashboard-ui #page-principal .list-row-remove{ opacity:.25; }
-body.rota-dashboard-ui #page-principal .add-char-btn{ width:100%; min-height:18px; margin-top:2px; padding:2px; color:#826c50; border-color:rgba(115,76,38,.24); background:transparent; font-size:6px; white-space:normal; }
+body.rota-dashboard-ui #page-principal .list-row-remove{
+  display:grid;
+  place-items:center;
+  flex:0 0 28px;
+  width:28px;
+  height:28px;
+  padding:0;
+  opacity:1;
+  border:1px solid rgba(196,70,48,.78);
+  color:#e26a50;
+  background:linear-gradient(180deg,rgba(105,28,20,.42),rgba(31,12,9,.72));
+  box-shadow:inset 0 0 7px rgba(0,0,0,.42),0 0 5px rgba(184,55,38,.12);
+  font:700 17px/1 var(--font-mono);
+}
+body.rota-dashboard-ui #page-principal .list-row-remove:hover,
+body.rota-dashboard-ui #page-principal .list-row-remove:focus-visible{
+  border-color:#f08063;
+  color:#ffe0d3;
+  background:#6a2118;
+  box-shadow:0 0 9px rgba(219,73,46,.4);
+  outline:2px solid rgba(240,128,99,.55);
+  outline-offset:1px;
+}
+body.rota-dashboard-ui #page-principal .add-char-btn{ width:100%; min-height:20px; margin-top:2px; padding:2px; color:#826c50; border-color:rgba(115,76,38,.24); background:transparent; font-size:clamp(8px,.55vw,9.5px); white-space:normal; }
 
 /* Estado atual ----------------------------------------------------------- */
-.rota-vitals-panel{ flex:0 0 40%; min-height:0; overflow:hidden; }
+.rota-vitals-panel{ flex:0 0 50%; min-height:0; overflow:hidden; }
 .rota-vitals-panel .section-body{ height:calc(100% - 31px); padding:7px 9px 9px !important; }
-.rota-vitals-list{ display:grid !important; grid-template-rows:repeat(2,minmax(0,1fr)); height:100%; gap:7px !important; }
+.rota-vitals-list{ display:grid !important; grid-template-rows:minmax(120px,1.18fr) minmax(0,1fr) minmax(0,1fr); height:100%; gap:4px !important; }
 
 body.rota-dashboard-ui #page-principal .rota-vitals-list .track-block{
+  position:relative;
   display:grid;
   grid-template-rows:auto auto minmax(16px,1fr) auto;
   min-height:0;
@@ -462,9 +546,20 @@ body.rota-dashboard-ui #page-principal .rota-vitals-list .rota-vital-pe{
   border-left-color:#347d9e;
   background:linear-gradient(90deg,rgba(25,65,91,.13),rgba(4,5,4,.22));
 }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .rota-vital-pc{
+  padding-top:5px;
+  padding-bottom:5px;
+  border-color:rgba(150,83,24,.72);
+  border-left-color:#d07819;
+  background:linear-gradient(90deg,rgba(118,58,10,.16),rgba(4,5,4,.24));
+}
 body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header{ align-items:center; color:#d8c6a4; }
 body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header > span:first-child{ display:flex; align-items:center; gap:6px; }
-body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header b{ color:#d4b995; font:500 19px var(--font-display); }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header b{
+  color:#d4b995;
+  font:500 clamp(14px,1vw,17px) var(--font-display);
+  letter-spacing:.25px;
+}
 body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header img{
   width:34px;
   height:34px;
@@ -472,18 +567,35 @@ body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header img{
   filter:drop-shadow(0 0 5px rgba(190,44,30,.38));
 }
 body.rota-dashboard-ui #page-principal .rota-vitals-list .rota-vital-pe .track-header img{ filter:drop-shadow(0 0 5px rgba(44,152,216,.42)); }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .rota-vital-pc .track-header img{
+  width:42px;
+  height:42px;
+  margin:-4px;
+  filter:drop-shadow(0 0 6px rgba(230,137,29,.48));
+}
 body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header small{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
-body.rota-dashboard-ui #page-principal .rota-vitals-list .readout{ color:#d8c3a0; font:500 18px var(--font-display); }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .readout{ color:#d8c3a0; font:500 19px var(--font-display); }
 body.rota-dashboard-ui #page-principal .rota-vitals-list .track-max{ color:#a99576; }
 body.rota-dashboard-ui #page-principal .rota-vitals-list .zone-strip{ height:2px; margin:1px 0 4px; opacity:.45; }
-body.rota-dashboard-ui #page-principal .rota-vitals-list .box-row{ align-content:center; gap:2px; min-height:20px; }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .box-row{
+  align-content:center;
+  gap:clamp(2.5px,.16vw,3px);
+  min-height:20px;
+}
 body.rota-dashboard-ui #page-principal .rota-vitals-list .box-row .pip{
-  width:auto;
-  min-width:9px;
+  position:relative;
+  width:clamp(8px,.52vw,10px);
+  min-width:clamp(8px,.52vw,10px);
   height:20px;
   border-color:rgba(151,113,73,.44);
   background:rgba(7,7,5,.55);
   box-shadow:inset 0 0 4px rgba(0,0,0,.72);
+  touch-action:manipulation;
+}
+body.rota-dashboard-ui #page-principal .rota-vitals-list .box-row .pip::after{
+  content:"";
+  position:absolute;
+  inset:-2px -1.25px;
 }
 
 /* PF: machucado, ferido, crítico, morrendo e morte direta. */
@@ -507,13 +619,141 @@ body.rota-dashboard-ui #page-principal .rota-vital-pe .box-row .pip.filled.stage
 body.rota-dashboard-ui #page-principal .rota-vital-pe .box-row .pip.filled.stage-crit{ background:linear-gradient(135deg,#7144ad,#3b1f68); }
 body.rota-dashboard-ui #page-principal .rota-vital-pe .box-row .pip.breaking-point{ border-color:#b31668; box-shadow:0 0 5px rgba(192,18,105,.6),inset 0 0 4px rgba(0,0,0,.72); }
 body.rota-dashboard-ui #page-principal .rota-vital-pe .box-row .pip.filled.breaking-point{ background:linear-gradient(135deg,#bd1f71,#5f123d); }
-body.rota-dashboard-ui #page-principal .rota-vitals-list .track-stage{ margin-top:2px; font-size:7px; }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .track-stage{ margin-top:2px; font-size:9px; }
+/* Cada recurso comunica seus estágios com a própria progressão cromática. */
+body.rota-dashboard-ui #page-principal .rota-vital-pf .track-stage.stage-ok{ color:#d9b82f; }
+body.rota-dashboard-ui #page-principal .rota-vital-pf .track-stage.stage-warn{ color:#e26a1c; }
+body.rota-dashboard-ui #page-principal .rota-vital-pf .track-stage.stage-crit{ color:#d53b36; }
+body.rota-dashboard-ui #page-principal .rota-vital-pe .track-stage.stage-ok{ color:#68c68b; }
+body.rota-dashboard-ui #page-principal .rota-vital-pe .track-stage.stage-warn{ color:#36a9cf; }
+body.rota-dashboard-ui #page-principal .rota-vital-pe .track-stage.stage-crit{ color:#9658c2; }
+body.rota-dashboard-ui #page-principal .rota-vital-pe .track-stage.stage-breaking{ color:#c348a4; }
 body.rota-dashboard-ui #page-principal .rota-vitals-list .zone-legend{ display:none; }
-body.rota-dashboard-ui #page-principal .rota-vitals-list .permanent-control{ position:absolute; right:8px; bottom:4px; color:#8d7352; font-size:6px; }
-body.rota-dashboard-ui #page-principal .rota-vitals-list .permanent-control input{ width:25px; min-height:14px; color:#c4a77d; font-size:9px !important; }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .permanent-control{
+  position:absolute;
+  right:8px;
+  bottom:3px;
+  display:grid;
+  grid-template-columns:auto 23px;
+  align-items:center;
+  gap:4px;
+  height:16px;
+  margin:0;
+  color:#a68b66;
+  font:8.5px/1 var(--font-mono);
+  letter-spacing:.1px;
+  white-space:nowrap;
+}
+body.rota-dashboard-ui #page-principal .rota-vitals-list .permanent-control input{
+  width:23px;
+  min-width:23px;
+  height:16px;
+  min-height:16px;
+  padding:0;
+  border:1px solid rgba(135,96,51,.42);
+  color:#d9bd91;
+  background:#0d0b08;
+  font:700 9px/16px var(--font-mono) !important;
+  text-align:center;
+}
+
+body.rota-dashboard-ui #page-principal .rota-vital-pc .track-header{ min-height:34px; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-controls{ flex-shrink:0; gap:3px; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-readout{
+  display:flex;
+  align-items:baseline;
+  margin-right:3px;
+  color:#dfc7a0;
+  font:500 17px var(--font-display);
+}
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-readout b{ color:inherit; font:inherit; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-control-btn{
+  width:18px;
+  height:18px;
+  padding:0;
+  border-color:#82501e;
+  color:#e29a28;
+  background:rgba(31,17,8,.9);
+  font-size:12px;
+}
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-control-btn:hover,
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-control-btn:focus-visible{
+  border-color:#d78522;
+  color:#ffe0a1;
+  background:#3a1d09;
+  outline:none;
+}
+body.rota-dashboard-ui #page-principal .rota-vital-pc #pc-gain-input{
+  width:26px;
+  min-width:26px;
+  height:18px;
+  min-height:18px;
+  padding:0;
+  border:1px solid rgba(188,112,33,.62);
+  color:#f1cf91;
+  background:#120c06;
+  font:700 10px/18px var(--font-mono) !important;
+  text-align:center;
+  appearance:textfield;
+  -moz-appearance:textfield;
+}
+body.rota-dashboard-ui #page-principal .rota-vital-pc #pc-gain-input::-webkit-inner-spin-button,
+body.rota-dashboard-ui #page-principal .rota-vital-pc #pc-gain-input::-webkit-outer-spin-button{
+  margin:0;
+  -webkit-appearance:none;
+  appearance:none;
+}
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-bar{
+  height:10px;
+  margin-top:2px;
+  overflow:visible;
+  border-color:rgba(173,103,33,.58);
+  border-radius:1px;
+  background:#080705;
+  box-shadow:inset 0 0 5px rgba(0,0,0,.8),0 0 8px rgba(183,87,18,.08);
+}
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-seg{ opacity:.94; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-seg-imaculada{ background:linear-gradient(180deg,#dfb62c,#a97712); }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-seg-incipiente{ background:linear-gradient(180deg,#d99121,#a95711); }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-seg-alarmante{ background:linear-gradient(180deg,#c96b1c,#913b10); }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-seg-severa{ background:linear-gradient(180deg,#ad4818,#74220f); }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-seg-critica{ background:linear-gradient(180deg,#8f2d21,#58131a); }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-seg-corrompido{ background:#d01439; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-marker{
+  top:-3px;
+  bottom:-3px;
+  width:2px;
+  background:#fff0c9;
+  box-shadow:0 0 0 1px #2b1409,0 0 7px #ffb139;
+}
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-labels{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr)) auto;
+  gap:2px;
+  margin-top:3px;
+  color:#9d8260;
+  font:clamp(9.5px,.68vw,11.5px)/1 var(--font-mono);
+  letter-spacing:-.2px;
+  text-align:center;
+}
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-labels span:last-child{ color:#ba5261; text-align:right; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-stage{
+  margin-top:2px;
+  min-height:9px;
+  color:#d99d2d;
+  font:10px/1.15 var(--font-display);
+  letter-spacing:.45px;
+  text-transform:uppercase;
+}
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-stage.stage-imaculada{ color:#dfbd32; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-stage.stage-incipiente{ color:#dd9726; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-stage.stage-alarmante{ color:#dc6c22; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-stage.stage-severa{ color:#d64a25; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-stage.stage-critica{ color:#ca3032; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-stage.stage-corrompido{ color:#e01844; }
 
 /* Condições e dores ------------------------------------------------------ */
-.rota-state-panel{ flex:0 0 18%; min-height:0; overflow:hidden; }
+.rota-state-panel{ flex:0 0 16%; min-height:0; overflow:hidden; }
 .rota-state-content{ display:grid; grid-template-columns:minmax(0,1fr) 90px; gap:7px; height:calc(100% - 31px); padding:5px 9px 8px; }
 .dashboard-condition-list{ display:flex; align-items:center; min-width:0; gap:5px; overflow:hidden; }
 .dashboard-condition-chip,
@@ -527,7 +767,7 @@ body.rota-dashboard-ui #page-principal .rota-vitals-list .permanent-control inpu
   border:1px solid rgba(137,58,35,.62);
   color:#d15a43;
   background:linear-gradient(180deg,rgba(87,25,17,.16),rgba(8,7,5,.5));
-  font:8px var(--font-display);
+  font:9px var(--font-display);
   letter-spacing:.35px;
   text-transform:uppercase;
 }
@@ -537,7 +777,7 @@ body.rota-dashboard-ui #page-principal .rota-vitals-list .permanent-control inpu
 .dashboard-condition-chip b{ margin-left:auto; color:#8b3a2d; }
 .dashboard-condition-more{ flex:0 0 auto; }
 .dashboard-condition-empty{ display:grid; flex:1; align-content:center; text-align:left; }
-.dashboard-condition-empty small{ color:#79684e; font:6px var(--font-mono); }
+.dashboard-condition-empty small{ color:#79684e; font:8.5px var(--font-mono); }
 .dashboard-pain-link{
   display:flex !important;
   flex-direction:column;
@@ -551,31 +791,31 @@ body.rota-dashboard-ui #page-principal .rota-vitals-list .permanent-control inpu
   color:#bca580 !important;
   text-align:left !important;
 }
-.dashboard-pain-link span{ font-size:8px; }
+.dashboard-pain-link span{ font-size:10px; }
 .dashboard-pain-link strong{ margin-left:auto; color:#d1b57e; font:12px var(--font-mono); }
 
 /* Necessidades ----------------------------------------------------------- */
-body.rota-dashboard-ui #page-principal .rota-needs-panel{ flex:1 1 42%; min-height:0; overflow:hidden; }
+body.rota-dashboard-ui #page-principal .rota-needs-panel{ flex:1 1 34%; min-height:0; overflow:hidden; }
 body.rota-dashboard-ui #page-principal .rota-needs-panel > .section-title{ min-height:30px; }
-body.rota-dashboard-ui #page-principal .rota-needs-panel > .section-body{ height:calc(100% - 30px); padding:4px 9px 7px; overflow:auto; }
-body.rota-dashboard-ui #page-principal .rota-needs-panel .resources-list{ display:flex; min-height:100%; flex-direction:column; gap:4px; }
-body.rota-dashboard-ui #page-principal .needs-panel{ order:1; padding:0; border:0; background:transparent; }
+body.rota-dashboard-ui #page-principal .rota-needs-panel > .section-body{ height:calc(100% - 32px); padding:3px 9px 5px; overflow:hidden; }
+body.rota-dashboard-ui #page-principal .rota-needs-panel .resources-list{ display:flex; height:100%; min-height:0; flex-direction:column; gap:3px; }
+body.rota-dashboard-ui #page-principal .needs-panel{ order:1; gap:3px; padding:0; border:0; background:transparent; }
 body.rota-dashboard-ui #page-principal .needs-heading{ display:none; }
-body.rota-dashboard-ui #page-principal .needs-grid{ display:grid; grid-template-columns:1fr; gap:3px; }
+body.rota-dashboard-ui #page-principal .needs-grid{ display:grid; grid-template-columns:1fr; gap:2px; }
 body.rota-dashboard-ui #page-principal .need-card{
   display:grid;
   grid-template-columns:72px minmax(0,1fr) auto;
   align-items:center;
-  gap:6px;
-  min-height:27px;
-  padding:3px 5px;
+  gap:5px;
+  min-height:29px;
+  padding:2px 5px;
   border:0;
   border-bottom:1px solid rgba(133,88,43,.24);
   background:transparent;
 }
 body.rota-dashboard-ui #page-principal .need-card-header{ display:grid; gap:0; }
-body.rota-dashboard-ui #page-principal .need-card-header strong{ color:#c6922f; font:8px var(--font-display); }
-body.rota-dashboard-ui #page-principal .need-card-header span{ color:#806d50; font:6px var(--font-mono); }
+body.rota-dashboard-ui #page-principal .need-card-header strong{ color:#c6922f; font:clamp(10.5px,.72vw,12px) var(--font-display); }
+body.rota-dashboard-ui #page-principal .need-card-header span{ color:#806d50; font:clamp(8px,.55vw,9.5px) var(--font-mono); }
 body.rota-dashboard-ui #page-principal .need-bar{ display:flex; gap:1px; }
 body.rota-dashboard-ui #page-principal .need-segment{ flex:1; width:auto; min-width:0; height:11px; border-color:rgba(130,91,51,.35); color:transparent; background:rgba(9,8,6,.7); }
 body.rota-dashboard-ui #page-principal .need-hunger .need-segment.filled{ background:#9b6c20; }
@@ -584,17 +824,12 @@ body.rota-dashboard-ui #page-principal .need-sleep .need-segment.filled{ backgro
 body.rota-dashboard-ui #page-principal .need-card p{ display:none; }
 body.rota-dashboard-ui #page-principal .need-reset{ width:20px; min-height:20px; padding:0; overflow:hidden; color:transparent; border-color:rgba(132,87,44,.3); background:transparent; }
 body.rota-dashboard-ui #page-principal .need-reset::before{ content:"↺"; color:#a78b61; font-size:11px; }
-body.rota-dashboard-ui #page-principal .needs-cycle-alert{ order:2; min-height:18px; padding:3px 5px; color:#9e8969; border-color:rgba(127,82,40,.25); background:rgba(69,38,17,.08); font-size:6px; }
-body.rota-dashboard-ui #page-principal .critical-state-alert{ order:0; margin:0; padding:4px 6px; font-size:7px; }
-body.rota-dashboard-ui #page-principal .rota-pc-track{ order:3; margin-top:auto; padding:4px 6px; border-left-color:#7e3125; background:rgba(72,27,18,.07); }
-body.rota-dashboard-ui #page-principal .rota-pc-track .track-header{ font-size:7px; }
-body.rota-dashboard-ui #page-principal .rota-pc-track .pc-bar{ height:7px; }
-body.rota-dashboard-ui #page-principal .rota-pc-track .pc-labels{ display:none; }
-body.rota-dashboard-ui #page-principal .rota-pc-track .pc-stage{ font-size:6px; }
+body.rota-dashboard-ui #page-principal .needs-cycle-alert{ order:2; min-height:20px; padding:3px 5px; color:#9e8969; border-color:rgba(127,82,40,.25); background:rgba(69,38,17,.08); font-size:clamp(8px,.55vw,9px); }
+body.rota-dashboard-ui #page-principal .critical-state-alert{ order:0; margin:0; padding:4px 6px; font-size:9px; }
 body.rota-dashboard-ui #page-principal .health-rule-tools{ order:4; display:grid; grid-template-columns:1fr 1fr; gap:3px; }
-body.rota-dashboard-ui #page-principal .rule-tool-card{ min-height:24px; padding:3px 5px; color:#917b5c; border-color:rgba(124,79,38,.24); background:rgba(65,35,16,.06); }
-body.rota-dashboard-ui #page-principal .rule-tool-card > span{ font-size:6px; }
-body.rota-dashboard-ui #page-principal .rule-tool-card strong{ font-size:6.5px; }
+body.rota-dashboard-ui #page-principal .rule-tool-card{ min-height:30px; padding:2px 4px; color:#917b5c; border-color:rgba(124,79,38,.24); background:rgba(65,35,16,.06); }
+body.rota-dashboard-ui #page-principal .rule-tool-card > span{ font-size:8px; }
+body.rota-dashboard-ui #page-principal .rule-tool-card strong{ font-size:9px; }
 body.rota-dashboard-ui #page-principal .rule-tool-card small{ display:none; }
 
 /* Atributos -------------------------------------------------------------- */
@@ -616,13 +851,18 @@ body.rota-dashboard-ui #page-principal .attr-row{
   color:var(--attr-color);
   background:radial-gradient(circle at 50% 55%,color-mix(in srgb,var(--attr-color) 15%,transparent),transparent 48%),rgba(4,5,4,.35);
   box-shadow:inset 0 0 15px rgba(0,0,0,.48),0 0 8px color-mix(in srgb,var(--attr-color) 12%,transparent);
-  transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease;
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
 }
 body.rota-dashboard-ui #page-principal .attr-row[data-attribute-card="Destreza"]{ --attr-color:#d49808; }
 body.rota-dashboard-ui #page-principal .attr-row[data-attribute-card="Instinto"]{ --attr-color:#7f9f35; }
 body.rota-dashboard-ui #page-principal .attr-row[data-attribute-card="Intelecto"]{ --attr-color:#3d91bd; }
 body.rota-dashboard-ui #page-principal .attr-row[data-attribute-card="Espírito"]{ --attr-color:#9254b3; }
 body.rota-dashboard-ui #page-principal .attr-row[data-attribute-card="Físico"]{ --attr-color:#bb3a2c; }
+body.rota-dashboard-ui #page-principal .attr-row:hover{
+  border-color:color-mix(in srgb,var(--attr-color) 88%,#e7c48a);
+  background:radial-gradient(circle at 50% 52%,color-mix(in srgb,var(--attr-color) 23%,transparent),transparent 70%),rgba(5,6,4,.48);
+  box-shadow:inset 0 0 18px rgba(0,0,0,.42),0 0 13px color-mix(in srgb,var(--attr-color) 28%,transparent);
+}
 body.rota-dashboard-ui #page-principal .attribute-select-button{
   display:grid;
   grid-template-rows:auto minmax(42px,1fr);
@@ -637,13 +877,13 @@ body.rota-dashboard-ui #page-principal .attribute-select-button{
   cursor:pointer;
   transition:background-color .18s ease,filter .18s ease,transform .12s ease;
 }
-body.rota-dashboard-ui #page-principal .attribute-select-button:hover{ background:color-mix(in srgb,var(--attr-color) 7%,transparent); filter:brightness(1.15); }
+body.rota-dashboard-ui #page-principal .attribute-select-button:hover{ background:transparent; filter:brightness(1.15); }
 body.rota-dashboard-ui #page-principal .attribute-select-button:active{ transform:translateY(1px); }
 body.rota-dashboard-ui #page-principal .attribute-select-button:focus-visible{
   outline:2px solid color-mix(in srgb,var(--attr-color) 88%,#fff);
   outline-offset:-3px;
 }
-body.rota-dashboard-ui #page-principal .attr-name{ color:var(--attr-color); font:7px var(--font-display); letter-spacing:.25px; text-transform:uppercase; }
+body.rota-dashboard-ui #page-principal .attr-name{ color:var(--attr-color); font:clamp(9.5px,.68vw,11px) var(--font-display); letter-spacing:.25px; text-transform:uppercase; }
 body.rota-dashboard-ui #page-principal .attr-name::before{ display:none; }
 body.rota-dashboard-ui #page-principal .attribute-glyph{
   display:grid;
@@ -681,7 +921,7 @@ body.rota-dashboard-ui #page-principal .attribute-stepper{
 }
 body.rota-dashboard-ui #page-principal .attribute-stepper .readout{
   color:var(--attr-color);
-  font:16px/1 var(--font-display);
+  font:18px/1 var(--font-display);
   text-align:center;
   transition:color .18s ease,transform .18s ease;
 }
@@ -704,9 +944,53 @@ body.rota-dashboard-ui #page-principal .attribute-step-button:hover:not(:disable
 body.rota-dashboard-ui #page-principal .attribute-step-button:active:not(:disabled){ transform:translateY(1px); }
 body.rota-dashboard-ui #page-principal .attribute-step-button:focus-visible{ position:relative; z-index:2; outline:2px solid #f0d09a; outline-offset:1px; }
 body.rota-dashboard-ui #page-principal .attribute-step-button:disabled{ opacity:.28; cursor:not-allowed; }
-body.rota-dashboard-ui #page-principal [data-ui-section="attributes"] .pp-bar{ min-height:20px; margin-top:3px; padding-top:3px; color:#887454; border-color:rgba(140,91,42,.25); font-size:6.5px; }
+body.rota-dashboard-ui #page-principal [data-ui-section="attributes"] .pp-bar{
+  display:grid;
+  grid-template-columns:auto auto minmax(96px,1fr);
+  align-items:center;
+  gap:4px 10px;
+  min-height:23px;
+  margin-top:3px;
+  padding:3px 1px 1px;
+  overflow:visible;
+  color:#9a8462;
+  border-color:rgba(140,91,42,.25);
+  font:clamp(8px,.55vw,9px)/14px var(--font-mono);
+}
+body.rota-dashboard-ui #page-principal [data-ui-section="attributes"] .pp-bar > span{
+  display:inline-flex;
+  align-items:center;
+  min-width:0;
+  gap:3px;
+  white-space:nowrap;
+}
 body.rota-dashboard-ui #page-principal [data-ui-section="attributes"] .pp-bar b{ color:#c4ac83; }
-body.rota-dashboard-ui #page-principal [data-ui-section="attributes"] .mini-bonus-input{ width:20px; min-height:13px; font-size:8px !important; }
+body.rota-dashboard-ui #page-principal [data-ui-section="attributes"] .pp-bar > span:last-child{ justify-self:end; }
+body.rota-dashboard-ui #page-principal [data-ui-section="attributes"] .mini-bonus-input{
+  width:23px;
+  min-width:23px;
+  height:16px;
+  min-height:16px;
+  padding:0;
+  border:1px solid rgba(135,96,51,.42);
+  color:#d9bd91;
+  background:#0d0b08;
+  font:700 9px/16px var(--font-mono) !important;
+  text-align:center;
+}
+
+/* Os steppers do navegador deformam campos compactos; os controles da ficha
+   são intencionais e os demais valores continuam editáveis pelo teclado. */
+body.rota-dashboard-ui input[type="number"]{
+  appearance:textfield;
+  -moz-appearance:textfield;
+}
+body.rota-dashboard-ui input[type="number"]::-webkit-inner-spin-button,
+body.rota-dashboard-ui input[type="number"]::-webkit-outer-spin-button{
+  margin:0;
+  -webkit-appearance:none;
+  appearance:none;
+}
 
 /* Perícias: cada família herda a cor de seu atributo -------------------- */
 body.rota-dashboard-ui #page-principal [data-section="skills"]{ flex:1 1 43%; min-height:0; overflow:hidden; }
@@ -720,7 +1004,7 @@ body.rota-dashboard-ui #page-principal [data-section="skills"] .pp-bar{
   padding:2px 3px;
   border-color:rgba(137,91,47,.3);
   color:#927f61;
-  font-size:6.5px;
+  font-size:clamp(8px,.55vw,9px);
 }
 body.rota-dashboard-ui #page-principal [data-section="skills"] .pp-bar > span{ display:none; }
 body.rota-dashboard-ui #page-principal [data-section="skills"] .pp-bar > span:nth-child(5),
@@ -734,7 +1018,7 @@ body.rota-dashboard-ui #page-principal .skill-attribute-tab{
   border:1px solid color-mix(in srgb,var(--skill-color) 35%,#4f402d);
   color:color-mix(in srgb,var(--skill-color) 60%,#b8a88d);
   background:rgba(7,8,6,.65);
-  font:6.5px var(--font-display);
+  font:clamp(9px,.65vw,11px) var(--font-display);
   letter-spacing:.2px;
   cursor:pointer;
   transition:color .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease,transform .12s ease;
@@ -763,48 +1047,98 @@ body.rota-dashboard-ui #page-principal .skill-attribute-panel[data-skill-attribu
 body.rota-dashboard-ui #page-principal .skill-attribute-panel[data-skill-attribute-panel="Espírito"]{ --skill-color:#9a59bf; }
 body.rota-dashboard-ui #page-principal .skill-attribute-panel.active{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:repeat(3,minmax(0,1fr));
   align-content:start;
-  gap:4px 7px;
+  gap:5px;
   animation:rota-skill-panel-in .2s ease-out both;
 }
 @keyframes rota-skill-panel-in{
   from{ opacity:0; transform:translateY(5px); }
   to{ opacity:1; transform:translateY(0); }
 }
-body.rota-dashboard-ui #page-principal .skill-col-title{ grid-column:1/-1; margin:0 0 1px; padding:2px 0 3px; color:var(--skill-color); border-color:color-mix(in srgb,var(--skill-color) 30%,transparent); font-size:7px; }
+body.rota-dashboard-ui #page-principal .skill-col-title{ grid-column:1/-1; margin:0 0 1px; padding:2px 0 3px; color:var(--skill-color); border-color:color-mix(in srgb,var(--skill-color) 30%,transparent); font-size:10px; }
 body.rota-dashboard-ui #page-principal .skill-row{
   position:relative;
   display:grid;
-  grid-template-columns:34px minmax(0,1fr) auto;
-  align-items:center;
-  min-height:38px;
-  padding:3px 4px;
+  grid-template-columns:52px minmax(0,1fr);
+  grid-template-rows:minmax(18px,auto) auto;
+  grid-template-areas:"art name" "art pips";
+  align-content:center;
+  min-width:0;
+  min-height:78px;
+  padding:3px;
   border:1px solid color-mix(in srgb,var(--skill-color) 36%,#29231a);
   background:linear-gradient(90deg,color-mix(in srgb,var(--skill-color) 14%,transparent),rgba(5,7,4,.55) 40%);
   box-shadow:inset 0 0 12px rgba(0,0,0,.35);
   transition:border-color .16s ease,background-color .16s ease,box-shadow .16s ease,transform .16s ease;
 }
 body.rota-dashboard-ui #page-principal .skill-row:hover{ border-color:color-mix(in srgb,var(--skill-color) 62%,#5d4b33); box-shadow:inset 0 0 12px rgba(0,0,0,.3),0 0 8px color-mix(in srgb,var(--skill-color) 14%,transparent); }
-body.rota-dashboard-ui #page-principal .skill-row::before{
-  content:"✦";
+body.rota-dashboard-ui #page-principal .skill-row::before{ display:none; content:none; }
+body.rota-dashboard-ui #page-principal .skill-art{
+  grid-area:art;
   display:grid;
   place-items:center;
-  width:30px;
-  height:30px;
+  justify-self:center;
+  width:48px;
+  height:72px;
+  padding:0;
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--skill-color) 56%,#33281d);
+  border-radius:2px;
   color:var(--skill-color);
+  background:#080706;
+  box-shadow:0 0 8px color-mix(in srgb,var(--skill-color) 20%,transparent),inset 0 0 8px rgba(0,0,0,.45);
+}
+body.rota-dashboard-ui #page-principal button.skill-art{ cursor:zoom-in; }
+body.rota-dashboard-ui #page-principal button.skill-art:hover,
+body.rota-dashboard-ui #page-principal button.skill-art:focus-visible{
+  border-color:color-mix(in srgb,var(--skill-color) 86%,#ffe3af);
+  box-shadow:0 0 12px color-mix(in srgb,var(--skill-color) 38%,transparent),inset 0 0 8px rgba(0,0,0,.38);
+  outline:none;
+}
+body.rota-dashboard-ui #page-principal .skill-art img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  filter:saturate(.92) brightness(.92) contrast(1.08);
+  transition:transform .2s ease,filter .2s ease;
+}
+body.rota-dashboard-ui #page-principal .skill-row:hover .skill-art img{
+  transform:scale(1.06);
+  filter:saturate(1.06) brightness(1.04) contrast(1.08);
+}
+body.rota-dashboard-ui #page-principal .skill-art-placeholder{
+  width:48px;
+  height:72px;
+  border:0;
   background:radial-gradient(circle,color-mix(in srgb,var(--skill-color) 32%,transparent),transparent 65%);
   text-shadow:0 0 8px color-mix(in srgb,var(--skill-color) 75%,transparent);
   font-size:15px;
 }
-body.rota-dashboard-ui #page-principal .skill-name{ color:#d2c4a4; font-size:8.5px; }
+body.rota-dashboard-ui #page-principal .skill-name{
+  grid-area:name;
+  min-width:0;
+  align-self:end;
+  overflow:hidden;
+  color:#d2c4a4;
+  font-size:clamp(11.5px,.8vw,13.5px);
+  font-weight:600;
+  line-height:1.1;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
 body.rota-dashboard-ui #page-principal .skill-pips{
+  grid-area:pips;
   display:grid;
-  grid-template-columns:repeat(5,14px);
+  grid-template-columns:repeat(5,12px);
   gap:3px;
-  justify-content:end;
+  justify-content:start;
+  align-self:start;
   width:auto;
-  height:14px;
+  height:12px;
+  margin-top:5px;
   border:0;
   background:transparent;
 }
@@ -812,8 +1146,8 @@ body.rota-dashboard-ui #page-principal .skill-pips::after{ display:none; content
 body.rota-dashboard-ui #page-principal .skill-pips .pip{
   position:relative;
   inset:auto;
-  width:14px;
-  height:14px;
+  width:12px;
+  height:12px;
   padding:0;
   opacity:1;
   border:1px solid color-mix(in srgb,var(--skill-color) 66%,#7c6b50);
@@ -841,6 +1175,94 @@ body.rota-dashboard-ui #page-principal .skill-pips.origin-active .pip.filled{
 }
 body.rota-dashboard-ui #page-principal .skill-row.locked{ opacity:.4; }
 
+/* Visualizador ampliado das artes de perícia ---------------------------- */
+body.rota-dashboard-ui .skill-art-overlay{
+  --skill-color:#a9793b;
+  z-index:1500;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:radial-gradient(circle at 50% 42%,color-mix(in srgb,var(--skill-color) 18%,transparent),transparent 48%),rgba(2,1,4,.94);
+  backdrop-filter:blur(5px) saturate(.7);
+}
+body.rota-dashboard-ui .skill-art-dialog{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  width:min(720px,calc(100vw - 32px));
+  max-height:calc(100dvh - 32px);
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--skill-color) 68%,#6e5031);
+  border-radius:2px;
+  color:#ead8b5;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--skill-color) 8%,#0a0908),#060605 36%);
+  box-shadow:0 28px 90px rgba(0,0,0,.9),0 0 32px color-mix(in srgb,var(--skill-color) 22%,transparent),inset 0 0 46px rgba(0,0,0,.58);
+}
+body.rota-dashboard-ui .skill-art-dialog::before{
+  content:"";
+  position:absolute;
+  z-index:3;
+  top:0;
+  right:8%;
+  left:8%;
+  height:2px;
+  background:linear-gradient(90deg,transparent,var(--skill-color),transparent);
+  box-shadow:0 0 12px color-mix(in srgb,var(--skill-color) 56%,transparent);
+}
+body.rota-dashboard-ui .skill-art-viewer-header{
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  min-height:62px;
+  padding:11px 13px 10px 16px;
+  border-bottom:1px solid color-mix(in srgb,var(--skill-color) 45%,#422f20);
+  background:rgba(7,6,6,.92);
+}
+body.rota-dashboard-ui .skill-art-viewer-header > div{ display:grid; gap:4px; }
+body.rota-dashboard-ui .skill-art-viewer-header span{
+  color:color-mix(in srgb,var(--skill-color) 74%,#c9b18a);
+  font:7px var(--font-mono);
+  letter-spacing:1.2px;
+}
+body.rota-dashboard-ui .skill-art-viewer-header strong{
+  color:#f0ddba;
+  font:600 20px/1 var(--font-display);
+  letter-spacing:1px;
+  text-shadow:0 1px #000,0 0 12px color-mix(in srgb,var(--skill-color) 25%,transparent);
+}
+body.rota-dashboard-ui .skill-art-viewer-content{
+  display:grid;
+  min-height:0;
+  overflow:hidden;
+  padding:12px;
+  place-items:center;
+}
+body.rota-dashboard-ui .skill-art-viewer-content figure{
+  display:grid;
+  gap:8px;
+  justify-items:center;
+  margin:0;
+}
+body.rota-dashboard-ui #skill-art-expanded-image{
+  display:block;
+  width:auto;
+  max-width:100%;
+  height:auto;
+  max-height:calc(100dvh - 160px);
+  object-fit:contain;
+  border:1px solid color-mix(in srgb,var(--skill-color) 60%,#4b3522);
+  background:#030303;
+  box-shadow:0 18px 48px rgba(0,0,0,.72),0 0 22px color-mix(in srgb,var(--skill-color) 20%,transparent);
+}
+body.rota-dashboard-ui .skill-art-viewer-content figcaption{
+  color:#9f8c6d;
+  font:6.5px var(--font-mono);
+  letter-spacing:.8px;
+  text-align:center;
+}
+
 /* Somático --------------------------------------------------------------- */
 body.rota-dashboard-ui #page-principal .diagram-section{ flex:0 0 28%; min-height:0; overflow:hidden; background-color:#b6a27e; background-image:url("assets/ui/textures/paper-aged.png"); background-size:600px; }
 body.rota-dashboard-ui #page-principal .diagram-section > .section-title{ color:#2f2014; background:rgba(255,239,202,.08); }
@@ -858,12 +1280,51 @@ body.rota-dashboard-ui #page-principal .somatic-summary-card{
   background:rgba(255,243,210,.05);
   box-shadow:none;
 }
-body.rota-dashboard-ui #page-principal .somatic-miniature{ grid-row:1/-1; height:100%; }
-body.rota-dashboard-ui #page-principal .somatic-miniature img{ width:auto; max-width:100%; height:100%; max-height:150px; object-fit:contain; filter:sepia(.45) contrast(.86); }
+body.rota-dashboard-ui #page-principal .somatic-miniature{
+  position:relative;
+  grid-row:1/-1;
+  align-self:stretch;
+  min-height:0;
+  height:auto;
+  overflow:hidden;
+}
+body.rota-dashboard-ui #page-principal .somatic-miniature img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  max-width:none;
+  max-height:none;
+  object-fit:contain;
+  opacity:1;
+  mix-blend-mode:multiply;
+  filter:contrast(2.25) sepia(.4) saturate(.72);
+}
+
+@media (min-width:1121px) and (max-height:850px){
+  .rota-dashboard-center{
+    display:grid;
+    grid-template-rows:minmax(0,54fr) minmax(0,13fr) minmax(0,33fr);
+  }
+  .rota-dashboard-center .rota-vitals-list{
+    grid-template-rows:minmax(108px,1.16fr) minmax(0,1fr) minmax(0,1fr);
+  }
+  body.rota-dashboard-ui #page-principal .skill-row{
+    grid-template-columns:40px minmax(0,1fr);
+    min-height:59px;
+  }
+  body.rota-dashboard-ui #page-principal .skill-attribute-panel.active{ gap:4px; }
+  body.rota-dashboard-ui #page-principal .skill-art,
+  body.rota-dashboard-ui #page-principal .skill-art-placeholder{
+    width:36px;
+    height:54px;
+  }
+  body.rota-dashboard-ui #page-principal .skill-name{ font-size:clamp(11.5px,.8vw,13.5px); }
+}
 body.rota-dashboard-ui #page-principal .somatic-summary-status{ align-self:center; color:#342318; }
-body.rota-dashboard-ui #page-principal .somatic-summary-status > strong{ color:#8e2f24; font-size:11px; }
-body.rota-dashboard-ui #page-principal .somatic-severity-summary{ color:#342318; }
-body.rota-dashboard-ui #page-principal .somatic-inspect-label{ align-self:end; color:#4a3221; font-size:6.5px; }
+body.rota-dashboard-ui #page-principal .somatic-summary-status > strong{ color:#8e2f24; font-size:13px; }
+body.rota-dashboard-ui #page-principal .somatic-severity-summary{ color:#342318; font-size:9px; }
+body.rota-dashboard-ui #page-principal .somatic-inspect-label{ align-self:end; color:#4a3221; font-size:8.5px; }
 
 /* Outras páginas --------------------------------------------------------- */
 body.rota-dashboard-ui .sheet-page:not(#page-principal){ width:min(1480px,calc(100vw - 36px)); margin:14px auto 90px; }
@@ -1334,6 +1795,24 @@ body.rota-dashboard-ui #page-principal .dossier-utility-dialog .modifier-option{
   background:#16130e;
 }
 
+body.rota-dashboard-ui #page-principal .dossier-utility-dialog .modifier-option.filled{
+  border-color:#e2a447;
+  background:linear-gradient(135deg,#e2a447,#8e4b17);
+  box-shadow:inset 0 0 0 1px rgba(255,224,157,.3),0 0 7px rgba(218,137,43,.48);
+}
+body.rota-dashboard-ui #page-principal .dossier-utility-dialog .modifier-option.current{
+  outline:1px solid #ffe0a1;
+  outline-offset:2px;
+}
+body.rota-dashboard-ui #page-principal .dossier-utility-dialog .plague-control .modifier-option.filled{
+  border-color:#d95a45;
+  background:linear-gradient(135deg,#c84b39,#6f1f1b);
+  box-shadow:inset 0 0 0 1px rgba(255,177,146,.24),0 0 7px rgba(190,55,39,.48);
+}
+body.rota-dashboard-ui #page-principal .dossier-utility-dialog .plague-control .modifier-option.current{
+  outline-color:#ffad91;
+}
+
 body.rota-dashboard-ui #page-principal .dossier-utility-dialog .condition-reference{
   color:#c7b08c;
   background:#15130e;
@@ -1418,12 +1897,12 @@ body.rota-dashboard-ui #page-principal #wound-modal #wound-save{
   body.rota-dashboard-ui .rota-dashboard{ grid-template-columns:112px minmax(300px,.9fr) minmax(295px,.86fr) minmax(390px,1.22fr); }
   .rota-brand-rail{ padding-right:5px; padding-left:5px; }
   .rota-brand-rail img{ width:98px; }
-  body.rota-dashboard-ui .toolbar{ left:14px; width:98px; }
-  body.rota-dashboard-ui #page-principal .portrait-shell{ width:96px; height:151px; }
-  body.rota-dashboard-ui #page-principal .doc-header{ grid-template-columns:96px minmax(0,1fr); }
+  body.rota-dashboard-ui .toolbar{ left:14px; width:104px; }
+  body.rota-dashboard-ui #page-principal .portrait-shell{ width:105px; height:184px; }
+  body.rota-dashboard-ui #page-principal .doc-header{ grid-template-columns:105px minmax(0,1fr); }
   body.rota-dashboard-ui #page-principal .attribute-glyph{ width:42px; height:42px; font-size:20px; }
-  body.rota-dashboard-ui #page-principal .skill-pips{ grid-template-columns:repeat(5,13px); gap:3px; height:13px; }
-  body.rota-dashboard-ui #page-principal .skill-pips .pip{ width:13px; height:13px; }
+  body.rota-dashboard-ui #page-principal .skill-pips{ grid-template-columns:repeat(5,12px); gap:2px; height:12px; }
+  body.rota-dashboard-ui #page-principal .skill-pips .pip{ width:12px; height:12px; }
 }
 
 @media (max-width:1120px){
@@ -1433,7 +1912,8 @@ body.rota-dashboard-ui #page-principal #wound-modal #wound-save{
   body.rota-dashboard-ui .dossier-brand{ display:none; }
   body.rota-dashboard-ui .sheet-tab{ min-height:46px; font-size:10px; }
   body.rota-dashboard-ui #page-principal{ height:auto; min-height:0; overflow:visible; }
-  body.rota-dashboard-ui .rota-dashboard{ grid-template-columns:1fr 1fr; height:auto; }
+  body.rota-dashboard-ui .rota-dashboard{ grid-template-columns:1fr 1fr; grid-template-rows:auto; height:auto; }
+  .rota-dashboard-column{ height:auto; overflow:visible; }
   .rota-brand-rail{ display:none; }
   .rota-dashboard-left{ grid-column:1; }
   .rota-dashboard-center{ grid-column:2; }
@@ -1442,7 +1922,13 @@ body.rota-dashboard-ui #page-principal #wound-modal #wound-save{
   body.rota-dashboard-ui #page-principal [data-section="skills"],
   body.rota-dashboard-ui #page-principal .diagram-section{ min-height:250px; }
   body.rota-dashboard-ui #page-principal [data-section="skills"]{ grid-column:1/-1; }
+  body.rota-dashboard-ui #page-principal .skill-pips{ grid-template-columns:repeat(5,12px); height:12px; }
+  body.rota-dashboard-ui #page-principal .skill-pips .pip{ width:12px; height:12px; }
   body.rota-dashboard-ui .toolbar{ right:8px; bottom:8px; left:8px; width:auto; grid-template-columns:repeat(6,minmax(0,1fr)); }
+}
+
+@media (max-width:900px){
+  body.rota-dashboard-ui #page-principal .skill-attribute-panel.active{ grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 
 @media (max-width:720px){
@@ -1458,7 +1944,10 @@ body.rota-dashboard-ui #page-principal #wound-modal #wound-save{
   body.rota-dashboard-ui #page-principal .skill-attribute-panel.active{ grid-template-columns:1fr; }
   body.rota-dashboard-ui #page-principal .skill-pips{ grid-template-columns:repeat(5,18px); height:18px; }
   body.rota-dashboard-ui #page-principal .skill-pips .pip{ width:18px; height:18px; }
-  body.rota-dashboard-ui #page-principal .skill-row{ min-height:44px; }
+  body.rota-dashboard-ui #page-principal .skill-name{ font-size:12px; }
+  body.rota-dashboard-ui #page-principal .skill-row{ grid-template-columns:62px minmax(0,1fr); min-height:88px; }
+  body.rota-dashboard-ui #page-principal .skill-art,
+  body.rota-dashboard-ui #page-principal .skill-art-placeholder{ width:56px; height:84px; }
   body.rota-dashboard-ui #page-principal .chars-grid{ grid-template-columns:1fr; }
   body.rota-dashboard-ui #page-principal .somatic-summary-card{ min-height:200px; }
   body.rota-dashboard-ui .modal-overlay{ padding:8px; align-items:flex-start; }
@@ -1469,6 +1958,11 @@ body.rota-dashboard-ui #page-principal #wound-modal #wound-save{
     width:calc(100vw - 16px);
     max-height:calc(100dvh - 16px);
   }
+  body.rota-dashboard-ui .skill-art-dialog{ width:calc(100vw - 16px); max-height:calc(100dvh - 16px); }
+  body.rota-dashboard-ui .skill-art-viewer-header{ min-height:54px; padding:9px 10px; }
+  body.rota-dashboard-ui .skill-art-viewer-header strong{ font-size:17px; }
+  body.rota-dashboard-ui .skill-art-viewer-content{ padding:8px; }
+  body.rota-dashboard-ui #skill-art-expanded-image{ max-height:calc(100dvh - 142px); }
   body.rota-dashboard-ui #page-principal .dossier-utility-header,
   body.rota-dashboard-ui #page-principal .somatic-inspector-header,
   body.rota-dashboard-ui .rule-action-dialog > .modal-header,
@@ -1494,6 +1988,7 @@ body.rota-dashboard-ui #page-principal #wound-modal #wound-save{
   body.rota-dashboard-ui #page-principal .attribute-step-button,
   body.rota-dashboard-ui #page-principal .skill-attribute-tab,
   body.rota-dashboard-ui #page-principal .skill-row,
+  body.rota-dashboard-ui #page-principal .skill-art img,
   body.rota-dashboard-ui #page-principal .skill-pips .pip{
     scroll-behavior:auto;
     transition:none;

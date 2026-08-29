@@ -75,6 +75,60 @@
   var CONDITION_CATEGORIES = DATA.conditionCategories || [];
   var CONDITION_DURATIONS = DATA.conditionDurations || [];
   var CONDITION_LIBRARY = DATA.conditions || [];
+  var SKILL_ART = {
+    'Físico':{
+      'Atletismo':'assets/ui/skills/fisico/atletismo.png',
+      'Acrobacia':'assets/ui/skills/fisico/acrobacia.png',
+      'Força':'assets/ui/skills/fisico/forca.png',
+      'Briga':'assets/ui/skills/fisico/briga.png',
+      'Respiração':'assets/ui/skills/fisico/respiracao.png',
+      'Esquivar':'assets/ui/skills/fisico/esquivar.png',
+      'Tolerância':'assets/ui/skills/fisico/tolerancia.png'
+    },
+    'Destreza':{
+      'Armas Brancas':'assets/ui/skills/destreza/armas-brancas.png',
+      'Furtividade':'assets/ui/skills/destreza/furtividade.png',
+      'Mirar':'assets/ui/skills/destreza/mirar.png',
+      'Cautela':'assets/ui/skills/destreza/cautela.png',
+      'Condução':'assets/ui/skills/destreza/conducao.png',
+      'Crime':'assets/ui/skills/destreza/crime.png',
+      'Fuga':'assets/ui/skills/destreza/fuga.png'
+    },
+    'Intelecto':{
+      'Medicina':'assets/ui/skills/intelecto/medicina.png',
+      'Planejar':'assets/ui/skills/intelecto/planejar.png',
+      'Exatas':'assets/ui/skills/intelecto/exatas.png',
+      'Humanas':'assets/ui/skills/intelecto/humanas.png',
+      'Ciências':'assets/ui/skills/intelecto/ciencias.png',
+      'Mecânica':'assets/ui/skills/intelecto/mecanica.png',
+      'Raízologia':'assets/ui/skills/intelecto/raizologia.png'
+    },
+    'Instinto':{
+      'Percepção':'assets/ui/skills/instinto/percepcao.png',
+      'Intuição':'assets/ui/skills/instinto/intuicao.png',
+      'Improvisar':'assets/ui/skills/instinto/improvisar.png',
+      'Sobrevivência':'assets/ui/skills/instinto/sobrevivencia.png',
+      'Reflexos':'assets/ui/skills/instinto/reflexos.png',
+      'Investigação':'assets/ui/skills/instinto/investigacao.png',
+      'Lidar com Animais':'assets/ui/skills/instinto/lidar-com-animais.png'
+    },
+    'Espírito':{
+      'Empatia':'assets/ui/skills/espirito/empatia.png',
+      'Intimidação':'assets/ui/skills/espirito/intimidacao.png',
+      'Persuasão':'assets/ui/skills/espirito/persuasao.png',
+      'Performance':'assets/ui/skills/espirito/performance.png',
+      'Determinação':'assets/ui/skills/espirito/determinacao.png',
+      'Coragem':'assets/ui/skills/espirito/coragem.png',
+      'Mentira':'assets/ui/skills/espirito/mentira.png'
+    }
+  };
+  var SKILL_COLORS = {
+    'Físico':'#cf4a3a',
+    'Destreza':'#d49a0b',
+    'Intelecto':'#3f9dcc',
+    'Instinto':'#83a53b',
+    'Espírito':'#9a59bf'
+  };
   var BODY_MAPS = {
     feminino:{
       label:'Feminino',image:'assets/corpos/feminino.png',zones:{
@@ -641,8 +695,7 @@
     brandRail.className = 'rota-brand-rail';
     brandRail.setAttribute('aria-label','Roots of the Abyss · ROTA');
     brandRail.innerHTML = '<div class="rota-brand-copy"><span>Roots of the</span><strong>Abyss</strong><b>ROTA</b></div>'+
-      '<img src="assets/ui/icone-rota.png" alt="Emblema de Roots of the Abyss">'+
-      '<div class="rota-brand-motto"><span>Sobreviva</span><i></i><span>Recorde</span></div>';
+      '<img src="assets/ui/icone-rota.png" alt="Emblema de Roots of the Abyss">';
 
     var leftColumn = document.createElement('div');
     leftColumn.className = 'rota-dashboard-column rota-dashboard-left';
@@ -683,15 +736,16 @@
     vitals.setAttribute('data-ui-section','vitals-compact');
     vitals.innerHTML = '<div class="rota-panel-heading"><span></span><strong>Estado Atual</strong><span></span></div><div class="section-body"><div class="resources-list rota-vitals-list"></div></div>';
     var vitalsList = $('.rota-vitals-list',vitals);
-    function decorateVital(track,code,label,iconPath){
+    function decorateVital(track,code,visibleTitle,label,iconPath){
       if(!track) return;
-      track.classList.add('vital-track','rota-vital-'+code.toLowerCase());
-      var title = $('.track-header > span:first-child',track);
-      if(title) title.innerHTML = '<b>'+code+'</b><img src="'+iconPath+'" alt=""><small>'+label+'</small>';
+      track.classList.add('vital-track','rota-vital-'+code);
+      var titleSlot = $('.track-header > span:first-child',track);
+      if(titleSlot) titleSlot.innerHTML = '<b>'+visibleTitle+'</b><img src="'+iconPath+'" alt=""><small>'+label+'</small>';
       vitalsList.appendChild(track);
     }
-    decorateVital(pfTrack,'PF','Pontos de Ferimento','assets/ui/icons/coracao-pf.png');
-    decorateVital(peTrack,'PE','Pontos de Estresse','assets/ui/icons/cerebro-pe.png');
+    decorateVital(pfTrack,'pf','Ferimentos','Pontos de Ferimento','assets/ui/icons/coracao-pf.png');
+    decorateVital(peTrack,'pe','Estresse','Pontos de Estresse','assets/ui/icons/cerebro-pe.png');
+    decorateVital(pcTrack,'pc','Corrupção','Pontos de Corrupção','assets/ui/icons/arvore-pc.png');
     centerColumn.appendChild(vitals);
 
     var statePanel = document.createElement('section');
@@ -705,7 +759,6 @@
       resources.classList.add('rota-needs-panel');
       var resourcesTitle = $('.section-title',resources);
       if(resourcesTitle) resourcesTitle.innerHTML = '<span></span><strong>Necessidades</strong><span></span>';
-      if(pcTrack) pcTrack.classList.add('rota-pc-track');
       centerColumn.appendChild(resources);
     }
 
@@ -930,6 +983,54 @@
     document.body.classList.remove('modal-open');
     if(lastSomaticFocus && typeof lastSomaticFocus.focus === 'function') lastSomaticFocus.focus();
     lastSomaticFocus = null;
+  }
+
+  var lastSkillArtFocus = null;
+  function buildSkillArtViewer(){
+    if($('#skill-art-modal')) return;
+    var overlay = document.createElement('div');
+    overlay.id = 'skill-art-modal';
+    overlay.className = 'modal-overlay skill-art-overlay no-print';
+    overlay.style.display = 'none';
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-hidden','true');
+    overlay.setAttribute('aria-labelledby','skill-art-viewer-title');
+    overlay.innerHTML = '<div class="modal skill-art-dialog" tabindex="-1">'+
+      '<div class="skill-art-viewer-header"><div><span id="skill-art-viewer-attribute">ARQUIVO DE PERÍCIA</span><strong id="skill-art-viewer-title">Perícia</strong></div><button type="button" class="modal-close" data-close-skill-art aria-label="Fechar arte da perícia">×</button></div>'+
+      '<div class="skill-art-viewer-content"><figure><img id="skill-art-expanded-image" src="" alt=""><figcaption>ARTE CONCEITUAL · CLIQUE FORA OU PRESSIONE ESC PARA FECHAR</figcaption></figure></div>'+
+    '</div>';
+    document.body.appendChild(overlay);
+  }
+
+  function openSkillArtViewer(trigger){
+    var overlay = $('#skill-art-modal');
+    var image = $('#skill-art-expanded-image');
+    if(!overlay || !image || !trigger) return;
+    var skill = trigger.dataset.skillArtName || 'Perícia';
+    var attribute = trigger.dataset.skillArtAttribute || '';
+    lastSkillArtFocus = document.activeElement;
+    $('#skill-art-viewer-title').textContent = skill;
+    $('#skill-art-viewer-attribute').textContent = 'ARQUIVO DE PERÍCIA' + (attribute ? ' · '+attribute.toUpperCase() : '');
+    image.src = trigger.dataset.skillArtSrc || '';
+    image.alt = 'Arte ampliada da perícia '+skill;
+    overlay.style.setProperty('--skill-color',SKILL_COLORS[attribute] || '#a9793b');
+    overlay.style.display = 'flex';
+    overlay.setAttribute('aria-hidden','false');
+    document.body.classList.add('modal-open');
+    var dialog = $('.skill-art-dialog',overlay);
+    if(dialog) dialog.focus();
+  }
+
+  function closeSkillArtViewer(){
+    var overlay = $('#skill-art-modal');
+    if(!overlay || overlay.style.display === 'none') return;
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden','true');
+    $('#skill-art-expanded-image').src = '';
+    document.body.classList.remove('modal-open');
+    if(lastSkillArtFocus && typeof lastSkillArtFocus.focus === 'function') lastSkillArtFocus.focus();
+    lastSkillArtFocus = null;
   }
 
   function buildAutomationModal(){
@@ -1180,7 +1281,11 @@
         row.className = 'skill-row';
         row.dataset.skill = skill;
         row.dataset.attribute = attribute;
-        row.innerHTML = '<span class="skill-name">'+skill+'</span><div class="pips skill-pips" id="sk-'+skillIndex+'" data-skill-name="'+skill+'" data-attribute="'+attribute+'" data-max="4" role="group" aria-label="Nível de '+skill+'">'+pipButtons(5)+'</div>';
+        var artPath = SKILL_ART[attribute] && SKILL_ART[attribute][skill];
+        var artMarkup = artPath
+          ? '<button type="button" class="skill-art has-image" data-open-skill-art data-skill-art-src="'+artPath+'" data-skill-art-name="'+skill+'" data-skill-art-attribute="'+attribute+'" aria-label="Ampliar arte da perícia '+skill+'" aria-haspopup="dialog"><img src="'+artPath+'" alt="Arte da perícia '+skill+'" loading="lazy" decoding="async"></button>'
+          : '<span class="skill-art skill-art-placeholder" aria-hidden="true">✦</span>';
+        row.innerHTML = artMarkup+'<span class="skill-name">'+skill+'</span><div class="pips skill-pips" id="sk-'+skillIndex+'" data-skill-name="'+skill+'" data-attribute="'+attribute+'" data-max="4" role="group" aria-label="Nível de '+skill+'">'+pipButtons(5)+'</div>';
         column.appendChild(row);
       });
       grid.appendChild(column);
@@ -1573,7 +1678,7 @@
     $('#pf-stage').textContent = 'Estágio atual: ' + pfStage;
     $('#pe-stage').textContent = 'Estágio atual: ' + peStage;
     $('#pf-stage').className = 'track-stage ' + (pfStage === 'Morte Direta' || pfStage === 'Morrendo' || pfStage === 'Crítico' ? 'stage-crit' : (pfStage === 'Machucado' || pfStage === 'Ferido' ? 'stage-warn' : 'stage-ok'));
-    $('#pe-stage').className = 'track-stage ' + (peStage === 'Enlouquecendo' || peStage === 'Desequilibrado' ? 'stage-crit' : (peStage === 'Instável' ? 'stage-warn' : 'stage-ok'));
+    $('#pe-stage').className = 'track-stage ' + (peStage === 'Enlouquecendo' ? 'stage-breaking' : (peStage === 'Desequilibrado' ? 'stage-crit' : (peStage === 'Instável' ? 'stage-warn' : 'stage-ok')));
     var alertBox = $('#critical-state-alert');
     if(alertBox){
       var alertText = '';
@@ -1810,8 +1915,9 @@
 
   function renderPC(){
     model.pc = clamp(model.pc,0,100);
-    $('#pc-input').value = model.pc;
+    $('#pc-readout-current').textContent = String(model.pc).padStart(2,'0');
     $('#pc-marker').style.left = model.pc + '%';
+    $('#pc-bar').setAttribute('aria-valuenow',String(model.pc));
     var stage = currentCorruptionStage();
     $('#pc-stage').textContent = 'Estágio atual: ' + stage.name;
     $('#pc-stage').className = 'pc-stage stage-' + stage.name.toLowerCase().replace(/í/g,'i');
@@ -2815,7 +2921,9 @@
       var key = map[containerId];
       var list = model.characteristics[key];
       $('#' + containerId).innerHTML = list.map(function(value,index){
-        return '<div class="list-input-row" data-character-type="'+key+'" data-character-index="'+index+'"><span class="list-num">'+(index+1)+'</span><div class="list-row-actions"><input type="text" value="'+escapeHtml(value)+'" placeholder="'+(key === 'vantagens' ? 'Vantagem...' : (key === 'desvantagens' ? 'Desvantagem...' : 'Cicatriz...'))+'"><button type="button" class="list-row-remove character-remove">×</button></div></div>';
+        var itemLabel = key === 'vantagens' ? 'vantagem' : (key === 'desvantagens' ? 'desvantagem' : 'cicatriz');
+        var removeLabel = 'Apagar '+itemLabel+' '+(index+1);
+        return '<div class="list-input-row" data-character-type="'+key+'" data-character-index="'+index+'"><span class="list-num">'+(index+1)+'</span><div class="list-row-actions"><input type="text" value="'+escapeHtml(value)+'" placeholder="'+(key === 'vantagens' ? 'Vantagem...' : (key === 'desvantagens' ? 'Desvantagem...' : 'Cicatriz...'))+'"><button type="button" class="list-row-remove character-remove" aria-label="'+removeLabel+'" title="'+removeLabel+'">×</button></div></div>';
       }).join('');
     });
     var advantages = model.characteristics.vantagens.filter(Boolean).length;
@@ -3720,6 +3828,10 @@
     if(event.target.closest('#somatic-inspector-open')){openSomaticInspector();return;}
     if(event.target.closest('[data-close-somatic-modal]')){closeSomaticInspector();return;}
     if(event.target.id === 'somatic-inspector-modal'){closeSomaticInspector();return;}
+    var skillArtTrigger = event.target.closest('[data-open-skill-art]');
+    if(skillArtTrigger){openSkillArtViewer(skillArtTrigger);return;}
+    if(event.target.closest('[data-close-skill-art]')){closeSkillArtViewer();return;}
+    if(event.target.id === 'skill-art-modal'){closeSkillArtViewer();return;}
     var utilityTrigger = event.target.closest('[data-open-dossier-utility]');
     if(utilityTrigger){openDossierUtility(utilityTrigger.dataset.openDossierUtility);return;}
     if(event.target.closest('[data-close-dossier-utility]')){closeDossierUtility();return;}
@@ -3779,7 +3891,14 @@
     var weaponFire=event.target.closest('.weapon-fire');if(weaponFire){var fireState=weaponFire.dataset.ammoItem?model.inventory.filter(function(item){return item.id===weaponFire.dataset.ammoItem;})[0].weapon:model.weapons[parseInt(weaponFire.dataset.weaponIndex,10)];var fireResult=fireWeaponState(fireState);showWeaponFeedback(fireResult);renderEquipment();saveModel();return;}
     var weaponReload=event.target.closest('.weapon-reload');if(weaponReload){var reloadItem=weaponReload.dataset.ammoItem?model.inventory.filter(function(item){return item.id===weaponReload.dataset.ammoItem;})[0]:null;var reloadState=reloadItem?reloadItem.weapon:model.weapons[parseInt(weaponReload.dataset.weaponIndex,10)];var reloadResult=reloadWeaponState(reloadState);showWeaponFeedback(reloadResult);renderEquipment();saveModel();return;}
     var modifier = event.target.closest('.modifier-option');
-    if(modifier){ setModifier(modifier.dataset.modifierInput,parseInt(modifier.dataset.value,10)); return; }
+    if(modifier){
+      var modifierInputId = modifier.dataset.modifierInput;
+      var modifierValue = parseInt(modifier.dataset.value,10) || 0;
+      var modifierInput = $('#' + modifierInputId);
+      var modifierCurrent = modifierInput ? (parseInt(modifierInput.value,10) || 0) : 0;
+      setModifier(modifierInputId,modifierCurrent === modifierValue ? modifierValue-1 : modifierValue);
+      return;
+    }
     var pip = event.target.closest('.pip');
     if(pip){
       var group = pip.closest('.pips'); var index = parseInt(pip.dataset.i,10);
@@ -4016,6 +4135,7 @@
       skillTabs[nextSkillTab].focus();
       return;
     }
+    if(event.key === 'Escape' && $('#skill-art-modal') && $('#skill-art-modal').style.display !== 'none'){event.preventDefault();closeSkillArtViewer();return;}
     if(event.key === 'Escape' && $('#wound-modal') && $('#wound-modal').style.display !== 'none'){event.preventDefault();closeWoundModal();return;}
     if(event.key === 'Escape' && $('#somatic-inspector-modal') && $('#somatic-inspector-modal').style.display !== 'none'){event.preventDefault();closeSomaticInspector();return;}
     if(event.key === 'Escape' && $$('.dossier-utility-overlay').some(function(item){return item.style.display !== 'none';})){event.preventDefault();closeDossierUtility();return;}
@@ -4030,6 +4150,7 @@
   function initialize(){
     buildTabs();
     bindFields();
+    buildSkillArtViewer();
     buildSkills();
     document.addEventListener('click',onClick);
     document.addEventListener('input',onInput);
