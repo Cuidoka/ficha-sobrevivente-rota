@@ -579,13 +579,13 @@ body.rota-dashboard-ui #page-principal .rota-vitals-list .track-max{ color:#a995
 body.rota-dashboard-ui #page-principal .rota-vitals-list .zone-strip{ height:2px; margin:1px 0 4px; opacity:.45; }
 body.rota-dashboard-ui #page-principal .rota-vitals-list .box-row{
   align-content:center;
-  gap:clamp(2.5px,.16vw,3px);
+  gap:clamp(3.25px,.22vw,4.25px);
   min-height:20px;
 }
 body.rota-dashboard-ui #page-principal .rota-vitals-list .box-row .pip{
   position:relative;
-  width:clamp(8px,.52vw,10px);
-  min-width:clamp(8px,.52vw,10px);
+  width:clamp(7.5px,.48vw,9.5px);
+  min-width:clamp(7.5px,.48vw,9.5px);
   height:20px;
   border-color:rgba(151,113,73,.44);
   background:rgba(7,7,5,.55);
