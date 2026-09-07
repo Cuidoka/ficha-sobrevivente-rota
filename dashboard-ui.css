@@ -52,7 +52,7 @@ body.rota-dashboard-ui .sheet{
   width:100%;
   max-width:none;
   min-height:100dvh;
-  padding:8px 10px 10px;
+  padding:8px 10px 55px;
 }
 
 /* Navegação horizontal --------------------------------------------------- */
@@ -156,16 +156,16 @@ body.rota-dashboard-ui .sheet-tab.active::after{ opacity:1; }
 
 /* Estrutura principal ---------------------------------------------------- */
 body.rota-dashboard-ui #page-principal{
-  height:calc(100dvh - 83px);
-  min-height:620px;
-  overflow:hidden;
+  height:calc(100dvh - 128px);
+  min-height:590px;
+  overflow:visible;
 }
 
 body.rota-dashboard-ui #page-principal.active{ display:block; }
 
 body.rota-dashboard-ui .rota-dashboard{
   display:grid;
-  grid-template-columns:140px minmax(330px,.95fr) minmax(330px,.9fr) minmax(430px,1.28fr);
+  grid-template-columns:minmax(310px,.94fr) minmax(355px,1.08fr) minmax(365px,1.13fr);
   grid-template-rows:minmax(0,1fr);
   gap:7px;
   width:100%;
@@ -184,9 +184,17 @@ body.rota-dashboard-ui .rota-dashboard{
 }
 
 @media (min-width:1121px){
+  .rota-dashboard-center{
+    display:grid;
+    grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
+    grid-template-rows:minmax(360px,1.15fr) minmax(218px,1fr);
+  }
+  .rota-dashboard-center > .rota-vitals-panel{ grid-column:1/-1; }
+  body.rota-dashboard-ui #page-principal .rota-dashboard-center .needs-grid{ grid-template-columns:1fr; gap:5px; }
+  body.rota-dashboard-ui #page-principal .rota-dashboard-center .health-rule-tools{ grid-template-columns:1fr; }
   .rota-dashboard-right{
     display:grid;
-    grid-template-rows:minmax(0,27fr) minmax(0,51fr) minmax(0,22fr);
+    grid-template-rows:minmax(150px,.9fr) minmax(0,2.1fr);
   }
   .rota-dashboard-right > *{ min-height:0; }
 }
@@ -292,13 +300,13 @@ body.rota-dashboard-ui .rota-dashboard{
 .rota-brand-motto i{ display:block; width:58px; height:1px; margin:auto; background:linear-gradient(90deg,transparent,#8a4825,transparent); }
 
 body.rota-dashboard-ui .toolbar{
-  right:auto;
-  bottom:14px;
-  left:18px;
+  right:10px;
+  bottom:8px;
+  left:10px;
   z-index:40;
   display:grid;
-  grid-template-columns:minmax(0,1fr);
-  width:124px;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  width:auto;
   gap:4px;
   padding:5px;
   border-color:rgba(120,78,37,.45);
@@ -306,9 +314,9 @@ body.rota-dashboard-ui .toolbar{
 }
 body.rota-dashboard-ui .toolbar button{
   min-width:0;
-  min-height:38px;
+  min-height:36px;
   padding:6px 5px;
-  font-size:clamp(9px,.62vw,10.5px);
+  font-size:clamp(11px,.75vw,13px);
   line-height:1.15;
   letter-spacing:.45px;
 }
@@ -316,12 +324,12 @@ body.rota-dashboard-ui .toolbar button{
 /* Identificação ---------------------------------------------------------- */
 .rota-identity-panel{
   position:relative;
-  flex:1 1 62%;
+  flex:1 1 auto;
   min-height:0;
   padding:5px 8px 7px;
-  overflow:hidden;
+  overflow:auto;
   border:1px solid rgba(76,50,30,.82);
-  clip-path:polygon(.7% 1.5%,99% 0,100% 97.5%,98% 100%,1% 99%);
+  clip-path:none;
   color:#17100b;
   background-color:var(--rota-paper);
   background-image:
@@ -437,7 +445,7 @@ body.rota-dashboard-ui #page-principal .paradigm-summary{ display:none; }
 @media (min-width:1121px){
   .rota-identity-panel{
     display:grid;
-    grid-template-rows:32px minmax(0,1fr) 58px;
+    grid-template-rows:32px minmax(285px,1.25fr) 58px minmax(160px,1fr);
   }
   body.rota-dashboard-ui #page-principal .doc-header{ height:100%; padding:5px 2px 4px; }
   body.rota-dashboard-ui #page-principal .title-block{
@@ -462,10 +470,23 @@ body.rota-dashboard-ui #page-principal .paradigm-summary{ display:none; }
 
 /* Características -------------------------------------------------------- */
 body.rota-dashboard-ui #page-principal [data-section="characteristics"]{
-  flex:1 1 38%;
+  flex:0 0 auto;
   min-height:0;
-  overflow:hidden;
+  overflow:auto;
 }
+body.rota-dashboard-ui #page-principal .rota-identity-panel [data-section="characteristics"]{
+  border:0;
+  border-top:1px solid rgba(48,31,18,.4);
+  background:transparent;
+  box-shadow:none;
+  color:#2f2015;
+}
+body.rota-dashboard-ui #page-principal .rota-identity-panel [data-section="characteristics"]::after{ display:none; }
+body.rota-dashboard-ui #page-principal .rota-identity-panel [data-section="characteristics"] > .section-title{ color:#2f2015; background:transparent; }
+body.rota-dashboard-ui #page-principal .rota-identity-panel .list-input-row input{ color:#281a10; }
+body.rota-dashboard-ui #page-principal .rota-identity-panel .chars-col-title.vant{ color:#3c5829; }
+body.rota-dashboard-ui #page-principal .rota-identity-panel .chars-col-title.desv{ color:#922d20; }
+body.rota-dashboard-ui #page-principal .rota-identity-panel .chars-col-title.cicat{ color:#704219; }
 body.rota-dashboard-ui #page-principal [data-section="characteristics"] .section-body{ padding:5px 9px 8px; overflow:hidden; }
 body.rota-dashboard-ui #page-principal .character-status{ display:none; }
 body.rota-dashboard-ui #page-principal .chars-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; min-width:0; }
@@ -528,14 +549,14 @@ body.rota-dashboard-ui #page-principal .add-char-btn{ width:100%; min-height:20p
 /* Estado atual ----------------------------------------------------------- */
 .rota-vitals-panel{ flex:0 0 50%; min-height:0; overflow:hidden; }
 .rota-vitals-panel .section-body{ height:calc(100% - 31px); padding:7px 9px 9px !important; }
-.rota-vitals-list{ display:grid !important; grid-template-rows:minmax(120px,1.18fr) minmax(0,1fr) minmax(0,1fr); height:100%; gap:4px !important; }
+.rota-vitals-list{ display:grid !important; grid-template-rows:minmax(110px,1fr) minmax(110px,1fr) minmax(83px,.8fr); height:100%; gap:4px !important; }
 
 body.rota-dashboard-ui #page-principal .rota-vitals-list .track-block{
   position:relative;
   display:grid;
   grid-template-rows:auto auto minmax(16px,1fr) auto;
   min-height:0;
-  padding:7px 9px 5px;
+  padding:4px 9px 5px;
   border:1px solid rgba(115,64,35,.7);
   border-left:2px solid #8c2d22;
   background:linear-gradient(90deg,rgba(83,22,17,.13),rgba(4,5,4,.22));
@@ -553,7 +574,7 @@ body.rota-dashboard-ui #page-principal .rota-vitals-list .rota-vital-pc{
   border-left-color:#d07819;
   background:linear-gradient(90deg,rgba(118,58,10,.16),rgba(4,5,4,.24));
 }
-body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header{ align-items:center; color:#d8c6a4; }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header{ min-height:30px; margin:0; align-items:center; color:#d8c6a4; }
 body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header > span:first-child{ display:flex; align-items:center; gap:6px; }
 body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header b{
   color:#d4b995;
@@ -561,8 +582,8 @@ body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header b{
   letter-spacing:.25px;
 }
 body.rota-dashboard-ui #page-principal .rota-vitals-list .track-header img{
-  width:34px;
-  height:34px;
+  width:28px;
+  height:28px;
   object-fit:contain;
   filter:drop-shadow(0 0 5px rgba(190,44,30,.38));
 }
@@ -656,6 +677,14 @@ body.rota-dashboard-ui #page-principal .rota-vitals-list .permanent-control inpu
   font:700 9px/16px var(--font-mono) !important;
   text-align:center;
 }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .rota-vital-pf,
+body.rota-dashboard-ui #page-principal .rota-vitals-list .rota-vital-pe{ grid-template-rows:auto auto minmax(20px,1fr) auto auto; }
+body.rota-dashboard-ui #page-principal .vital-status-row{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:2px 8px; }
+body.rota-dashboard-ui #page-principal .vital-status-row .permanent-control{ position:static; flex:none; }
+body.rota-dashboard-ui #page-principal .vital-status-row .track-stage{ margin:0; }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .vital-rule-button{ display:flex; align-items:center; justify-content:center; min-height:22px; margin-top:3px; padding:2px 4px; border-color:rgba(142,98,54,.35); color:#b6a17e; background:rgba(7,6,4,.4); }
+body.rota-dashboard-ui #page-principal .vital-rule-button > span{ display:none; }
+body.rota-dashboard-ui #page-principal .vital-rule-button strong{ font:10px var(--font-display); }
 
 body.rota-dashboard-ui #page-principal .rota-vital-pc .track-header{ min-height:34px; }
 body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-controls{ flex-shrink:0; gap:3px; }
@@ -753,9 +782,11 @@ body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-stage.stage-critica{ c
 body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-stage.stage-corrompido{ color:#e01844; }
 
 /* Condições e dores ------------------------------------------------------ */
-.rota-state-panel{ flex:0 0 16%; min-height:0; overflow:hidden; }
-.rota-state-content{ display:grid; grid-template-columns:minmax(0,1fr) 90px; gap:7px; height:calc(100% - 31px); padding:5px 9px 8px; }
-.dashboard-condition-list{ display:flex; align-items:center; min-width:0; gap:5px; overflow:hidden; }
+.rota-state-panel{ min-height:0; overflow:auto; }
+.rota-state-content{ display:grid; grid-template-columns:minmax(0,1fr) 62px; gap:7px; padding:3px 9px 7px; }
+.dashboard-condition-list{ display:flex; align-items:center; flex-wrap:wrap; min-width:0; gap:5px; }
+.rota-condition-heading{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:3px 9px; font:11px var(--font-display); text-transform:uppercase; }
+.rota-condition-heading button{ padding:3px 6px; border:1px solid rgba(64,40,23,.5); color:#4a291c; background:rgba(255,239,202,.2); font:11px var(--font-display); }
 .dashboard-condition-chip,
 .dashboard-condition-more,
 .dashboard-condition-empty,
@@ -773,7 +804,7 @@ body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-stage.stage-corrompido
 }
 .dashboard-condition-chip{ display:flex; align-items:center; gap:5px; flex:1 1 105px; }
 .dashboard-condition-chip i{ color:#d45b3d; font-style:normal; }
-.dashboard-condition-chip span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dashboard-condition-chip span{ overflow-wrap:anywhere; }
 .dashboard-condition-chip b{ margin-left:auto; color:#8b3a2d; }
 .dashboard-condition-more{ flex:0 0 auto; }
 .dashboard-condition-empty{ display:grid; flex:1; align-content:center; text-align:left; }
@@ -797,14 +828,14 @@ body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-stage.stage-corrompido
 /* Necessidades ----------------------------------------------------------- */
 body.rota-dashboard-ui #page-principal .rota-needs-panel{ flex:1 1 34%; min-height:0; overflow:hidden; }
 body.rota-dashboard-ui #page-principal .rota-needs-panel > .section-title{ min-height:30px; }
-body.rota-dashboard-ui #page-principal .rota-needs-panel > .section-body{ height:calc(100% - 32px); padding:3px 9px 5px; overflow:hidden; }
+body.rota-dashboard-ui #page-principal .rota-needs-panel > .section-body{ height:calc(100% - 32px); padding:3px 9px 5px; overflow:auto; }
 body.rota-dashboard-ui #page-principal .rota-needs-panel .resources-list{ display:flex; height:100%; min-height:0; flex-direction:column; gap:3px; }
 body.rota-dashboard-ui #page-principal .needs-panel{ order:1; gap:3px; padding:0; border:0; background:transparent; }
 body.rota-dashboard-ui #page-principal .needs-heading{ display:none; }
-body.rota-dashboard-ui #page-principal .needs-grid{ display:grid; grid-template-columns:1fr; gap:2px; }
+body.rota-dashboard-ui #page-principal .needs-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
 body.rota-dashboard-ui #page-principal .need-card{
   display:grid;
-  grid-template-columns:72px minmax(0,1fr) auto;
+  grid-template-columns:minmax(0,1fr) auto;
   align-items:center;
   gap:5px;
   min-height:29px;
@@ -816,7 +847,7 @@ body.rota-dashboard-ui #page-principal .need-card{
 body.rota-dashboard-ui #page-principal .need-card-header{ display:grid; gap:0; }
 body.rota-dashboard-ui #page-principal .need-card-header strong{ color:#c6922f; font:clamp(10.5px,.72vw,12px) var(--font-display); }
 body.rota-dashboard-ui #page-principal .need-card-header span{ color:#806d50; font:clamp(8px,.55vw,9.5px) var(--font-mono); }
-body.rota-dashboard-ui #page-principal .need-bar{ display:flex; gap:1px; }
+body.rota-dashboard-ui #page-principal .need-bar{ display:flex; grid-column:1/-1; grid-row:2; gap:2px; }
 body.rota-dashboard-ui #page-principal .need-segment{ flex:1; width:auto; min-width:0; height:11px; border-color:rgba(130,91,51,.35); color:transparent; background:rgba(9,8,6,.7); }
 body.rota-dashboard-ui #page-principal .need-hunger .need-segment.filled{ background:#9b6c20; }
 body.rota-dashboard-ui #page-principal .need-thirst .need-segment.filled{ background:#3b738e; }
@@ -1264,12 +1295,22 @@ body.rota-dashboard-ui .skill-art-viewer-content figcaption{
 }
 
 /* Somático --------------------------------------------------------------- */
-body.rota-dashboard-ui #page-principal .diagram-section{ flex:0 0 28%; min-height:0; overflow:hidden; background-color:#b6a27e; background-image:url("assets/ui/textures/paper-aged.png"); background-size:600px; }
+body.rota-dashboard-ui #page-principal .diagram-section{ display:flex; flex-direction:column; flex:0 0 auto; min-height:0; overflow:auto; background-color:#b6a27e; background-image:url("assets/ui/textures/paper-aged.png"); background-size:600px; }
 body.rota-dashboard-ui #page-principal .diagram-section > .section-title{ color:#2f2014; background:rgba(255,239,202,.08); }
-body.rota-dashboard-ui #page-principal .diagram-section .somatic-summary-body{ height:calc(100% - 31px); }
+body.rota-dashboard-ui #page-principal .diagram-section .somatic-summary-body{ flex:1 0 64px; min-height:64px; }
+body.rota-dashboard-ui #page-principal .diagram-section .rota-state-panel{ flex:0 0 auto; margin:0 7px 5px; border:0; border-top:1px solid rgba(55,34,21,.3); background:transparent; box-shadow:none; color:#302016; }
+body.rota-dashboard-ui #page-principal .diagram-section .rota-state-panel::after{ display:none; }
+body.rota-dashboard-ui #page-principal .diagram-section .rota-state-content{ padding:2px 2px 0; }
+body.rota-dashboard-ui #page-principal .diagram-section .rota-condition-heading{ padding:3px 2px; }
+body.rota-dashboard-ui #page-principal .diagram-section .dashboard-condition-chip,
+body.rota-dashboard-ui #page-principal .diagram-section .dashboard-condition-empty{ min-height:28px; color:#692c20; background:rgba(255,242,214,.18); border-color:rgba(109,53,28,.4); font-size:11px; }
+body.rota-dashboard-ui #page-principal .diagram-section .dashboard-condition-empty small{ color:#57412e; }
+body.rota-dashboard-ui #page-principal .diagram-section .dashboard-pain-link{ min-height:28px !important; flex-direction:row; align-items:center !important; gap:4px; padding:3px 4px !important; color:#48311f !important; background:transparent !important; }
+body.rota-dashboard-ui #page-principal .diagram-section .dashboard-pain-link strong{ color:#48311f; margin:0; white-space:nowrap; font-size:10px; }
+body.rota-dashboard-ui #page-principal .diagram-section .dashboard-pain-link span{ font-size:9px; }
 body.rota-dashboard-ui #page-principal .somatic-summary-card{
   display:grid;
-  grid-template-columns:minmax(105px,1fr) minmax(120px,1fr);
+  grid-template-columns:minmax(65px,.6fr) minmax(120px,1.4fr);
   grid-template-rows:1fr auto;
   width:100%;
   height:100%;
@@ -1302,13 +1343,6 @@ body.rota-dashboard-ui #page-principal .somatic-miniature img{
 }
 
 @media (min-width:1121px) and (max-height:850px){
-  .rota-dashboard-center{
-    display:grid;
-    grid-template-rows:minmax(0,54fr) minmax(0,13fr) minmax(0,33fr);
-  }
-  .rota-dashboard-center .rota-vitals-list{
-    grid-template-rows:minmax(108px,1.16fr) minmax(0,1fr) minmax(0,1fr);
-  }
   body.rota-dashboard-ui #page-principal .skill-row{
     grid-template-columns:40px minmax(0,1fr);
     min-height:59px;
@@ -1894,10 +1928,6 @@ body.rota-dashboard-ui #page-principal #wound-modal #wound-save{
 }
 
 @media (max-width:1450px){
-  body.rota-dashboard-ui .rota-dashboard{ grid-template-columns:112px minmax(300px,.9fr) minmax(295px,.86fr) minmax(390px,1.22fr); }
-  .rota-brand-rail{ padding-right:5px; padding-left:5px; }
-  .rota-brand-rail img{ width:98px; }
-  body.rota-dashboard-ui .toolbar{ left:14px; width:104px; }
   body.rota-dashboard-ui #page-principal .portrait-shell{ width:105px; height:184px; }
   body.rota-dashboard-ui #page-principal .doc-header{ grid-template-columns:105px minmax(0,1fr); }
   body.rota-dashboard-ui #page-principal .attribute-glyph{ width:42px; height:42px; font-size:20px; }
@@ -1917,14 +1947,22 @@ body.rota-dashboard-ui #page-principal #wound-modal #wound-save{
   .rota-brand-rail{ display:none; }
   .rota-dashboard-left{ grid-column:1; }
   .rota-dashboard-center{ grid-column:2; }
-  .rota-dashboard-right{ grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr; }
+  .rota-dashboard-right{ grid-column:1/-1; display:grid; grid-template-columns:1fr; }
+  body.rota-dashboard-ui #page-principal .rota-vitals-panel{ flex:none; min-height:330px; }
+  body.rota-dashboard-ui #page-principal .rota-vitals-panel > .section-body{ height:auto; }
+  body.rota-dashboard-ui #page-principal .rota-vitals-list{ height:auto; grid-template-rows:minmax(110px,auto) minmax(110px,auto) minmax(88px,auto); }
+  body.rota-dashboard-ui #page-principal .rota-needs-panel{ flex:none; }
+  body.rota-dashboard-ui #page-principal .rota-needs-panel > .section-body{ height:auto; overflow:visible; }
+  body.rota-dashboard-ui #page-principal .rota-needs-panel .resources-list{ height:auto; }
+  body.rota-dashboard-ui #page-principal .rota-identity-panel{ height:100%; }
+  body.rota-dashboard-ui #page-principal .rota-identity-panel [data-section="characteristics"]{ margin-top:8px; }
   body.rota-dashboard-ui #page-principal [data-ui-section="attributes"],
   body.rota-dashboard-ui #page-principal [data-section="skills"],
   body.rota-dashboard-ui #page-principal .diagram-section{ min-height:250px; }
   body.rota-dashboard-ui #page-principal [data-section="skills"]{ grid-column:1/-1; }
   body.rota-dashboard-ui #page-principal .skill-pips{ grid-template-columns:repeat(5,12px); height:12px; }
   body.rota-dashboard-ui #page-principal .skill-pips .pip{ width:12px; height:12px; }
-  body.rota-dashboard-ui .toolbar{ right:8px; bottom:8px; left:8px; width:auto; grid-template-columns:repeat(6,minmax(0,1fr)); }
+  body.rota-dashboard-ui .toolbar{ right:8px; bottom:8px; left:8px; width:auto; grid-template-columns:repeat(5,minmax(0,1fr)); }
 }
 
 @media (max-width:900px){
@@ -1934,6 +1972,9 @@ body.rota-dashboard-ui #page-principal #wound-modal #wound-save{
 @media (max-width:720px){
   body.rota-dashboard-ui .dossier-nav-list{ display:flex; overflow-x:auto; }
   body.rota-dashboard-ui .sheet-tab{ flex:0 0 115px; }
+  body.rota-dashboard-ui .sheet{ padding-bottom:112px; }
+  body.rota-dashboard-ui .toolbar{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+  body.rota-dashboard-ui .toolbar .dossier-utility-button{ grid-column:span 2; }
   body.rota-dashboard-ui .rota-dashboard{ display:flex; flex-direction:column; }
   .rota-dashboard-right{ display:flex; }
   .rota-identity-panel{ overflow:visible; }
@@ -1997,6 +2038,9 @@ body.rota-dashboard-ui #page-principal #wound-modal #wound-save{
 
 @media print{
   body.rota-dashboard-ui #page-principal{ height:auto; overflow:visible; }
-  body.rota-dashboard-ui .rota-dashboard{ display:grid; grid-template-columns:34% 31% 35%; height:auto; }
+  body.rota-dashboard-ui .rota-dashboard{ display:grid; grid-template-columns:minmax(0,1fr); height:auto; }
+  body.rota-dashboard-ui .rota-dashboard-column,
+  body.rota-dashboard-ui .rota-identity-panel{ display:block; height:auto; overflow:visible; }
+  body.rota-dashboard-ui #page-principal .diagram-section{ overflow:visible; }
   body.rota-dashboard-ui .rota-brand-rail{ display:none; }
 }

@@ -530,7 +530,7 @@
     nav.className = 'sheet-tabs no-print';
     nav.setAttribute('aria-label','Navegação do dossiê');
     var dossierNavigation = [
-      {page:'principal',label:'Player',icon:'✦',tab:true},
+      {page:'principal',label:'Sobrevivente',icon:'✦',tab:true},
       {page:'equipamentos',label:'Bolsa',icon:'▣',tab:true},
       {page:'historia',label:'Social',icon:'♙',tab:true},
       {page:'origem',label:'Corrupção',icon:'✣',tab:true}
@@ -691,12 +691,6 @@
     var stage = document.createElement('div');
     stage.className = 'dossier-stage rota-dashboard';
 
-    var brandRail = document.createElement('aside');
-    brandRail.className = 'rota-brand-rail';
-    brandRail.setAttribute('aria-label','Roots of the Abyss · ROTA');
-    brandRail.innerHTML = '<div class="rota-brand-copy"><span>Roots of the</span><strong>Abyss</strong><b>ROTA</b></div>'+
-      '<img src="assets/ui/icone-rota.png" alt="Emblema de Roots of the Abyss">';
-
     var leftColumn = document.createElement('div');
     leftColumn.className = 'rota-dashboard-column rota-dashboard-left';
     var centerColumn = document.createElement('div');
@@ -705,7 +699,6 @@
     rightColumn.className = 'rota-dashboard-column rota-dashboard-right';
 
     page.insertBefore(stage,page.firstChild);
-    stage.appendChild(brandRail);
     stage.appendChild(leftColumn);
     stage.appendChild(centerColumn);
     stage.appendChild(rightColumn);
@@ -724,9 +717,10 @@
         return '<i data-dashboard-growth="'+(index+1)+'">'+roman+'</i>';
       }).join('')+'</div>';
       identityPanel.appendChild(growthTrack);
+      if(characteristics) identityPanel.appendChild(characteristics);
       leftColumn.appendChild(identityPanel);
     }
-    if(characteristics) leftColumn.appendChild(characteristics);
+    else if(characteristics) leftColumn.appendChild(characteristics);
 
     var pfTrack = $('#pf-boxes') && $('#pf-boxes').closest('.track-block');
     var peTrack = $('#pe-boxes') && $('#pe-boxes').closest('.track-block');
@@ -746,14 +740,33 @@
     decorateVital(pfTrack,'pf','Ferimentos','Pontos de Ferimento','assets/ui/icons/coracao-pf.png');
     decorateVital(peTrack,'pe','Estresse','Pontos de Estresse','assets/ui/icons/cerebro-pe.png');
     decorateVital(pcTrack,'pc','Corrupção','Pontos de Corrupção','assets/ui/icons/arvore-pc.png');
+    [[pfTrack,'pf','open-dying-panel'],[peTrack,'pe','open-stress-panel']].forEach(function(entry){
+      var track = entry[0];
+      if(!track) return;
+      var statusRow = document.createElement('div');
+      statusRow.className = 'vital-status-row';
+      var stageLabel = $('.track-stage',track);
+      var permanentControl = $('.permanent-control',track);
+      if(stageLabel) statusRow.appendChild(stageLabel);
+      if(permanentControl) statusRow.appendChild(permanentControl);
+      track.appendChild(statusRow);
+      var ruleButton = $('#'+entry[2]);
+      if(ruleButton){
+        ruleButton.classList.add('vital-rule-button');
+        track.appendChild(ruleButton);
+      }
+    });
+    var oldRuleTools = $('.health-rule-tools',resources);
+    if(oldRuleTools && !oldRuleTools.children.length) oldRuleTools.remove();
     centerColumn.appendChild(vitals);
 
     var statePanel = document.createElement('section');
-    statePanel.className = 'section rota-state-panel';
-    statePanel.innerHTML = '<div class="rota-panel-heading"><span></span><strong>Ferimentos e Condições</strong><span></span></div>'+
-      '<div class="rota-state-content"><div id="dashboard-condition-list" class="dashboard-condition-list"></div>'+
+    statePanel.className = 'rota-state-panel';
+    statePanel.innerHTML = '<div class="rota-condition-heading"><strong>Condições ativas</strong><button type="button" data-open-dossier-utility="conditions">Gerenciar condições</button></div>'+
+      '<div class="rota-state-content"><div id="dashboard-condition-list" class="dashboard-condition-list" aria-live="polite"></div>'+
       '<button type="button" class="dashboard-pain-link sheet-anchor" data-page-target="historia" data-scroll-target="[data-section=&quot;pains&quot;]"><span>Dores</span><strong id="dashboard-pain-count">0 / 3</strong></button></div>';
-    centerColumn.appendChild(statePanel);
+    if(diagram) centerColumn.appendChild(diagram);
+    else centerColumn.appendChild(statePanel);
 
     if(resources){
       resources.classList.add('rota-needs-panel');
@@ -810,15 +823,13 @@
       rightColumn.appendChild(attributes);
     }
     if(skills) rightColumn.appendChild(skills);
-    if(diagram) rightColumn.appendChild(diagram);
     if(core) core.remove();
 
-    if(dice || conditions){
+    if(dice){
       var utilityLaunchers = document.createElement('div');
       utilityLaunchers.className = 'dossier-utility-launchers no-print';
       utilityLaunchers.setAttribute('aria-label','Ferramentas rápidas da ficha');
-      utilityLaunchers.innerHTML = (dice ? '<button type="button" class="dossier-utility-button" data-open-dossier-utility="dice">Rolar dados</button>' : '')+
-        (conditions ? '<button type="button" class="dossier-utility-button" data-open-dossier-utility="conditions">Condições</button>' : '');
+      utilityLaunchers.innerHTML = '<button type="button" class="dossier-utility-button" data-open-dossier-utility="dice">Rolar dados</button>';
       var persistentToolbar = $('.toolbar');
       if(persistentToolbar){
         Array.from(utilityLaunchers.children).reverse().forEach(function(button){persistentToolbar.insertBefore(button,persistentToolbar.firstChild);});
@@ -827,6 +838,7 @@
     if(dice) buildDossierUtilityModal(page,'dice','Rolagem de Testes',dice);
     if(conditions) buildDossierUtilityModal(page,'conditions','Condições Ativas',conditions);
     buildSomaticInspector(page,diagram);
+    if(diagram) diagram.appendChild(statePanel);
     renderDashboardOverview();
   }
 
@@ -876,11 +888,11 @@
       if(!entries.length){
         conditionList.innerHTML = '<button type="button" class="dashboard-condition-empty" data-open-dossier-utility="conditions"><span>Nenhuma condição ativa</span><small>Clique para registrar</small></button>';
       } else {
-        conditionList.innerHTML = entries.slice(0,3).map(function(entry,index){
+        conditionList.innerHTML = entries.map(function(entry){
           var definition = conditionDefinition(entry.name);
           var category = definition ? definition.category : 'other';
-          return '<button type="button" class="dashboard-condition-chip condition-'+category+'" data-open-dossier-utility="conditions"><i>'+(entry.derived ? '◈' : '●')+'</i><span>'+escapeHtml(entry.name)+'</span><b>×</b></button>';
-        }).join('')+(entries.length > 3 ? '<button type="button" class="dashboard-condition-more" data-open-dossier-utility="conditions">+'+(entries.length-3)+'</button>' : '');
+          return '<button type="button" class="dashboard-condition-chip condition-'+category+'" data-open-dossier-utility="conditions" aria-label="Consultar condição '+escapeHtml(entry.name)+'"><i aria-hidden="true">'+(entry.derived ? '◈' : '●')+'</i><span>'+escapeHtml(entry.name)+'</span></button>';
+        }).join('');
       }
     }
   }
@@ -940,9 +952,9 @@
     var summary = document.createElement('div');
     summary.className = 'somatic-summary-body';
     summary.innerHTML = '<button type="button" class="somatic-summary-card" id="somatic-inspector-open" aria-haspopup="dialog" aria-controls="somatic-inspector-modal">'+
-      '<span class="somatic-miniature"><img id="somatic-thumbnail-image" src="assets/corpos/masculino.png" alt="Miniatura do corpo para mapeamento somático"></span>'+
+      '<span class="somatic-miniature"><img id="somatic-thumbnail-image" src="assets/corpos/masculino.png" alt="Miniatura do mapa corporal"></span>'+
       '<span class="somatic-summary-status"><strong id="somatic-record-total">0 REGISTROS</strong><span class="somatic-severity-summary" id="somatic-severity-summary"><span class="somatic-empty-state">SEM FERIMENTOS REGISTRADOS</span></span></span>'+
-      '<span class="somatic-inspect-label">CLIQUE PARA INSPECIONAR</span>'+
+      '<span class="somatic-inspect-label">ABRIR MAPA CORPORAL</span>'+
     '</button>';
     diagram.appendChild(summary);
 
@@ -956,7 +968,7 @@
     overlay.setAttribute('aria-hidden','true');
     overlay.setAttribute('aria-labelledby','somatic-inspector-title');
     overlay.innerHTML = '<div class="modal somatic-inspector-dialog" tabindex="-1">'+
-      '<div class="somatic-inspector-header"><div><span>FIG. 01 · PRONTUÁRIO CLÍNICO</span><strong id="somatic-inspector-title">Mapeamento Somático</strong></div><button type="button" class="modal-close" data-close-somatic-modal aria-label="Fechar mapeamento somático">×</button></div>'+
+      '<div class="somatic-inspector-header"><div><span>FIG. 01 · FERIMENTOS E CONDIÇÕES</span><strong id="somatic-inspector-title">Mapa corporal</strong></div><button type="button" class="modal-close" data-close-somatic-modal aria-label="Fechar mapa corporal">×</button></div>'+
       '<div class="somatic-inspector-content"></div>'+
     '</div>';
     $('.somatic-inspector-content',overlay).appendChild(detailBody);
@@ -1240,7 +1252,7 @@
     var thumbnail = $('#somatic-thumbnail-image');
     if(thumbnail){
       thumbnail.src = body.image;
-      thumbnail.alt = 'Miniatura do corpo '+body.label.toLowerCase()+' para mapeamento somático';
+      thumbnail.alt = 'Miniatura do mapa corporal '+body.label.toLowerCase();
     }
     $('#body-map-title').textContent = 'Mapeamento somático do corpo ' + body.label.toLowerCase();
     $('#body-map-caption').textContent = 'Vista Frontal — Corpo ' + body.label;
@@ -3135,7 +3147,7 @@
       return '<span class="somatic-severity-row '+labels[severity].className+'"><i aria-hidden="true"></i><b>'+counts[severity]+'</b> '+label+'</span>';
     });
     severityElement.innerHTML = rows.length ? rows.join('') : '<span class="somatic-empty-state">SEM FERIMENTOS REGISTRADOS</span>';
-    if(openButton) openButton.setAttribute('aria-label','Inspecionar mapeamento somático. '+entries.length+' registro'+(entries.length === 1 ? '' : 's')+'.');
+    if(openButton) openButton.setAttribute('aria-label','Abrir mapa corporal e registrar ferimentos. '+entries.length+' registro'+(entries.length === 1 ? '' : 's')+'.');
   }
 
   function woundRegion(zoneId){
