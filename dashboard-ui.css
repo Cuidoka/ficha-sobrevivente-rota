@@ -2287,6 +2287,47 @@ body.rota-dashboard-ui #page-principal .condition-feedback:empty{ display:none; 
 body.rota-dashboard-ui #page-principal #wound-modal{ z-index:1600; }
 body.rota-dashboard-ui #page-principal #wound-modal #wound-cancel{ color:#ead8b5; border-color:#8c633b; background:#21190f; }
 
+/* Etapa 5: nomes completos, artes maiores e símbolos centrados. */
+body.rota-dashboard-ui #page-principal [data-section="skills"]{ container-type:inline-size; }
+body.rota-dashboard-ui #page-principal [data-section="skills"] > .section-body{ display:flex; flex-direction:column; min-height:0; }
+body.rota-dashboard-ui #page-principal .skills-grid{ flex:1; min-height:0; height:auto; padding:2px 2px 5px; }
+body.rota-dashboard-ui #page-principal .skill-attribute-panel.active{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+body.rota-dashboard-ui #page-principal .skill-col-title{ padding:3px 1px 5px; font:400 14px/1.4 var(--font-display); letter-spacing:.6px; text-transform:uppercase; }
+body.rota-dashboard-ui #page-principal .skill-row{ grid-template-columns:60px minmax(0,1fr); grid-template-rows:auto auto; column-gap:7px; min-height:102px; padding:5px; }
+body.rota-dashboard-ui #page-principal .skill-art,
+body.rota-dashboard-ui #page-principal .skill-art-placeholder{ width:60px; height:90px; }
+body.rota-dashboard-ui #page-principal .skill-art img{ object-fit:contain; filter:none; }
+body.rota-dashboard-ui #page-principal .skill-row:hover .skill-art img{ transform:none; filter:brightness(1.08); }
+body.rota-dashboard-ui #page-principal .skill-row .skill-name{ font:600 14px/1.4 "Segoe UI",Tahoma,Arial,sans-serif; color:#e1d4b9; padding:2px 0 4px; white-space:normal; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; }
+body.rota-dashboard-ui #page-principal .skill-pips{ margin-top:2px; }
+body.rota-dashboard-ui #page-principal .skill-attribute-tab{ min-height:30px; font:400 12px/1.4 var(--font-display); }
+body.rota-dashboard-ui #page-principal .attr-name{ padding:2px 0; font:400 12px/1.4 var(--font-display); }
+body.rota-dashboard-ui #page-principal .attribute-glyph{ line-height:1; }
+body.rota-dashboard-ui #page-principal .attribute-glyph svg{ display:block; width:24px; height:24px; }
+body.rota-dashboard-ui #page-principal .skill-source-active .attribute-glyph{ transform:none; }
+body.rota-dashboard-ui #page-principal [data-section="skills"] .pp-bar{ font-size:11px; line-height:1.4; }
+body.rota-dashboard-ui #page-principal .need-card-header strong{ font:400 13px/1.4 var(--font-display); }
+body.rota-dashboard-ui #page-principal .need-card-header span{ font:11px/1.4 var(--font-body,sans-serif); color:#b4a17d; }
+body.rota-dashboard-ui #page-principal .needs-cycle-alert{ font:12px/1.4 var(--font-body,sans-serif); color:#c0ac88; }
+@container (min-width:620px){
+  body.rota-dashboard-ui #page-principal .skill-attribute-panel.active{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+  body.rota-dashboard-ui #page-principal .skill-row{ grid-template-columns:68px minmax(0,1fr); min-height:114px; }
+  body.rota-dashboard-ui #page-principal .skill-art,
+  body.rota-dashboard-ui #page-principal .skill-art-placeholder{ width:68px; height:102px; }
+  body.rota-dashboard-ui #page-principal .skill-row .skill-name{ font-size:15px; }
+}
+@container (max-width:379px){
+  body.rota-dashboard-ui #page-principal .skill-attribute-panel.active{ grid-template-columns:1fr; }
+  body.rota-dashboard-ui #page-principal .skill-row{ grid-template-columns:72px minmax(0,1fr); min-height:120px; }
+  body.rota-dashboard-ui #page-principal .skill-art,
+  body.rota-dashboard-ui #page-principal .skill-art-placeholder{ width:72px; height:108px; }
+  body.rota-dashboard-ui #page-principal .skill-row .skill-name{ font-size:15px; }
+}
+@media (max-width:1120px){
+  body.rota-dashboard-ui #page-principal [data-section="skills"] > .section-body{ height:auto; }
+  body.rota-dashboard-ui #page-principal .skills-grid{ flex:none; overflow:visible; }
+}
+
 @media print{
   body.rota-dashboard-ui #page-principal{ height:auto; overflow:visible; }
   body.rota-dashboard-ui .rota-dashboard{ display:grid; grid-template-columns:minmax(0,1fr); height:auto; }

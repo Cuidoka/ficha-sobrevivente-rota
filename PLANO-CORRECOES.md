@@ -2,7 +2,7 @@
 
 Data: 07/09/2026.
 
-Estado: etapas 1 a 4 implementadas e verificadas. Etapas 3 e 4 concluídas em 08/09/2026. Etapas 5 e 6 pendentes.
+Estado: etapas 1 a 5 implementadas e verificadas. Etapa 5 concluída em 08/09/2026. Etapa 6 pendente.
 
 Fonte: mensagens e prints enviados nesta conversa, incluindo o feedback de T.K. de 29/08/2026 e o relato de uso de Moira. O usuário encerrou os envios com “Esta tudo pronto agora” e pediu a organização das correções em sequência.
 
@@ -125,19 +125,23 @@ Verificação da etapa 4: busca e inclusão manual de Quebrado, bloqueio de dupl
 
 ### 5. Refinar Atributos, Perícias e tipografia
 
-- [ ] Manter a ordem Físico → Destreza → Intelecto → Instinto → Espírito.
-- [ ] Preservar as cores: vermelho, amarelo/dourado, azul, verde e roxo, respectivamente.
-- [ ] Preservar o clique no atributo para mostrar suas perícias, os controles de atributo e os quadrados com brilho.
-- [ ] Corrigir a fonte do nome interno do atributo no painel de perícias, destacado como “FÍSICO” no print.
-- [ ] Corrigir o alinhamento visual dos ícones dos atributos.
-- [ ] Aumentar os textos usando o espaço disponível na nova composição.
-- [ ] Corrigir cortes nas partes inferiores de ç, g e outras letras; conferir Raízologia, Intimidação e Investigação, além dos outros nomes.
-- [ ] Avaliar o aumento das artes para que seus desenhos sejam identificáveis.
-- [ ] Preservar o visualizador ampliado das artes.
-- [ ] Considerar ícones simples somente se as miniaturas continuarem ilegíveis. Essa substituição foi apresentada como alternativa, não como decisão definitiva.
-- [ ] Conferir também textos de Características, Necessidades e identificação em telas amplas, evitando fontes excessivamente pequenas.
+- [x] Manter a ordem Físico → Destreza → Intelecto → Instinto → Espírito.
+- [x] Preservar as cores: vermelho, amarelo/dourado, azul, verde e roxo, respectivamente.
+- [x] Preservar o clique no atributo para mostrar suas perícias, os controles de atributo e os quadrados com brilho.
+- [x] Corrigir a fonte do nome interno do atributo no painel de perícias, destacado como “FÍSICO” no print.
+- [x] Corrigir o alinhamento visual dos ícones dos atributos.
+- [x] Aumentar os textos usando o espaço disponível na nova composição.
+- [x] Corrigir cortes nas partes inferiores de ç, g e outras letras; conferir Raízologia, Intimidação e Investigação, além dos outros nomes.
+- [x] Avaliar o aumento das artes para que seus desenhos sejam identificáveis.
+- [x] Preservar o visualizador ampliado das artes.
+- [x] Considerar ícones simples somente se as miniaturas continuarem ilegíveis. Essa substituição foi apresentada como alternativa, não como decisão definitiva.
+- [x] Conferir também textos de Características, Necessidades e identificação em telas amplas, evitando fontes excessivamente pequenas.
 
 Conclusão da etapa: não há letras cortadas ou borradas; textos e imagens são legíveis e os controles mantêm os comportamentos aprovados.
+
+Verificação da etapa 5: as cinco famílias (35 perícias) em 1280×720, 1920×1080, 900×768 e 390×844, sem transbordamento dos nomes ou cartões. Nomes com 14–15 px, altura de linha 1,4 e quebra livre; título interno com a fonte Oswald dos demais títulos. Artes originais preservadas, exibidas inteiras em 60×90, 68×102 ou 72×108 px, conforme a largura do painel, e distribuídas em uma, duas ou três colunas. A ampliação tornou desnecessária a substituição por ícones simples. Símbolos dos atributos desenhados em SVG, centralizados na mesma caixa e mantendo suas cores. Necessidades recebeu texto maior; os campos de Identificação e Características mantêm as ampliações anteriores, sem cortes na conferência ampla.
+
+Conferidos clique nas cinco famílias, navegação por setas nas abas, incremento/decremento do atributo, seleção de perícia por teclado e retorno ao valor inicial. Visualizadores de Raízologia, Investigação e Intimidação abrem; Esc fecha e devolve o foco. Oito testes existentes passaram, além de sintaxe e git diff --check; console sem erros ou avisos. Em telas baixas, a lista de perícias permite rolagem para preservar os novos tamanhos. Prévia: http://127.0.0.1:4182/.
 
 ### 6. Validar o conjunto e revisar regras separadamente
 
