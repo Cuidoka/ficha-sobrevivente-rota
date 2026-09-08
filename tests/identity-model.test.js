@@ -45,3 +45,10 @@ test('3/2/1 não limita listas existentes nem repõe campos removidos', () => {
     assert.deepEqual(plain(normalizeModel(saved).characteristics), saved.characteristics);
   }
 });
+
+test('restaura fotos antigas e preserva a imagem de origem e o enquadramento novos', () => {
+  const legacy = {dataUrl:'data:image/jpeg;base64,preview',fileName:'foto.jpg'};
+  assert.deepEqual(plain(normalizeModel({portrait:legacy}).portrait), legacy);
+  const editable = {...legacy,sourceDataUrl:'data:image/jpeg;base64,original',crop:{zoom:2,offsetX:32,offsetY:-16}};
+  assert.deepEqual(plain(normalizeModel({portrait:editable}).portrait), editable);
+});

@@ -72,6 +72,10 @@ Validação automatizada: quatro testes passaram (três de criação/restauraç�
 
 ### 3. Corrigir apresentação e controles das barras
 
+Antes da etapa 3, complemento solicitado em 08/09/2026 e concluído: clicar na foto abre um visualizador ampliado com “Alterar foto” e “Ajustar enquadramento”. Após aplicar o recorte, a visualização reaparece. Novas imagens guardam uma cópia anterior ao recorte e os ajustes de zoom/posição para reedição; fotos antigas continuam disponíveis e usam o recorte existente quando a imagem anterior não está salva. O editor agora indica corretamente a área quadrada.
+
+Fontes da Identificação e Características ampliadas discretamente; em telas grandes, campos e grupos se distribuem pela altura do papel. Verificados envio de imagem de teste, zoom, ajuste por teclado, reedição, persistência após recarga, retorno de foco e visualizador em 390×844. Conferido uso do papel em 1920×1080 e ausência de cortes nos campos em 1280×720. Cinco testes passaram, incluindo compatibilidade de fotos antigas e restauração dos novos dados de enquadramento.
+
 - [ ] Diferenciar cada estágio por seu próprio nome e cor, sincronizando o texto do estado com os marcadores.
 - [ ] Substituir “Nenhum” por “Intacto” em PF zero e por “Íntegro” em PE zero.
 - [ ] Aumentar a espessura dos quadrados de PF e PE e manter espaço suficiente entre eles para clicar.

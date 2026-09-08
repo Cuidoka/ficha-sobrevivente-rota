@@ -1100,7 +1100,7 @@
   function openRuleModal(title, content, modalName){
     var overlay = $('#rule-action-modal');
     if(!overlay) return;
-    lastModalFocus = document.activeElement;
+    if(overlay.style.display === 'none') lastModalFocus = document.activeElement;
     $('#rule-action-title').textContent = title;
     $('#rule-action-content').innerHTML = content;
     overlay.dataset.modalName = modalName || '';
@@ -3436,13 +3436,38 @@
     placeholder.classList.toggle('hidden',hasPhoto);
     removeButton.classList.toggle('hidden',!hasPhoto);
     frame.classList.toggle('has-photo',hasPhoto);
-    frame.setAttribute('aria-label',hasPhoto ? 'Trocar foto do personagem' : 'Adicionar foto do personagem');
-    frame.title = hasPhoto ? 'Trocar foto do personagem' : 'Adicionar foto do personagem';
+    frame.setAttribute('aria-label',hasPhoto ? 'Visualizar foto do sobrevivente' : 'Adicionar foto do personagem');
+    frame.title = hasPhoto ? 'Visualizar foto do sobrevivente' : 'Adicionar foto do personagem';
+    frame.setAttribute('aria-haspopup','dialog');
+    $('.portrait-change-hint',frame).textContent = hasPhoto ? 'VISUALIZAR' : 'ADICIONAR';
+  }
+
+  function openPortraitViewer(){
+    if(!model.portrait.dataUrl){ $('#portrait-file-input').click(); return; }
+    openRuleModal('Foto do sobrevivente','<div class="portrait-viewer"><img src="'+escapeHtml(model.portrait.dataUrl)+'" alt="Foto de '+escapeHtml(model.fields['nome-sobrevivente'] || 'sobrevivente')+'"><div class="portrait-viewer-actions"><button type="button" class="primary-action" id="portrait-edit">Ajustar enquadramento</button><button type="button" class="notes-btn" id="portrait-replace">Alterar foto</button></div></div>','portrait-viewer');
+  }
+
+  function editPortrait(){
+    var source = new Image();
+    source.onload = function(){
+      if(model.ui.activeModal !== 'portrait-viewer') return;
+      openPortraitCropper(source,model.portrait.fileName,'');
+      portraitCropState.sourceDataUrl = model.portrait.sourceDataUrl || model.portrait.dataUrl;
+      var crop = model.portrait.crop;
+      if(model.portrait.sourceDataUrl && crop){
+        portraitCropState.zoom = clamp(crop.zoom,1,4);
+        portraitCropState.offsetX = Number(crop.offsetX) || 0;
+        portraitCropState.offsetY = Number(crop.offsetY) || 0;
+        setPortraitCropZoom(portraitCropState.zoom*100);
+      }
+    };
+    source.onerror = function(){ alert('Não foi possível abrir a foto para edição. Escolha outra imagem.'); };
+    source.src = model.portrait.sourceDataUrl || model.portrait.dataUrl;
   }
 
   function portraitCropHtml(){
     return '<div class="portrait-cropper">'+
-      '<p class="portrait-crop-instructions">Arraste a imagem para escolher o enquadramento. Use o zoom para aproximar ou afastar; tudo dentro do círculo será usado na ficha.</p>'+
+      '<p class="portrait-crop-instructions">Arraste a imagem para escolher o enquadramento. Use o zoom para aproximar ou afastar; a área quadrada será usada na ficha.</p>'+
       '<div class="portrait-crop-stage"><canvas id="portrait-crop-canvas" width="640" height="640" tabindex="0" aria-label="Área de ajuste da foto. Arraste para reposicionar e use as setas para ajustes finos."></canvas><span class="portrait-crop-badge">Arraste para posicionar</span></div>'+
       '<div class="portrait-crop-controls"><label class="portrait-zoom-control" for="portrait-crop-zoom"><span>Zoom</span><input type="range" id="portrait-crop-zoom" min="100" max="400" step="1" value="100"><output id="portrait-crop-zoom-value" for="portrait-crop-zoom">100%</output></label>'+
       '<div class="portrait-crop-toolbar"><button type="button" class="notes-btn" id="portrait-crop-reset">Centralizar</button><button type="button" class="notes-btn" id="portrait-crop-replace">Escolher outra imagem</button></div></div>'+
@@ -3482,9 +3507,6 @@
     var metrics = portraitCropMetrics(canvas);
     if(!canvas || !metrics || !portraitCropState) return;
     var context = canvas.getContext('2d');
-    var centerX = canvas.width/2;
-    var centerY = canvas.height/2;
-    var radius = canvas.width/2-6;
     context.clearRect(0,0,canvas.width,canvas.height);
     context.fillStyle = '#11130f';
     context.fillRect(0,0,canvas.width,canvas.height);
@@ -3493,17 +3515,6 @@
     context.drawImage(portraitCropState.source,metrics.x,metrics.y,metrics.width,metrics.height);
 
     context.save();
-    context.fillStyle = 'rgba(0,0,0,.58)';
-    context.beginPath();
-    context.rect(0,0,canvas.width,canvas.height);
-    context.arc(centerX,centerY,radius,0,Math.PI*2,true);
-    context.fill('evenodd');
-    context.restore();
-
-    context.save();
-    context.beginPath();
-    context.arc(centerX,centerY,radius,0,Math.PI*2);
-    context.clip();
     context.strokeStyle = 'rgba(231,228,217,.2)';
     context.lineWidth = 1;
     [1/3,2/3].forEach(function(mark){
@@ -3518,9 +3529,7 @@
 
     context.strokeStyle = '#63805f';
     context.lineWidth = 6;
-    context.beginPath();
-    context.arc(centerX,centerY,radius,0,Math.PI*2);
-    context.stroke();
+    context.strokeRect(3,3,canvas.width-6,canvas.height-6);
   }
 
   function setPortraitCropZoom(value){
@@ -3596,7 +3605,6 @@
     slider.addEventListener('input',function(){ setPortraitCropZoom(slider.value); });
     $('#portrait-crop-reset').addEventListener('click',resetPortraitCrop);
     $('#portrait-crop-replace').addEventListener('click',function(){
-      closeRuleModal();
       var input = $('#portrait-file-input');
       if(input) input.click();
     });
@@ -3639,10 +3647,22 @@
       outputContext.imageSmoothingEnabled = true;
       outputContext.imageSmoothingQuality = 'high';
       outputContext.drawImage(portraitCropState.source,metrics.x*ratio,metrics.y*ratio,metrics.width*ratio,metrics.height*ratio);
-      model.portrait = { dataUrl:output.toDataURL('image/jpeg',.88), fileName:portraitCropState.fileName };
+      // Guarda também a imagem antes do recorte para permitir novos enquadramentos.
+      var original = document.createElement('canvas');
+      var source = portraitCropState.source;
+      var sourceScale = Math.min(1,1600/Math.max(source.naturalWidth,source.naturalHeight));
+      original.width = Math.max(1,Math.round(source.naturalWidth*sourceScale));
+      original.height = Math.max(1,Math.round(source.naturalHeight*sourceScale));
+      original.getContext('2d').drawImage(source,0,0,original.width,original.height);
+      model.portrait = {
+        dataUrl:output.toDataURL('image/jpeg',.88), fileName:portraitCropState.fileName,
+        sourceDataUrl:portraitCropState.sourceDataUrl || original.toDataURL('image/jpeg',.88),
+        crop:{zoom:portraitCropState.zoom,offsetX:portraitCropState.offsetX,offsetY:portraitCropState.offsetY}
+      };
       renderPortrait();
       saveModel(true);
       closeRuleModal();
+      openPortraitViewer();
     } catch(error){
       alert('Não foi possível aplicar esse enquadramento. Tente outra imagem.');
     }
@@ -3913,10 +3933,11 @@
       return;
     }
     if(event.target.closest('#portrait-trigger')){
-      var portraitInput = $('#portrait-file-input');
-      if(portraitInput) portraitInput.click();
+      openPortraitViewer();
       return;
     }
+    if(event.target.closest('#portrait-edit')){ editPortrait(); return; }
+    if(event.target.closest('#portrait-replace')){ $('#portrait-file-input').click(); return; }
     if(event.target.closest('#somatic-inspector-open')){openSomaticInspector();return;}
     if(event.target.closest('[data-close-somatic-modal]')){closeSomaticInspector();return;}
     if(event.target.id === 'somatic-inspector-modal'){closeSomaticInspector();return;}
