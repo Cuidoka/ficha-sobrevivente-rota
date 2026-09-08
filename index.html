@@ -10,7 +10,7 @@
 <link rel="preload" as="image" href="assets/corpos/feminino.png">
 <link rel="stylesheet" href="style.css?v=16">
 <link rel="stylesheet" href="new-ui.css?v=24">
-<link rel="stylesheet" href="dashboard-ui.css?v=42">
+<link rel="stylesheet" href="dashboard-ui.css?v=44">
 </head>
 <body class="dossier-ui rota-dashboard-ui">
 
@@ -191,7 +191,7 @@
             </div>
             <div class="zone-strip" id="pf-zones"></div>
             <div class="box-row pips" data-value="0" data-max="20" id="pf-boxes"></div>
-            <div class="track-stage stage-ok" id="pf-stage">Estágio atual: Nenhum</div>
+            <div class="track-stage pf-state-none" id="pf-stage">Estágio atual: Intacto</div>
             <div class="zone-legend" id="pf-zones-text"></div>
           </div>
 
@@ -202,7 +202,7 @@
             </div>
             <div class="zone-strip" id="pe-zones"></div>
             <div class="box-row pips" data-value="0" data-max="15" id="pe-boxes"></div>
-            <div class="track-stage stage-ok" id="pe-stage">Estágio atual: Nenhum</div>
+            <div class="track-stage pe-state-none" id="pe-stage">Estágio atual: Íntegro</div>
             <div class="zone-legend" id="pe-zones-text"></div>
           </div>
 
@@ -216,7 +216,7 @@
                 <button type="button" class="pc-control-btn" data-action="add" title="Adicionar Corrupção" aria-label="Adicionar Corrupção">+</button>
               </div>
             </div>
-            <div class="pc-bar" id="pc-bar" role="progressbar" aria-label="Pontos de Corrupção" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="pc-bar" id="pc-bar">
               <div class="pc-seg pc-seg-imaculada" style="flex:19"></div>
               <div class="pc-seg pc-seg-incipiente" style="flex:20"></div>
               <div class="pc-seg pc-seg-alarmante" style="flex:20"></div>
@@ -224,6 +224,7 @@
               <div class="pc-seg pc-seg-critica" style="flex:20"></div>
               <div class="pc-seg pc-seg-corrompido" style="flex:1"></div>
               <div class="pc-marker" id="pc-marker"></div>
+              <input id="pc-slider" type="range" min="0" max="100" step="1" value="0" aria-label="Pontos de Corrupção">
             </div>
             <div class="pc-labels">
               <span>Imaculada</span><span>Incipiente</span><span>Alarmante</span><span>Severa</span><span>Crítica</span><span title="Corrompido">100</span>
@@ -247,7 +248,7 @@
         <span class="corner corner-bl"></span><span class="corner corner-br"></span>
         <div class="diagram-caption" id="body-map-caption">Vista Frontal — Corpo Masculino</div>
         <svg id="body-svg" viewBox="0 0 1472 2616" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="body-map-title" xmlns="http://www.w3.org/2000/svg">
-          <title id="body-map-title">Mapeamento somático do corpo masculino</title>
+          <title id="body-map-title">Mapa corporal masculino</title>
           <g id="body-zone-layer"></g>
           <image id="body-art-image" href="assets/corpos/masculino.png" x="0" y="0" width="1472" height="2616" preserveAspectRatio="xMidYMid meet"></image>
         </svg>
@@ -255,9 +256,9 @@
       </div>
 
       <!-- Wound detail modal -->
-      <div id="wound-modal" class="modal-overlay" style="display:none;">
+      <div id="wound-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="wound-dialog-title" style="display:none;">
         <div class="modal">
-          <div class="modal-header">Especificar Ferimento — <span id="wound-zone-name"></span></div>
+          <div class="modal-header" id="wound-dialog-title">Especificar Ferimento — <span id="wound-zone-name"></span></div>
           <div class="modal-body">
             <div class="wound-existing-header">
               <span>Ferimentos nesta região</span>
@@ -419,8 +420,8 @@
 
 <script src="rules-data.js?v=16"></script>
 <script src="weapon-details.js?v=14"></script>
-<script src="automation-engine.js?v=16"></script>
-<script src="script.js?v=44"></script>
+<script src="automation-engine.js?v=17"></script>
+<script src="script.js?v=46"></script>
 
 </body>
 </html>

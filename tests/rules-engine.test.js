@@ -112,6 +112,10 @@ Object.values(data.woundTable).forEach((regions) => {
 assert.equal(woundRuleCount, 36, 'tabela somática deve ter 36 resultados');
 
 assert.equal(engine.pfStage(15,15,[5,10,15]).key, 'critical');
+for (const [pf, pe, pfSegments, peSegments] of [[20,15,[8,15,20],[5,10,15]], [15,20,[5,10,15],[8,15,20]]]) {
+  assert.deepEqual([0,1,pfSegments[0]+1,pfSegments[1]+1,pf+1,pf+6].map(value=>engine.pfStage(value,pf,pfSegments).name), ['Intacto','Machucado','Ferido','Crítico','Morrendo','Morte Direta']);
+  assert.deepEqual([0,1,peSegments[0]+1,peSegments[1]+1,pe].map(value=>engine.stressStage(value,pe,peSegments).name), ['Íntegro','Estável','Instável','Desequilibrado','Enlouquecendo']);
+}
 assert.equal(engine.pfStage(16,15,[5,10,15]).key, 'dying');
 assert.equal(engine.pfStage(20,15,[5,10,15]).key, 'dying');
 assert.equal(engine.pfStage(21,15,[5,10,15]).key, 'dead');

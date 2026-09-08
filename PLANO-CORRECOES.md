@@ -2,7 +2,7 @@
 
 Data: 07/09/2026.
 
-Estado: etapas 1 e 2 implementadas e verificadas. Etapa 2 concluída em 08/09/2026. Etapas 3 a 6 pendentes.
+Estado: etapas 1 a 4 implementadas e verificadas. Etapas 3 e 4 concluídas em 08/09/2026. Etapas 5 e 6 pendentes.
 
 Fonte: mensagens e prints enviados nesta conversa, incluindo o feedback de T.K. de 29/08/2026 e o relato de uso de Moira. O usuário encerrou os envios com “Esta tudo pronto agora” e pediu a organização das correções em sequência.
 
@@ -76,16 +76,16 @@ Antes da etapa 3, complemento solicitado em 08/09/2026 e concluído: clicar na f
 
 Fontes da Identificação e Características ampliadas discretamente; em telas grandes, campos e grupos se distribuem pela altura do papel. Verificados envio de imagem de teste, zoom, ajuste por teclado, reedição, persistência após recarga, retorno de foco e visualizador em 390×844. Conferido uso do papel em 1920×1080 e ausência de cortes nos campos em 1280×720. Cinco testes passaram, incluindo compatibilidade de fotos antigas e restauração dos novos dados de enquadramento.
 
-- [ ] Diferenciar cada estágio por seu próprio nome e cor, sincronizando o texto do estado com os marcadores.
-- [ ] Substituir “Nenhum” por “Intacto” em PF zero e por “Íntegro” em PE zero.
-- [ ] Aumentar a espessura dos quadrados de PF e PE e manter espaço suficiente entre eles para clicar.
-- [ ] Preservar seleção e retorno a zero pelos marcadores.
-- [ ] Permitir ajustar Corrupção clicando diretamente na barra, com leitura clara do valor de 0 a 100 e alternativa por teclado/controles existentes.
-- [ ] Simplificar a edição de PF e PE permanentes com botões − e + e valor visível.
-- [ ] Colocar aviso e acesso a Morrendo/Testes de Morte junto de PF.
-- [ ] Colocar aviso e acesso a Enlouquecendo/Determinação e Crises junto de PE.
-- [ ] Retirar esses controles de Necessidades, onde atualmente confundem sua função.
-- [ ] Verificar a exibição quando há problemas físicos e mentais ao mesmo tempo, evitando que um aviso oculte o outro.
+- [x] Diferenciar cada estágio por seu próprio nome e cor, sincronizando o texto do estado com os marcadores.
+- [x] Substituir “Nenhum” por “Intacto” em PF zero e por “Íntegro” em PE zero.
+- [x] Aumentar a espessura dos quadrados de PF e PE e manter espaço suficiente entre eles para clicar.
+- [x] Preservar seleção e retorno a zero pelos marcadores.
+- [x] Permitir ajustar Corrupção clicando diretamente na barra, com leitura clara do valor de 0 a 100 e alternativa por teclado/controles existentes.
+- [x] Simplificar a edição de PF e PE permanentes com botões − e + e valor visível.
+- [x] Colocar aviso e acesso a Morrendo/Testes de Morte junto de PF.
+- [x] Colocar aviso e acesso a Enlouquecendo/Determinação e Crises junto de PE.
+- [x] Retirar esses controles de Necessidades, onde atualmente confundem sua função.
+- [x] Verificar a exibição quando há problemas físicos e mentais ao mesmo tempo, evitando que um aviso oculte o outro.
 
 Cores solicitadas:
 
@@ -106,18 +106,22 @@ Morte Direta deve continuar identificada separadamente. Não foi pedida uma nova
 
 Conclusão da etapa: nomes, cores, valores, cliques e avisos correspondem ao estado do personagem e ficam junto do recurso relacionado.
 
+Verificação da etapa 3: progressão dos estágios, retorno a zero, controles de permanentes e limites nos dois tipos de Sangue; Corrupção por clique e teclado nos valores 0 e 100; avisos físicos e mentais simultâneos em 1280×720, 1920×1080, 900×768 e 390×844, sem transbordamento das barras. Em telas baixas, a página permite rolagem para preservar a leitura. Cinco testes passaram, além de sintaxe e git diff --check. A regra atual que mantém Enlouquecendo até o encerramento pelo MP foi preservada e segue para revisão na etapa 6.
+
 ### 4. Consolidar o registro de ferimentos e condições
 
-- [ ] Usar um nome compreensível pelo sistema para o conjunto; proposta: “Ferimentos e Condições”, com “Mapa corporal” no detalhe, substituindo “Mapeamento Somático” na interface.
-- [ ] Preservar a miniatura clicável e o mapa completo em pop-up, que foram aprovados.
-- [ ] Exibir abaixo do mapa um resumo das condições ativas, como Sangrando, e dos ferimentos registrados.
-- [ ] Tornar claros os acessos a registrar ferimento por região e adicionar condição.
-- [ ] Manter múltiplos ferimentos, gravidades, tratamentos e efeitos de armadura funcionando.
-- [ ] Evitar condições duplicadas quando um ferimento já produz a condição automaticamente.
-- [ ] Verificar a localização e inclusão de “Quebrado” no seletor e no fluxo de tratamento.
-- [ ] Manter Dores acessíveis durante a reorganização.
+- [x] Usar um nome compreensível pelo sistema para o conjunto; proposta: “Ferimentos e Condições”, com “Mapa corporal” no detalhe, substituindo “Mapeamento Somático” na interface.
+- [x] Preservar a miniatura clicável e o mapa completo em pop-up, que foram aprovados.
+- [x] Exibir abaixo do mapa um resumo das condições ativas, como Sangrando, e dos ferimentos registrados.
+- [x] Tornar claros os acessos a registrar ferimento por região e adicionar condição.
+- [x] Manter múltiplos ferimentos, gravidades, tratamentos e efeitos de armadura funcionando.
+- [x] Evitar condições duplicadas quando um ferimento já produz a condição automaticamente.
+- [x] Verificar a localização e inclusão de “Quebrado” no seletor e no fluxo de tratamento.
+- [x] Manter Dores acessíveis durante a reorganização.
 
 Conclusão da etapa: o jogador encontra “Quebrado”, entende como registrar um problema e consulta o estado atual sem navegar entre áreas separadas.
+
+Verificação da etapa 4: busca e inclusão manual de Quebrado, bloqueio de duplicatas manuais e derivadas, dois ferimentos no Tronco, tratamento de Ferida Severa para Quebrado, edição de observações sem perder o tratamento e persistência após recarga. Um ferimento na Cabeça com Capacete resultou em 0 PF, condição impedida e consumo da Integridade. O resumo abre o editor diretamente, inclusive a partir das condições, sem depender de o mapa estar aberto. Conferidos fechamento por Esc, remoção dos registros de teste, acesso a Dores e telas 1280×720, 1920×1080, 900×768 e 390×844. Listas extensas permitem rolagem dentro do painel no desktop. Oito testes passaram, incluindo três regressões de condições/tratamentos; console sem erros ou avisos. Prévia: http://127.0.0.1:4182/.
 
 ### 5. Refinar Atributos, Perícias e tipografia
 

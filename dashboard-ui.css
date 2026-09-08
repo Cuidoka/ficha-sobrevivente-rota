@@ -2206,6 +2206,87 @@ body.rota-dashboard-ui #rule-action-modal[data-modal-name="portrait-viewer"] .ru
   body.rota-dashboard-ui #page-principal .chars-grid{ grid-template-columns:1fr; }
 }
 
+/* Estágios das barras: nomes, marcadores e avisos compartilham as cores. */
+body.rota-dashboard-ui{
+  --pf-intact:#68c68b; --pf-hurt:#d9b82f; --pf-wounded:#e26a1c;
+  --pf-critical:#e44842; --pf-dying:#a66be0; --pf-dead:#d53b36;
+  --pe-whole:#a0dca5; --pe-stable:#79d5f2; --pe-unstable:#398de3;
+  --pe-unbalanced:#a66be0; --pe-breaking:#f066be;
+}
+body.rota-dashboard-ui #page-principal .pf-state-none{ color:var(--pf-intact); }
+body.rota-dashboard-ui #page-principal .pf-state-hurt{ color:var(--pf-hurt); }
+body.rota-dashboard-ui #page-principal .pf-state-wounded{ color:var(--pf-wounded); }
+body.rota-dashboard-ui #page-principal .pf-state-critical{ color:var(--pf-critical); }
+body.rota-dashboard-ui #page-principal .pf-state-dying{ color:var(--pf-dying); }
+body.rota-dashboard-ui #page-principal .pf-state-dead{ color:var(--pf-dead); }
+body.rota-dashboard-ui #page-principal .pe-state-none{ color:var(--pe-whole); }
+body.rota-dashboard-ui #page-principal .pe-state-stable{ color:var(--pe-stable); }
+body.rota-dashboard-ui #page-principal .pe-state-unstable{ color:var(--pe-unstable); }
+body.rota-dashboard-ui #page-principal .pe-state-unbalanced{ color:var(--pe-unbalanced); }
+body.rota-dashboard-ui #page-principal .pe-state-breaking{ color:var(--pe-breaking); }
+body.rota-dashboard-ui #page-principal .rota-vital-pf .pip.stage-ok{ --vital-color:var(--pf-hurt); }
+body.rota-dashboard-ui #page-principal .rota-vital-pf .pip.stage-warn{ --vital-color:var(--pf-wounded); }
+body.rota-dashboard-ui #page-principal .rota-vital-pf .pip.stage-crit{ --vital-color:var(--pf-critical); }
+body.rota-dashboard-ui #page-principal .rota-vital-pf .pip.overflow{ --vital-color:var(--pf-dying); }
+body.rota-dashboard-ui #page-principal .rota-vital-pf .pip.death-direct{ --vital-color:var(--pf-dead); }
+body.rota-dashboard-ui #page-principal .rota-vital-pe .pip.stage-ok{ --vital-color:var(--pe-stable); }
+body.rota-dashboard-ui #page-principal .rota-vital-pe .pip.stage-warn{ --vital-color:var(--pe-unstable); }
+body.rota-dashboard-ui #page-principal .rota-vital-pe .pip.stage-crit{ --vital-color:var(--pe-unbalanced); }
+body.rota-dashboard-ui #page-principal .rota-vital-pe .pip.breaking-point{ --vital-color:var(--pe-breaking); }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .box-row{ display:flex; flex-wrap:nowrap; gap:3px; min-height:26px; }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .box-row .pip[data-i]{
+  flex:1 1 0; width:auto; min-width:0; max-width:28px; height:26px;
+  border-color:var(--vital-color); border-radius:2px;
+}
+body.rota-dashboard-ui #page-principal .rota-vitals-list .box-row .pip[data-i].filled{ background:linear-gradient(135deg,var(--vital-color),color-mix(in srgb,var(--vital-color) 55%,#080705)); }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .box-row .pip.overflow-start{ margin-left:6px; }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .box-row .pip:focus-visible{ outline:2px solid #f4e3be; outline-offset:2px; }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .track-stage{ font-size:11px; line-height:1.35; }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .permanent-control{ display:flex; position:static; height:auto; gap:4px; font-size:10px; }
+body.rota-dashboard-ui #page-principal .permanent-control label{ color:inherit; font:inherit; }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .permanent-control input{ width:28px; min-width:28px; height:24px; min-height:24px; font:11px/24px var(--font-mono) !important; appearance:textfield; }
+body.rota-dashboard-ui #page-principal .permanent-control input::-webkit-inner-spin-button,
+body.rota-dashboard-ui #page-principal .permanent-control input::-webkit-outer-spin-button{ appearance:none; margin:0; }
+body.rota-dashboard-ui #page-principal .permanent-control button{ width:24px; height:24px; padding:0; border:1px solid var(--rota-line); color:#e6c994; background:#15100b; font:16px/1 var(--font-mono); }
+body.rota-dashboard-ui #page-principal .permanent-control button:disabled{ opacity:.35; cursor:default; }
+body.rota-dashboard-ui #page-principal .critical-state-alert{ padding:4px 6px; margin:2px 0; font:11px/1.4 var(--font-body,sans-serif); border:1px solid currentColor; background:rgba(7,6,4,.5); }
+body.rota-dashboard-ui #page-principal .rota-vitals-list .rota-vital-pf,
+body.rota-dashboard-ui #page-principal .rota-vitals-list .rota-vital-pe{ grid-template-rows:auto auto minmax(26px,1fr) auto auto auto; }
+body.rota-dashboard-ui #page-principal .rota-vital-pc .pc-bar{ height:24px; position:relative; }
+body.rota-dashboard-ui #page-principal #pc-slider{ position:absolute; inset:0; z-index:2; width:100%; height:100%; min-height:0; margin:0; padding:0; opacity:0; cursor:pointer; }
+body.rota-dashboard-ui #page-principal .pc-bar:focus-within{ outline:2px solid #f4e3be; outline-offset:3px; }
+body.rota-dashboard-ui #page-principal .rota-vitals-list{ grid-template-rows:minmax(150px,1fr) minmax(150px,1fr) minmax(100px,.75fr); }
+@media (min-width:1121px){
+  body.rota-dashboard-ui #page-principal{ min-height:695px; }
+  body.rota-dashboard-ui #page-principal .rota-dashboard-center{ grid-template-rows:minmax(460px,1.3fr) minmax(218px,1fr); }
+}
+@media (max-width:1120px){
+  body.rota-dashboard-ui #page-principal .rota-vitals-panel{ min-height:0; }
+  body.rota-dashboard-ui #page-principal .rota-vitals-list{ grid-template-rows:auto auto auto; }
+  body.rota-dashboard-ui #page-principal .rota-vitals-list .track-block{ min-height:125px; }
+}
+
+/* Etapa 4: resumo consultável e busca de condições. */
+body.rota-dashboard-ui #page-principal .dashboard-wound-list{ display:grid; gap:4px; padding:2px; }
+body.rota-dashboard-ui #page-principal .dashboard-wound-entry{ display:grid; gap:2px; width:100%; padding:6px; text-align:left; border:1px solid rgba(85,49,29,.4); border-left:3px solid #705322; background:rgba(255,242,214,.22); color:#352218; white-space:normal; overflow-wrap:anywhere; }
+body.rota-dashboard-ui #page-principal .dashboard-wound-entry.severity-2{ border-left-color:#91611d; }
+body.rota-dashboard-ui #page-principal .dashboard-wound-entry.severity-3{ border-left-color:#a32c22; }
+body.rota-dashboard-ui #page-principal .dashboard-wound-entry strong{ font:12px/1.35 var(--font-body,sans-serif); font-weight:700; }
+body.rota-dashboard-ui #page-principal .dashboard-wound-entry span,
+body.rota-dashboard-ui #page-principal .dashboard-wound-entry small,
+body.rota-dashboard-ui #page-principal .dashboard-wound-empty{ font:11px/1.4 var(--font-body,sans-serif); }
+body.rota-dashboard-ui #page-principal .dashboard-wound-entry:focus-visible{ outline:2px solid #782d1f; outline-offset:1px; }
+body.rota-dashboard-ui #page-principal .diagram-section .somatic-summary-body{ flex:1 0 90px; min-height:90px; }
+body.rota-dashboard-ui #page-principal .somatic-inspect-label{ font-size:10px; line-height:1.4; }
+body.rota-dashboard-ui #page-principal .condition-search-row{ display:grid; gap:5px; margin-bottom:10px; }
+body.rota-dashboard-ui #page-principal .condition-search-row input{ width:100%; min-height:36px; color:#ead8b5; background:#14120e; }
+body.rota-dashboard-ui #page-principal .condition-search-row label{ font-size:13px; }
+body.rota-dashboard-ui #page-principal #condition-search-status,
+body.rota-dashboard-ui #page-principal .condition-feedback{ color:#d3b787; font:12px/1.45 var(--font-body,sans-serif); }
+body.rota-dashboard-ui #page-principal .condition-feedback:empty{ display:none; }
+body.rota-dashboard-ui #page-principal #wound-modal{ z-index:1600; }
+body.rota-dashboard-ui #page-principal #wound-modal #wound-cancel{ color:#ead8b5; border-color:#8c633b; background:#21190f; }
+
 @media print{
   body.rota-dashboard-ui #page-principal{ height:auto; overflow:visible; }
   body.rota-dashboard-ui .rota-dashboard{ display:grid; grid-template-columns:minmax(0,1fr); height:auto; }

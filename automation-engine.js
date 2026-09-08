@@ -31,7 +31,7 @@
     total = Math.max(0,number(total));
     limit = Math.max(1,number(limit,20));
     segments = Array.isArray(segments) && segments.length >= 2 ? segments : [Math.ceil(limit * .4),Math.ceil(limit * .75),limit];
-    if(total === 0) return {key:'none',name:'Nenhum'};
+    if(total === 0) return {key:'none',name:'Intacto'};
     if(total <= segments[0]) return {key:'hurt',name:'Machucado'};
     if(total <= segments[1]) return {key:'wounded',name:'Ferido'};
     if(total <= limit) return {key:'critical',name:'Crítico'};
@@ -43,7 +43,7 @@
     total = Math.max(0,number(total));
     limit = Math.max(1,number(limit,15));
     segments = Array.isArray(segments) && segments.length >= 2 ? segments : [Math.ceil(limit / 3),Math.ceil(limit * 2 / 3),limit];
-    if(total === 0) return {key:'none',name:'Nenhum',eventCap:4,crisisShift:0};
+    if(total === 0) return {key:'none',name:'Íntegro',eventCap:4,crisisShift:0};
     if(total <= segments[0]) return {key:'stable',name:'Estável',eventCap:4,crisisShift:0};
     if(total <= segments[1]) return {key:'unstable',name:'Instável',eventCap:6,crisisShift:2};
     if(total < limit) return {key:'unbalanced',name:'Desequilibrado',eventCap:Infinity,crisisShift:3};

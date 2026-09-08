@@ -623,12 +623,12 @@
     var conditionSection = document.createElement('div');
     conditionSection.className = 'section condition-section';
     conditionSection.innerHTML = '<div class="section-title">Condições Ativas <span class="tag">CATEGORIAS E EFEITOS DO LIVRO</span></div>'+
-      '<div class="section-body condition-shell"><div class="condition-add">'+
+      '<div class="section-body condition-shell"><div class="condition-search-row"><label for="condition-search">Buscar condição</label><input id="condition-search" type="search" placeholder="Ex.: Quebrado, Sangrando" autocomplete="off"><span id="condition-search-status" role="status"></span></div><div class="condition-add">'+
       '<select id="condition-category" aria-label="Categoria da condição"></select>'+
       '<select id="condition-select" aria-label="Condição"><option value="">— Selecionar —</option></select>'+
       '<input id="condition-custom" type="text" placeholder="Condição personalizada">'+
       '<button type="button" class="notes-btn" id="condition-add-button">Adicionar</button></div>'+
-      '<div class="condition-reference" id="condition-reference">Selecione uma condição para consultar Descrição, Impacto e Duração.</div>'+
+      '<p class="condition-feedback" id="condition-feedback" role="status"></p><div class="condition-reference" id="condition-reference">Selecione uma condição para consultar Descrição, Impacto e Duração.</div>'+
       conditionGuideHtml()+
       '<div class="condition-groups" id="condition-list"></div></div>';
     var diagram = $('.diagram-section', page);
@@ -637,27 +637,21 @@
 
     var pfBlock = $('#pf-boxes').closest('.track-block');
     var peBlock = $('#pe-boxes').closest('.track-block');
-    var permanentPf = document.createElement('label');
+    var permanentPf = document.createElement('div');
     permanentPf.className = 'permanent-control';
-    permanentPf.innerHTML = 'PF permanentes <input id="pf-permanent" type="number" min="0" max="20" value="0">';
+    permanentPf.innerHTML = permanentControlHtml('pf');
     pfBlock.appendChild(permanentPf);
-    var permanentPe = document.createElement('label');
+    var permanentPe = document.createElement('div');
     permanentPe.className = 'permanent-control';
-    permanentPe.innerHTML = 'PE permanentes <input id="pe-permanent" type="number" min="0" max="20" value="0">';
+    permanentPe.innerHTML = permanentControlHtml('pe');
     peBlock.appendChild(permanentPe);
-    var criticalAlert = document.createElement('div');
-    criticalAlert.id = 'critical-state-alert';
-    criticalAlert.className = 'critical-state-alert hidden';
-    criticalAlert.setAttribute('role','alert');
-    criticalAlert.setAttribute('aria-live','assertive');
     var resourcesList = pfBlock.closest('.resources-list');
     if(resourcesList){
-      resourcesList.appendChild(criticalAlert);
       var needsPanel = document.createElement('div');
       needsPanel.className = 'needs-panel';
       needsPanel.innerHTML = '<div class="needs-heading"><div><strong>Necessidades do Corpo</strong><span>1 CICLO = 24 CENAS</span></div><p>Sacie ao menos duas das três necessidades por Ciclo.</p></div>'+
         '<div class="needs-grid" id="needs-grid"></div><div class="needs-cycle-alert" id="needs-cycle-alert" aria-live="polite"></div>';
-      resourcesList.insertBefore(needsPanel,criticalAlert);
+      resourcesList.appendChild(needsPanel);
       var ruleTools = document.createElement('div');
       ruleTools.className = 'health-rule-tools no-print';
       ruleTools.innerHTML = '<button type="button" class="rule-tool-card" id="open-dying-panel"><span>PF</span><strong>Morrendo & Testes de Morte</strong><small id="dying-tool-status">Estado estável</small></button>'+
@@ -788,6 +782,12 @@
       if(stageLabel) statusRow.appendChild(stageLabel);
       if(permanentControl) statusRow.appendChild(permanentControl);
       track.appendChild(statusRow);
+      var alertBox = document.createElement('div');
+      alertBox.id = entry[1]+'-critical-alert';
+      alertBox.className = 'critical-state-alert hidden';
+      alertBox.setAttribute('role','status');
+      alertBox.setAttribute('aria-live','polite');
+      track.appendChild(alertBox);
       var ruleButton = $('#'+entry[2]);
       if(ruleButton){
         ruleButton.classList.add('vital-rule-button');
@@ -800,7 +800,7 @@
 
     var statePanel = document.createElement('section');
     statePanel.className = 'rota-state-panel';
-    statePanel.innerHTML = '<div class="rota-condition-heading"><strong>Condições ativas</strong><button type="button" data-open-dossier-utility="conditions">Gerenciar condições</button></div>'+
+    statePanel.innerHTML = '<div class="rota-condition-heading"><strong>Ferimentos registrados</strong></div><div id="dashboard-wound-list" class="dashboard-wound-list"></div><div class="rota-condition-heading"><strong>Condições ativas</strong><button type="button" data-open-dossier-utility="conditions">Adicionar / consultar</button></div>'+
       '<div class="rota-state-content"><div id="dashboard-condition-list" class="dashboard-condition-list" aria-live="polite"></div>'+
       '<button type="button" class="dashboard-pain-link sheet-anchor" data-page-target="historia" data-scroll-target="[data-section=&quot;pains&quot;]"><span>Dores</span><strong id="dashboard-pain-count">0 / 3</strong></button></div>';
     if(diagram) centerColumn.appendChild(diagram);
@@ -992,7 +992,7 @@
     summary.innerHTML = '<button type="button" class="somatic-summary-card" id="somatic-inspector-open" aria-haspopup="dialog" aria-controls="somatic-inspector-modal">'+
       '<span class="somatic-miniature"><img id="somatic-thumbnail-image" src="assets/corpos/masculino.png" alt="Miniatura do mapa corporal"></span>'+
       '<span class="somatic-summary-status"><strong id="somatic-record-total">0 REGISTROS</strong><span class="somatic-severity-summary" id="somatic-severity-summary"><span class="somatic-empty-state">SEM FERIMENTOS REGISTRADOS</span></span></span>'+
-      '<span class="somatic-inspect-label">ABRIR MAPA CORPORAL</span>'+
+      '<span class="somatic-inspect-label">MAPA CORPORAL · REGISTRAR FERIMENTO</span>'+
     '</button>';
     diagram.appendChild(summary);
 
@@ -1011,6 +1011,8 @@
     '</div>';
     $('.somatic-inspector-content',overlay).appendChild(detailBody);
     page.appendChild(overlay);
+    // O editor também pode abrir pelo resumo ou pelas condições, sem abrir o mapa.
+    page.appendChild($('#wound-modal',overlay));
   }
 
   function openSomaticInspector(){
@@ -1334,7 +1336,7 @@
       thumbnail.src = body.image;
       thumbnail.alt = 'Miniatura do mapa corporal '+body.label.toLowerCase();
     }
-    $('#body-map-title').textContent = 'Mapeamento somático do corpo ' + body.label.toLowerCase();
+    $('#body-map-title').textContent = 'Mapa corporal ' + body.label.toLowerCase();
     $('#body-map-caption').textContent = 'Vista Frontal — Corpo ' + body.label;
     layer.innerHTML = BODY_ZONE_LABELS.map(function(zone){
       var connection = body.connections && body.connections[zone.key] ? ' ' + body.connections[zone.key] : '';
@@ -1593,6 +1595,25 @@
     group.innerHTML = pipButtons(max);
   }
 
+  function permanentControlHtml(resource){
+    var label = resource.toUpperCase()+' permanentes';
+    return '<label for="'+resource+'-permanent">'+label+'</label><button type="button" data-permanent-resource="'+resource+'" data-permanent-delta="-1" aria-label="Diminuir '+label+'">−</button><input id="'+resource+'-permanent" type="number" min="0" max="20" value="0"><button type="button" data-permanent-resource="'+resource+'" data-permanent-delta="1" aria-label="Aumentar '+label+'">+</button>';
+  }
+
+  function setPermanentPoints(resource,value){
+    var limits = bloodLimits();
+    if(resource === 'pf'){
+      var previous = pfTotal();
+      model.health.permanentPf = clamp(Math.floor(Number(value)||0),0,limits.pf);
+      reconcileCriticalState(previous,{source:'PF permanentes'});
+    } else if(resource === 'pe'){
+      model.health.permanentPe = clamp(Math.floor(Number(value)||0),0,limits.pe);
+      if(peTotal() >= limits.pe) model.stress.breaking = true;
+    } else return;
+    renderHealth();
+    saveModel();
+  }
+
   function addTemporaryEffect(config){
     config = config || {};
     var sourceKey = String(config.sourceKey || config.name || uid('effect'));
@@ -1766,28 +1787,23 @@
     renderTrackZones('pe', limits.peSegments, limits.pe);
     var pfStageRule = ENGINE.pfStage(pfTotal,limits.pf,limits.pfSegments);
     var pfStage = model.critical.status === 'stabilized' && pfStageRule.key === 'dying' ? 'Estabilizado' : pfStageRule.name;
-    var peStage = model.stress.breaking ? 'Enlouquecendo' : ENGINE.stressStage(peTotal,limits.pe,limits.peSegments).name;
+    var peStageRule = ENGINE.stressStage(peTotal,limits.pe,limits.peSegments);
+    var peStage = model.stress.breaking ? 'Enlouquecendo' : peStageRule.name;
     $('#pf-stage').textContent = 'Estágio atual: ' + pfStage;
     $('#pe-stage').textContent = 'Estágio atual: ' + peStage;
-    $('#pf-stage').className = 'track-stage ' + (pfStage === 'Morte Direta' || pfStage === 'Morrendo' || pfStage === 'Crítico' ? 'stage-crit' : (pfStage === 'Machucado' || pfStage === 'Ferido' ? 'stage-warn' : 'stage-ok'));
-    $('#pe-stage').className = 'track-stage ' + (peStage === 'Enlouquecendo' ? 'stage-breaking' : (peStage === 'Desequilibrado' ? 'stage-crit' : (peStage === 'Instável' ? 'stage-warn' : 'stage-ok')));
-    var alertBox = $('#critical-state-alert');
-    if(alertBox){
-      var alertText = '';
-      var alertClass = '';
-      if(pfStage === 'Morte Direta'){
-        alertText = 'MORTE DIRETA — o total de PF atingiu 6 pontos além do limite. Aplique imediatamente a condição de morte prevista pela regra.';
-        alertClass = 'death';
-      } else if(pfStage === 'Morrendo' && model.critical.status === 'dying'){
-        alertText = 'MORRENDO — o personagem ultrapassou o limite de PF e precisa ser estabilizado antes de alcançar Morte Direta.';
-        alertClass = 'dying';
-      } else if(peStage === 'Enlouquecendo'){
-        alertText = 'ENLOUQUECENDO — o personagem atingiu o limite de PE ('+limits.pe+'). O controle passa ao MP até a resolução narrativa.';
-        alertClass = 'insanity';
-      }
-      alertBox.textContent = alertText;
-      alertBox.className = 'critical-state-alert' + (alertText ? ' '+alertClass : ' hidden');
-    }
+    $('#pf-stage').className = 'track-stage pf-state-' + pfStageRule.key;
+    $('#pe-stage').className = 'track-stage pe-state-' + (model.stress.breaking ? 'breaking' : peStageRule.key);
+    var pfAlert = $('#pf-critical-alert');
+    var peAlert = $('#pe-critical-alert');
+    pfAlert.textContent = pfStageRule.key === 'dead' ? 'MORTE DIRETA — consulte o painel de morte.' : (pfStage === 'Morrendo' ? 'MORRENDO — estabilize o sobrevivente.' : (pfStage === 'Estabilizado' ? 'ESTABILIZADO — acompanhe a recuperação.' : ''));
+    pfAlert.className = 'critical-state-alert pf-state-'+pfStageRule.key+(pfAlert.textContent ? '' : ' hidden');
+    peAlert.textContent = peStage === 'Enlouquecendo' ? 'ENLOUQUECENDO — resolução com o MP.' : '';
+    peAlert.className = 'critical-state-alert pe-state-breaking'+(peAlert.textContent ? '' : ' hidden');
+    $$('[data-permanent-resource]').forEach(function(button){
+      var resource = button.dataset.permanentResource;
+      var value = resource === 'pf' ? model.health.permanentPf : model.health.permanentPe;
+      button.disabled = Number(button.dataset.permanentDelta) < 0 ? value <= 0 : value >= limits[resource];
+    });
     renderDyingToolStatus();
     renderStressToolStatus();
     renderDashboardOverview();
@@ -2009,8 +2025,9 @@
     model.pc = clamp(model.pc,0,100);
     $('#pc-readout-current').textContent = String(model.pc).padStart(2,'0');
     $('#pc-marker').style.left = model.pc + '%';
-    $('#pc-bar').setAttribute('aria-valuenow',String(model.pc));
+    $('#pc-slider').value = String(model.pc);
     var stage = currentCorruptionStage();
+    $('#pc-slider').setAttribute('aria-valuetext',model.pc+' de 100 — '+stage.name);
     $('#pc-stage').textContent = 'Estágio atual: ' + stage.name;
     $('#pc-stage').className = 'pc-stage stage-' + stage.name.toLowerCase().replace(/í/g,'i');
     renderCorruption();
@@ -3078,9 +3095,10 @@
     if(!categorySelect || !conditionSelect) return;
     var selectedCategory = categorySelect.value;
     var selectedCondition = conditionSelect.value;
+    var query = normalizedConditionName($('#condition-search').value);
     categorySelect.innerHTML = conditionCategoryOptions(selectedCategory);
     var choices = CONDITION_LIBRARY.filter(function(condition){
-      return !selectedCategory || condition.category === selectedCategory;
+      return (!selectedCategory || condition.category === selectedCategory) && (!query || normalizedConditionName(condition.name).indexOf(query) >= 0);
     });
     if(selectedCategory){
       conditionSelect.innerHTML = '<option value="">— Selecionar —</option>'+choices.map(function(condition){
@@ -3091,10 +3109,11 @@
         var options = choices.filter(function(condition){ return condition.category === category.id; }).map(function(condition){
           return '<option value="'+escapeHtml(condition.name)+'">'+escapeHtml(condition.name)+'</option>';
         }).join('');
-        return '<optgroup label="'+category.label+'">'+options+'</optgroup>';
+        return options ? '<optgroup label="'+category.label+'">'+options+'</optgroup>' : '';
       }).join('');
     }
-    conditionSelect.value = choices.some(function(condition){ return condition.name === selectedCondition; }) ? selectedCondition : '';
+    conditionSelect.value = choices.some(function(condition){ return condition.name === selectedCondition; }) ? selectedCondition : (query && choices.length === 1 ? choices[0].name : '');
+    $('#condition-search-status').textContent = query ? choices.length+' resultado'+(choices.length === 1 ? '' : 's') : 'Busque pelo nome em todas as categorias.';
     renderConditionReference();
   }
   function renderConditionReference(){
@@ -3157,6 +3176,16 @@
   }
   function addCondition(name){
     name = String(name || '').trim();
+    var canonical = CONDITION_LIBRARY.filter(function(entry){ return normalizedConditionName(entry.name) === normalizedConditionName(name); })[0];
+    if(canonical) name = canonical.name;
+    var feedback = $('#condition-feedback');
+    if(!name){ if(feedback) feedback.textContent = 'Selecione uma condição ou escreva uma condição personalizada.'; return; }
+    var derived = derivedWoundConditions().some(function(entry){ return normalizedConditionName(entry.name) === normalizedConditionName(name); });
+    var manual = model.conditions.some(function(entry){ return normalizedConditionName(entry) === normalizedConditionName(name); });
+    if(derived || manual){
+      if(feedback) feedback.textContent = name+(derived ? ' já vem de um ferimento. Consulte a origem abaixo para tratar.' : ' já está registrada.');
+      return;
+    }
     var definition = conditionDefinition(name);
     if(name && definition && (definition.category === 'terrain' || definition.category === 'environment') && DATA.archetypes[model.fields['origem-select']] === 'Terra Viva' && hasGrowthStage(7)){
       addRuleLog('imunidade','Resiliência Ecológica impediu '+name+'.',null);
@@ -3164,7 +3193,12 @@
     }
     if(name && !hasCondition(name)) model.conditions.push(name);
     renderConditions();
+    if(feedback) feedback.textContent = name+' adicionada.';
     saveModel();
+  }
+
+  function normalizedConditionName(name){
+    return String(name || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
   }
 
   function woundsForBodyZone(zoneId){
@@ -3198,6 +3232,18 @@
       }
     });
     $('#wound-summary').innerHTML = lines.length ? lines.join('') : 'Nenhum ferimento registrado.';
+    var compact = $('#dashboard-wound-list');
+    if(compact){
+      var compactRows = [];
+      BODY_ZONE_LABELS.forEach(function(zone){
+        woundsForBodyZone(zone.id).forEach(function(detail){
+          var severity = ['','Leve','Moderado','Grave'][detail.severity] || '';
+          var condition = detail.condition ? (detail.armorBlocked ? detail.condition+' · impedida pela proteção' : (detail.conditionApplied ? detail.condition : detail.condition+' · inativa')) : 'Sem condição';
+          compactRows.push('<button type="button" class="dashboard-wound-entry severity-'+detail.severity+'" data-wound-source="'+escapeHtml(zone.id)+'" data-wound-id="'+escapeHtml(detail.id)+'"><strong>'+escapeHtml(zone.label)+' · '+severity+'</strong><span>'+escapeHtml(detail.type)+' · '+detail.pf+' PF</span><small>'+escapeHtml(condition)+'</small></button>');
+        });
+      });
+      compact.innerHTML = compactRows.length ? compactRows.join('') : '<span class="dashboard-wound-empty">Nenhum ferimento registrado.</span>';
+    }
     renderSomaticSummary();
     renderDashboardOverview();
   }
@@ -3256,6 +3302,8 @@
 
   var editingZoneId = null;
   var editingWoundId = '';
+  var lastWoundFocus = null;
+  var lastWoundDialog = null;
   function woundById(zoneId,woundId){
     return woundsForBodyZone(zoneId).filter(function(detail){ return detail.id === woundId; })[0] || null;
   }
@@ -3293,10 +3341,15 @@
     renderWoundModalList();
   }
   function openWoundModal(zone){
+    lastWoundFocus = document.activeElement;
+    lastWoundDialog = lastWoundFocus && lastWoundFocus.closest('.modal-overlay');
     editingZoneId = canonicalBodyZone(zone.id);
     $('#wound-zone-name').textContent = zone.dataset.part;
     startNewWound();
     $('#wound-modal').style.display = 'flex';
+    $('#wound-modal').setAttribute('aria-hidden','false');
+    document.body.classList.add('modal-open');
+    $('#wound-type').focus();
   }
   function editWound(woundId){
     var detail = woundById(editingZoneId,woundId);
@@ -3314,13 +3367,27 @@
     renderWounds(); renderConditions();
     saveModel();
   }
-  function closeWoundModal(){ editingZoneId = null; editingWoundId = ''; $('#wound-modal').style.display = 'none'; }
+  function closeWoundModal(){
+    editingZoneId = null; editingWoundId = '';
+    $('#wound-modal').style.display = 'none';
+    $('#wound-modal').setAttribute('aria-hidden','true');
+    if(!$$('.modal-overlay').some(function(overlay){return overlay.style.display !== 'none' && overlay.getClientRects().length;})) document.body.classList.remove('modal-open');
+    var focusTarget = lastWoundFocus && lastWoundFocus.isConnected ? lastWoundFocus : (lastWoundDialog && lastWoundDialog.style.display !== 'none' ? $('.modal',lastWoundDialog) : $('#somatic-inspector-open'));
+    if(focusTarget) focusTarget.focus();
+    lastWoundFocus = null;
+    lastWoundDialog = null;
+  }
   function selectedWoundSeverity(){
     var checked = $('input[name="wound-severity"]:checked');
     return checked ? parseInt(checked.value,10) : 0;
   }
   function updateWoundPreview(){
     if(!editingZoneId) return;
+    var existing = editingWoundId ? woundById(editingZoneId,editingWoundId) : null;
+    if(existing && !$('#wound-apply-pf').checked && existing.type === $('#wound-type').value && Number(existing.severity) === selectedWoundSeverity()){
+      $('#wound-rule-preview').textContent = 'Registro atual: '+existing.pf+' PF'+(existing.condition ? ' · '+existing.condition+(existing.armorBlocked || !existing.conditionApplied ? ' (inativa)' : '') : '')+'. O tratamento será preservado ao salvar as observações.';
+      return;
+    }
     var rule = woundRule($('#wound-type').value,selectedWoundSeverity(),editingZoneId);
     var armor = armorForRegion(woundRegion(editingZoneId));
     var growthBlocks = DATA.archetypes[model.fields['origem-select']] === 'Terra Viva' && hasGrowthStage(8) && selectedWoundSeverity() <= 2;
@@ -3358,7 +3425,7 @@
     if(DATA.archetypes[model.fields['origem-select']] === 'Terra Viva' && hasGrowthStage(8) && severity <= 2) conditionBlocked = true;
     var detail = {
       id:editingWoundId || uid('wound'), type:type, severity:severity, note:$('#wound-note').value,
-      pf:pf, basePf:basePf, condition:rule.condition || '',
+      pf:pf, basePf:basePf, condition:!applyRules && previousDetail && previousDetail.type === type && previousDetail.severity === severity ? previousDetail.condition : (rule.condition || ''),
       conditionApplied:applyRules ? !!rule.condition && !conditionBlocked : (previousDetail ? previousDetail.conditionApplied : false),
       armorBlocked:applyRules ? conditionBlocked : !!(previousDetail && previousDetail.armorBlocked), rulesApplied:applyRules || !!(previousDetail && previousDetail.rulesApplied),
       conditionTicks:previousDetail ? previousDetail.conditionTicks || 0 : 0,
@@ -3926,6 +3993,13 @@
   }
 
   function onClick(event){
+    var permanentStep = event.target.closest('[data-permanent-resource]');
+    if(permanentStep){
+      var resource = permanentStep.dataset.permanentResource;
+      var current = resource === 'pf' ? model.health.permanentPf : model.health.permanentPe;
+      setPermanentPoints(resource,current+Number(permanentStep.dataset.permanentDelta));
+      return;
+    }
     if(event.target.closest('#portrait-remove')){
       model.portrait = { dataUrl:'', fileName:'' };
       renderPortrait();
@@ -4130,8 +4204,10 @@
       if(target.id === 'growth-stage') renderGrowth();
       saveModel(); return;
     }
-    if(target.id === 'pf-permanent'){ var previousPfTotal=pfTotal();model.health.permanentPf=Math.max(0,parseInt(target.value,10)||0);reconcileCriticalState(previousPfTotal,{source:'PF permanente'});renderHealth();saveModel();return; }
-    if(target.id === 'pe-permanent'){ model.health.permanentPe=Math.max(0,parseInt(target.value,10)||0);if(peTotal()>=bloodLimits().pe)model.stress.breaking=true;renderHealth();saveModel();return; }
+    if(target.id === 'condition-search'){$('#condition-category').value='';renderConditionPicker();return;}
+    if(target.id === 'pf-permanent'){setPermanentPoints('pf',target.value);return;}
+    if(target.id === 'pe-permanent'){setPermanentPoints('pe',target.value);return;}
+    if(target.id === 'pc-slider'){changePC(Number(target.value)-model.pc);return;}
     if(target.id === 'parts-input'){ model.parts=Math.max(0,parseInt(target.value,10)||0);saveModel();return; }
     var invRow=target.closest('.inv-slot');
     if(invRow){
@@ -4236,10 +4312,17 @@
     if(target.classList.contains('recipe-known')){var recipeId=target.dataset.recipeId;var recipeIndex=model.knownRecipes.indexOf(recipeId);if(target.checked&&recipeIndex<0){if(!model.allowCampaignRecipes&&model.knownRecipes.length>=recipeLimit()){target.checked=false;alert('O limite de Receitas conhecidas na criação é igual ao Intelecto.');return;}model.knownRecipes.push(recipeId);}else if(!target.checked&&recipeIndex>=0)model.knownRecipes.splice(recipeIndex,1);renderRecipes();saveModel();return;}
     if(target.id==='allow-campaign-recipes'){model.allowCampaignRecipes=target.checked;renderRecipes();saveModel();return;}
     if(target.id==='backup-file-input'){if(target.files&&target.files[0])importBackup(target.files[0]);target.value='';return;}
-    if(target.id==='wound-type'||target.name==='wound-severity'){$('#wound-rule-preview').classList.remove('error');updateWoundPreview();return;}
+    if(target.id==='wound-type'||target.id==='wound-apply-pf'||target.name==='wound-severity'){$('#wound-rule-preview').classList.remove('error');updateWoundPreview();return;}
   }
 
   function onKeyDown(event){
+    if(event.key === 'Tab' && $('#wound-modal').style.display !== 'none'){
+      var woundControls = $$('button,input,select,textarea,[tabindex="0"]',$('#wound-modal')).filter(function(control){return !control.disabled && control.getClientRects().length;});
+      var firstWoundControl = woundControls[0];
+      var lastWoundControl = woundControls[woundControls.length-1];
+      if(event.shiftKey && document.activeElement === firstWoundControl){event.preventDefault();lastWoundControl.focus();return;}
+      if(!event.shiftKey && document.activeElement === lastWoundControl){event.preventDefault();firstWoundControl.focus();return;}
+    }
     var skillTab = event.target.closest && event.target.closest('.skill-attribute-tab');
     if(skillTab && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')){
       event.preventDefault();
