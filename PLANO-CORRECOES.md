@@ -2,7 +2,7 @@
 
 Data: 07/09/2026.
 
-Estado: etapa 1 implementada e verificada em 07/09/2026. Etapas 2 a 6 pendentes.
+Estado: etapas 1 e 2 implementadas e verificadas. Etapa 2 concluída em 08/09/2026. Etapas 3 a 6 pendentes.
 
 Fonte: mensagens e prints enviados nesta conversa, incluindo o feedback de T.K. de 29/08/2026 e o relato de uso de Moira. O usuário encerrou os envios com “Esta tudo pronto agora” e pediu a organização das correções em sequência.
 
@@ -51,18 +51,24 @@ Ponto de retorno: backups/revisao-2026-09-07_19-48-22/antes-das-correcoes.zip e 
 
 ### 2. Ajustar Identificação e Características
 
-- [ ] Corrigir o tamanho do campo de nome e do texto “NOME DO SOBREVIVENTE”, incluindo nomes longos.
-- [ ] Corrigir a sobreposição de letras no Arquétipo e seu negrito destoante.
-- [ ] Usar uma moldura de fotografia mais próxima de uma foto quadrada/Polaroid, com reposicionamento da imagem preservado.
-- [ ] Organizar os campos e grupos com divisões claras; pequenos ícones são uma possibilidade sugerida no feedback.
-- [ ] Corrigir o corte dos textos de Vantagens, Desvantagens e Cicatrizes. Abreviar rótulos é uma alternativa, sem truncar ou modificar o conteúdo escrito pelo jogador.
-- [ ] Iniciar fichas novas com três campos de vantagem, dois de desvantagem e um de cicatriz.
-- [ ] Preservar as Características já preenchidas em fichas existentes. A configuração 3/2/1 não foi definida como limite máximo.
-- [ ] Oferecer consulta de detalhes da Identificação em pop-up, evitando a ida obrigatória à quarta página.
+- [x] Corrigir o tamanho do campo de nome e do texto “NOME DO SOBREVIVENTE”, incluindo nomes longos.
+- [x] Corrigir a sobreposição de letras no Arquétipo e seu negrito destoante.
+- [x] Usar uma moldura de fotografia mais próxima de uma foto quadrada/Polaroid, com reposicionamento da imagem preservado.
+- [x] Organizar os campos e grupos com divisões claras; pequenos ícones são uma possibilidade sugerida no feedback.
+- [x] Corrigir o corte dos textos de Vantagens, Desvantagens e Cicatrizes. Abreviar rótulos é uma alternativa, sem truncar ou modificar o conteúdo escrito pelo jogador.
+- [x] Iniciar fichas novas com três campos de vantagem, dois de desvantagem e um de cicatriz.
+- [x] Preservar as Características já preenchidas em fichas existentes. A configuração 3/2/1 não foi definida como limite máximo.
+- [x] Oferecer consulta de detalhes da Identificação em pop-up, evitando a ida obrigatória à quarta página.
 
-Proposta para o pop-up: reutilizar os detalhes existentes de Origem, Ocupação, Sangue, Paradigma e Arquétipo/Crescimento conforme o campo acionado. O feedback pede a consulta local, mas não define exatamente quais desses campos devem abri-la. Manter seleção e consulta claramente distintas.
+Pop-ups implementados: Origem, Ocupação, Sangue, Paradigma e Arquétipo/Crescimento pelos botões de consulta ao lado dos rótulos. A Trilha de Crescimento também abre sua consulta local. O conteúdo usa os dados atuais do projeto; os seletores continuam separados da consulta.
 
 Conclusão da etapa: informações legíveis, sem sobreposição, foto proporcional e acesso aos detalhes sem perder o contexto da primeira página.
+
+Verificação da etapa 2: textos extensos em Nome, Vantagens, Desvantagens e Cicatrizes, persistência após recarga, inclusão/remoção de campo adicional, detalhes de Curandeiro e Determinado, Paradigma e os dois tipos de Sangue. Pop-ups fecham por Esc e devolvem o foco. Conferidos 1280×720, 1920×1080, 900×768 e 390×844 sem transbordamento horizontal dos campos testados. A moldura tem área quadrada e mantém o editor de enquadramento existente.
+
+Em telas baixas ou com textos extensos, o painel de papel permite rolagem; o conteúdo cresce em altura em vez de ser truncado. Em celular, as Características ficam em uma coluna. O padrão 3/2/1 vale para fichas novas; listas salvas, inclusive vazias ou maiores, são preservadas. A migração do formato legado mantém seu comportamento anterior.
+
+Validação automatizada: quatro testes passaram (três de criação/restauração em tests/identity-model.test.js e a suíte existente de regras). Sintaxe e git diff --check também passaram. Prévia final: http://localhost:4181/. A revisão completa de impressão e regras continua na etapa 6.
 
 ### 3. Corrigir apresentação e controles das barras
 
@@ -155,7 +161,7 @@ Estas constatações são de leitura, ainda sem validação desta rodada no nave
 | Ponto | Encaminhamento |
 | --- | --- |
 | Nome que substituirá Mapeamento Somático | Proposta: painel “Ferimentos e Condições” e detalhe “Mapa corporal” |
-| Escopo do pop-up de Identificação | Reutilizar informações já existentes; definir o acesso durante a etapa 2 |
+| Escopo do pop-up de Identificação | Resolvido na etapa 2: Origem, Ocupação, Sangue, Paradigma e Arquétipo/Crescimento |
 | Artes versus ícones de perícias | Primeiro avaliar as artes com o novo espaço; ícones simples são alternativa |
 | Logo definitiva | Verificar o arquivo já disponível; usar um novo apenas quando fornecido |
 | Enlouquecendo após reduzir PE | Conferir regra e fluxo de encerramento antes de mudar a mecânica |

@@ -238,7 +238,7 @@
       paradigmNotes:'',
       log:[],
       relationships:[],
-      characteristics:{ vantagens:['',''], desvantagens:[''], cicatrizes:[''] },
+      characteristics:{ vantagens:['','',''], desvantagens:['',''], cicatrizes:[''] },
       pains:[{checked:false,text:''},{checked:false,text:''},{checked:false,text:''}],
       inventory:[],
       weapons:[emptyWeapon(), emptyWeapon()],
@@ -708,16 +708,54 @@
       identityPanel.className = 'rota-identity-panel';
       identityPanel.innerHTML = '<div class="rota-panel-heading rota-paper-heading"><span></span><strong>Identificação</strong><span></span></div>';
       identityPanel.appendChild(header);
+      // Deixa os metadados ocuparem toda a largura abaixo da foto e do nome.
+      header.appendChild($('.meta-grid',header));
+      $$('.meta-field',header).forEach(function(field){
+        var control = $('input,select,textarea',field);
+        var label = $('label',field);
+        if(control && label) label.htmlFor = control.id;
+      });
+      [['sangue','Sangue'],['origem-select','Origem'],['ocupacao-select','Ocupação'],['reputacao-select','Paradigma'],['arquetipo-readout','Arquétipo']].forEach(function(entry){
+        var field = $('#'+entry[0],header).closest('.meta-field');
+        var label = $('label',field);
+        var heading = document.createElement('div');
+        heading.className = 'identity-field-heading';
+        field.insertBefore(heading,label);
+        heading.appendChild(label);
+        var detail = document.createElement('button');
+        detail.type = 'button';
+        detail.className = 'identity-detail-button no-print';
+        detail.dataset.identityDetail = entry[0];
+        detail.setAttribute('aria-label','Consultar '+entry[1]);
+        detail.setAttribute('aria-haspopup','dialog');
+        detail.textContent = 'ⓘ';
+        heading.appendChild(detail);
+      });
       var growthTrack = document.createElement('button');
       growthTrack.type = 'button';
-      growthTrack.className = 'rota-growth-track sheet-anchor';
-      growthTrack.dataset.pageTarget = 'origem';
-      growthTrack.dataset.scrollTarget = '[data-ui-section="growth"]';
+      growthTrack.className = 'rota-growth-track';
+      growthTrack.dataset.identityDetail = 'arquetipo-readout';
+      growthTrack.setAttribute('aria-label','Consultar Trilha de Crescimento');
+      growthTrack.setAttribute('aria-haspopup','dialog');
       growthTrack.innerHTML = '<span>Trilha de Crescimento</span><div>'+['I','II','III','IV','V','VI','VII','VIII','IX','X'].map(function(roman,index){
         return '<i data-dashboard-growth="'+(index+1)+'">'+roman+'</i>';
       }).join('')+'</div>';
       identityPanel.appendChild(growthTrack);
-      if(characteristics) identityPanel.appendChild(characteristics);
+      if(characteristics){
+        $$('.chars-grid > div',characteristics).forEach(function(group){
+          var title = $('.chars-col-title',group);
+          var addButton = $('.add-char-btn',group);
+          var heading = document.createElement('div');
+          heading.className = 'character-group-heading';
+          group.insertBefore(heading,title);
+          heading.appendChild(title);
+          addButton.setAttribute('aria-label',addButton.textContent.replace('+ ','').trim());
+          addButton.title = addButton.getAttribute('aria-label');
+          addButton.textContent = '+';
+          heading.appendChild(addButton);
+        });
+        identityPanel.appendChild(characteristics);
+      }
       leftColumn.appendChild(identityPanel);
     }
     else if(characteristics) leftColumn.appendChild(characteristics);
@@ -1238,6 +1276,48 @@
     input.classList.toggle('name-long',length >= 13 && length < 18);
     input.classList.toggle('name-very-long',length >= 18);
     input.title = input.value || input.placeholder || '';
+    resizeIdentityText(input);
+  }
+
+  function resizeIdentityText(field){
+    if(!field || !field.clientWidth) return;
+    field.style.height = 'auto';
+    field.style.height = (field.scrollHeight + 2)+'px';
+  }
+
+  function resizeIdentityFields(){
+    $$('.identity-autosize').forEach(resizeIdentityText);
+  }
+
+  function openIdentityDetail(key){
+    var title = '';
+    var content = '';
+    function powerCard(power, note){
+      if(typeof power === 'string') power = {name:power};
+      return '<article class="identity-reference-card"><h3>'+escapeHtml(power.name)+'</h3>'+(note ? '<small>'+escapeHtml(note)+'</small>' : '')+'<p>'+escapeHtml(power.description || '')+'</p></article>';
+    }
+    if(key === 'origem-select'){
+      var name = model.fields[key];
+      var origin = DATA.origins[name];
+      title = 'Origem'+(origin ? ' · '+name : '');
+      content = origin ? '<p>Arquétipo: '+escapeHtml(DATA.archetypes[name] || '')+'<br>Arma inicial: '+escapeHtml(origin.weapon)+'<br>Perícias de Origem: '+escapeHtml(origin.skills.join(' · '))+'</p>'+powerCard(origin.initial,'Poder inicial')+origin.powers.map(function(power){return powerCard(power,power.cost+' PO · '+(model.originPowers.indexOf(power.name)>=0 ? 'Selecionado' : 'Disponível'));}).join('') : '<p>Selecione uma Origem na Identificação para consultar seus poderes.</p>';
+    } else if(key === 'ocupacao-select'){
+      var occupation = getOccupation();
+      title = 'Ocupação'+(occupation ? ' · '+model.fields[key] : '');
+      content = occupation ? '<p>'+escapeHtml(occupation.bonus || '')+'</p>'+occupation.powers.map(function(power){return powerCard(power);}).join('') : '<p>Selecione uma Ocupação na Identificação para consultar seus detalhes.</p>';
+    } else if(key === 'reputacao-select'){
+      var paradigm = (DATA.paradigms || []).filter(function(item){return item.name === model.fields[key];})[0];
+      title = 'Paradigma'+(paradigm ? ' · '+paradigm.name : '');
+      content = paradigm ? '<p>'+escapeHtml(paradigm.path)+' · '+escapeHtml(paradigm.focus)+'</p><p>'+escapeHtml(paradigm.description)+'</p><article class="identity-reference-card"><h3>Aspecto positivo</h3><p>'+escapeHtml(paradigm.positive)+'</p></article><article class="identity-reference-card"><h3>Aspecto negativo</h3><p>'+escapeHtml(paradigm.negative)+'</p></article>' : '<p>Selecione um Paradigma para consultar seus efeitos.</p>';
+    } else if(key === 'sangue'){
+      var limits = bloodLimits();
+      title = model.fields.sangue === 'novo' ? 'Sangue Novo' : 'Sangue Velho';
+      content = '<p>Limite de Ferimentos: <strong>'+limits.pf+' PF</strong><br>Limite de Estresse: <strong>'+limits.pe+' PE</strong></p><p>'+(model.fields.sangue === 'novo' ? 'Flor da Corrupção: '+escapeHtml(model.fields['flor-select'] || 'Nenhuma selecionada') : 'Filtro Corruptivo: consulte os modos da Pulseira na aba Corrupção.')+'</p>';
+    } else if(key === 'arquetipo-readout'){
+      title = 'Arquétipo & Crescimento';
+      content = '<h3>'+escapeHtml(DATA.archetypes[model.fields['origem-select']] || 'Origem não selecionada')+'</h3><p>'+escapeHtml($('#growth-summary').textContent)+'</p><div class="growth-track-list">'+$('#growth-track-list').innerHTML+'</div>';
+    } else return;
+    openRuleModal(title,'<div class="identity-reference">'+content+'</div>','identity-reference');
   }
 
   function renderBodyMap(){
@@ -1989,6 +2069,7 @@
     var origin = DATA.origins[originName];
     var archetype = DATA.archetypes[originName] || '';
     $('#arquetipo-readout').value = archetype;
+    resizeIdentityText($('#arquetipo-readout'));
     $('#growth-archetype').value = archetype;
     $('#origin-weapon-hint').textContent = origin ? 'Categoria de arma inicial: ' + origin.weapon : '';
     if(!origin){
@@ -2935,18 +3016,17 @@
       $('#' + containerId).innerHTML = list.map(function(value,index){
         var itemLabel = key === 'vantagens' ? 'vantagem' : (key === 'desvantagens' ? 'desvantagem' : 'cicatriz');
         var removeLabel = 'Apagar '+itemLabel+' '+(index+1);
-        return '<div class="list-input-row" data-character-type="'+key+'" data-character-index="'+index+'"><span class="list-num">'+(index+1)+'</span><div class="list-row-actions"><input type="text" value="'+escapeHtml(value)+'" placeholder="'+(key === 'vantagens' ? 'Vantagem...' : (key === 'desvantagens' ? 'Desvantagem...' : 'Cicatriz...'))+'"><button type="button" class="list-row-remove character-remove" aria-label="'+removeLabel+'" title="'+removeLabel+'">×</button></div></div>';
+        return '<div class="list-input-row" data-character-type="'+key+'" data-character-index="'+index+'"><span class="list-num">'+(index+1)+'</span><div class="list-row-actions"><textarea class="identity-autosize" rows="1" aria-label="'+itemLabel+' '+(index+1)+'" placeholder="'+(key === 'vantagens' ? 'Vantagem...' : (key === 'desvantagens' ? 'Desvantagem...' : 'Cicatriz...'))+'">'+escapeHtml(value)+'</textarea><button type="button" class="list-row-remove character-remove" aria-label="'+removeLabel+'" title="'+removeLabel+'">×</button></div></div>';
       }).join('');
     });
     var advantages = model.characteristics.vantagens.filter(Boolean).length;
     var disadvantages = model.characteristics.desvantagens.filter(Boolean).length;
-    var minimumDisadvantages = model.fields['ocupacao-select'] === 'Prodígio' ? 0 : 1;
-    var maxAdvantages = Math.min(5,2 + Math.max(0,disadvantages-minimumDisadvantages));
     var section = $('#vantagens-list').closest('.section-body');
     var status = $('#character-status');
     if(!status){ status = document.createElement('div'); status.id = 'character-status'; status.className = 'status-line character-status'; section.insertBefore(status, section.firstChild); }
-    status.textContent = 'Criação: 2 Vantagens, ' + (minimumDisadvantages ? '1 Desvantagem' : 'nenhuma Desvantagem por Prodígio') + ' e 1 Cicatriz opcional · limite atual de Vantagens: ' + maxAdvantages + ' · preenchidas: ' + advantages;
-    status.classList.toggle('over',advantages > maxAdvantages || disadvantages < minimumDisadvantages);
+    status.textContent = 'Ficha nova: 3 Vantagens, 2 Desvantagens e 1 Cicatriz · preenchidas: '+advantages+' / '+disadvantages+' / '+model.characteristics.cicatrizes.filter(Boolean).length;
+    status.classList.remove('over');
+    resizeIdentityFields();
   }
 
   function renderPains(){
@@ -3845,6 +3925,8 @@
     if(event.target.closest('[data-close-skill-art]')){closeSkillArtViewer();return;}
     if(event.target.id === 'skill-art-modal'){closeSkillArtViewer();return;}
     var utilityTrigger = event.target.closest('[data-open-dossier-utility]');
+    var identityTrigger = event.target.closest('[data-identity-detail]');
+    if(identityTrigger){openIdentityDetail(identityTrigger.dataset.identityDetail);return;}
     if(utilityTrigger){openDossierUtility(utilityTrigger.dataset.openDossierUtility);return;}
     if(event.target.closest('[data-close-dossier-utility]')){closeDossierUtility();return;}
     if(event.target.classList.contains('dossier-utility-overlay')){closeDossierUtility();return;}
@@ -4051,7 +4133,7 @@
       }
       return;
     }
-    var charRow=target.closest('.list-input-row'); if(charRow&&target.tagName==='INPUT'){model.characteristics[charRow.dataset.characterType][parseInt(charRow.dataset.characterIndex,10)]=target.value;saveModel();return;}
+    var charRow=target.closest('.list-input-row'); if(charRow&&target.tagName==='TEXTAREA'){model.characteristics[charRow.dataset.characterType][parseInt(charRow.dataset.characterIndex,10)]=target.value;resizeIdentityText(target);saveModel();return;}
     var painRow=target.closest('.dor-row'); if(painRow&&target.tagName==='INPUT'){model.pains[parseInt(painRow.dataset.painIndex,10)].text=target.value;saveModel();return;}
     var weaponCard=target.closest('.weapon-card'); if(weaponCard){var weaponState=model.weapons[parseInt(weaponCard.dataset.weaponIndex,10)];if(target.classList.contains('weapon-notes'))weaponState.notes=target.value;if(target.classList.contains('custom-weapon-name'))weaponState.customName=target.value;if(target.classList.contains('custom-weapon-damage'))weaponState.customDamage=target.value;if(target.classList.contains('custom-weapon-range'))weaponState.customRange=target.value;if(target.classList.contains('custom-weapon-max')){weaponState.customMax=Math.max(0,parseInt(target.value,10)||0);weaponState.current=Math.min(weaponState.current,weaponState.customMax);}saveModel();return;}
     var noteCard=target.closest('.note-card'); if(noteCard){var note=getSelectedNotebook().notes.filter(function(entry){return entry.id===noteCard.dataset.noteId;})[0];if(note){if(target.classList.contains('note-title-input'))note.title=target.value;if(target.classList.contains('note-content'))note.content=target.value;saveModel();}return;}
@@ -4174,6 +4256,14 @@
     reconcileCriticalState(pfTotal(),{source:'restauração da ficha'});
     if(peTotal()>=bloodLimits().pe) model.stress.breaking=true;
     renderAll();
+    if(window.ResizeObserver){
+      var identityWidth = 0;
+      new ResizeObserver(function(entries){
+        var width = entries[0].contentRect.width;
+        if(width !== identityWidth){ identityWidth = width; resizeIdentityFields(); }
+      }).observe($('.rota-identity-panel'));
+    }
+    document.fonts.ready.then(resizeIdentityFields);
     saveModel(true);
   }
 

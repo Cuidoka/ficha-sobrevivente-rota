@@ -10,7 +10,7 @@
 <link rel="preload" as="image" href="assets/corpos/feminino.png">
 <link rel="stylesheet" href="style.css?v=16">
 <link rel="stylesheet" href="new-ui.css?v=24">
-<link rel="stylesheet" href="dashboard-ui.css?v=40">
+<link rel="stylesheet" href="dashboard-ui.css?v=41">
 </head>
 <body class="dossier-ui rota-dashboard-ui">
 
@@ -35,7 +35,7 @@
         <span>ROOTS OF THE ABYSS · DOSSIÊ DE SOBREVIVENTE</span>
         <span class="reg">Nº <input type="text" id="registro" placeholder="000-XX"></span>
       </div>
-      <input class="name-input" id="nome-sobrevivente" type="text" placeholder="NOME DO SOBREVIVENTE">
+      <textarea class="name-input identity-autosize" id="nome-sobrevivente" rows="2" aria-label="Nome do sobrevivente" placeholder="NOME DO SOBREVIVENTE"></textarea>
       <div class="meta-grid">
         <div class="meta-field"><label>Jogador</label><input id="jogador" type="text" placeholder="—"></div>
         <div class="meta-field"><label>Idade</label><input id="idade" type="text" placeholder="—"></div>
@@ -102,7 +102,7 @@
             <option>Lírio da Morte</option><option>Margarida</option><option>Lótus</option>
           </select>
         </div>
-        <div class="meta-field"><label>Arquétipo</label><input type="text" id="arquetipo-readout" readonly placeholder="Definido pela Origem"></div>
+        <div class="meta-field"><label>Arquétipo</label><textarea id="arquetipo-readout" class="identity-autosize" rows="1" readonly placeholder="Definido pela Origem"></textarea></div>
       </div>
     </div>
   </div>
@@ -420,7 +420,7 @@
 <script src="rules-data.js?v=16"></script>
 <script src="weapon-details.js?v=14"></script>
 <script src="automation-engine.js?v=16"></script>
-<script src="script.js?v=42"></script>
+<script src="script.js?v=43"></script>
 
 </body>
 </html>
