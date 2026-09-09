@@ -490,12 +490,12 @@
         {name:"Corpo Adaptado",description:"Sua Cicatriz Inicial não impõe mais sua penalidade, mas você mantém o benefício que ela concede."}
       ], bonus:"Rola 5D6 em Crises de Estresse.", crisisDice:5 },
       "Prodígio": { powers:[
-        {name:"Vantagem de Largada",description:"Você não precisa escolher Desvantagens na criação."},
-        {name:"Aprendizado Rápido",description:"Após falhar em um teste, ganhe Bônus no próximo teste igual."},
-        {name:"Dom Superior",description:"Escolha duas Perícias. Sempre que realizar um Teste com uma delas, ganhe Bônus."}
-      ], bonus:"Não escolhe Desvantagens na criação." },
+        {name:"Vantagem de Largada",description:"Receba +2 Vantagens no início da vida."},
+        {name:"Aprendizado Rápido",description:"Após falhar em um teste, ganhe Bônus não cumulativo no próximo teste igual, imediatamente ou ao repetir a situação dentro da mesma Cena."},
+        {name:"Dom Superior",description:"Escolha três Perícias. Sempre que realizar um Teste com uma delas, ganhe Bônus e ignore Penalidades de Ambiente ou Terreno."}
+      ], bonus:"+2 Vantagens iniciais. Dom Superior concede Bônus em três Perícias e ignora Penalidades de Ambiente ou Terreno." },
       "Engenhoqueiro": { powers:[
-        {name:"Minha Melhor Criação",description:"Gaste uma Ação Principal ou uma Cena para aprimorar uma Arma Branca do seu Inventário. Quem a empunhar ganha Bônus em ataques. Só uma arma pode permanecer aprimorada por vez."},
+        {name:"Minha Melhor Criação",description:"Gaste uma Ação Principal ou uma Cena para aprimorar uma Arma Branca do seu Inventário. Quem a empunhar ganha Bônus em ataques. Só uma arma pode permanecer aprimorada por vez; outra só pode ser aprimorada se a atual for destruída."},
         {name:"Efeito Explosivo",description:"Ao usar um item ou arma que criou ou aprimorou, cada resultado 1 permite rolar um dado adicional, até o máximo de 3."},
         {name:"Solução de Emergência",description:"Uma vez por Conflito, conserte temporariamente algo quebrado para durar até o fim da Cena."}
       ], bonus:"Aprimora e conserta criações próprias." },
@@ -1740,7 +1740,7 @@ Object.assign(window.ROOTS_DATA.origins,
       {
         "cost": 2,
         "name": "Veneno Na Ponta",
-        "description": "Gaste sua Ação Principal e Secundária e esteja em um ambiente com plantas tóxicas ou as pegue com antecedência em uma Área Natural/Selvagem. Você envenena até 3 Munições do seu inventário, concedendo a Condição: Envenenado."
+        "description": "Gaste sua Ação Principal e Secundária e esteja em um ambiente com plantas tóxicas ou as pegue com antecedência em uma Área Natural/Selvagem. Você envenena uma Munição do seu inventário, concedendo, além do ataque, a Condição: Envenenado."
       },
       {
         "cost": 1,
@@ -1924,7 +1924,7 @@ Object.assign(window.ROOTS_DATA.origins,
       {
         "cost": 3,
         "name": "Estado De Flow",
-        "description": "Você achou um par de Fones no chão, atrelados a um dispositivo, e hoje em dia não larga deles. A música que você ouve molda seu estado emocional e físico. Ao usar sua Ação Principal, você liga o ESTADO DE FLOW e escolhe uma \"Mixtape\". O estado dura até seus fones quebrarem, o Fim da Cena ou Desligar gastando sua Ação Secundária.   Você pode trocar de Mixtape, mas isso exige uma Ação Principal. Sempre que estiver em ESTADO DE FLOW, você recebe Penalidade em Percepção. MIXTAPES: ● Pop – \"Flash of Fame\" ○ Bônus: Bônus em Esquivar e Persuasão. ○ Penalidade: Penalidade em Furtividade e Armas Brancas. ● Jazz – \"Smoky Drift\" ○ Bônus: Bônus em Furtividade e Improvisar. ○ Penalidade: Penalidade em Briga e Persuasão. ● Rock – \"Blaze of Defiance\" ○ Bônus: Bônus em Briga e Intimidação. ○ Penalidade: Penalidade em Fuga e Esquiva. ● Eletrônica – \"Neon Blitz\" ○ Bônus: Bônus em Mirar e Reflexos. ○ Penalidade: Penalidade em Intuição e Improvisar. ● Clássica – \"Crest of Valor\" ○ Bônus: Bônus em Determinação e Coragem. ○ Penalidade: Penalidade em Atletismo e Reflexos."
+        "description": "Você achou um par de Fones no chão, atrelados a um dispositivo, e hoje em dia não larga deles. A música que você ouve molda seu estado emocional e físico. Ao usar sua Ação Principal, você liga o ESTADO DE FLOW e escolhe uma \"Mixtape\". O estado dura até seus fones quebrarem, o Fim da Cena ou Desligar gastando sua Ação Secundária.   Você pode trocar de Mixtape, mas isso exige uma Ação Principal. Sempre que estiver em ESTADO DE FLOW, você recebe Penalidade em Percepção. MIXTAPES: ● Pop – \"Flash of Fame\" ○ Bônus: Bônus em testes de Destreza. ○ Penalidade: Penalidade em testes de Espírito. ● Jazz – \"Smoky Drift\" ○ Bônus: Bônus em testes de Intelecto. ○ Penalidade: Penalidade em testes de Destreza. ● Rock – \"Blaze of Defiance\" ○ Bônus: Bônus em testes de Físico. ○ Penalidade: Penalidade em testes de Instinto. ● Eletrônica – \"Neon Blitz\" ○ Bônus: Bônus em testes de Instinto. ○ Penalidade: Penalidade em testes de Intelecto. ● Clássica – \"Crest of Valor\" ○ Bônus: Bônus em testes de Espírito. ○ Penalidade: Penalidade em testes de Físico."
       },
       {
         "cost": 2,

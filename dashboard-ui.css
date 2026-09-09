@@ -2019,6 +2019,11 @@ body.rota-dashboard-ui #page-principal #wound-modal #wound-save{
 }
 
 @media (prefers-reduced-motion:reduce){
+  body.rota-dashboard-ui *,body.rota-dashboard-ui *::before,body.rota-dashboard-ui *::after{
+    animation:none!important;
+    transition:none!important;
+    scroll-behavior:auto!important;
+  }
   body.rota-dashboard-ui .modal-overlay,
   body.rota-dashboard-ui .modal-overlay > .modal,
   body.rota-dashboard-ui #page-principal .skill-attribute-panel.active{ animation:none; }

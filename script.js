@@ -214,7 +214,7 @@
         'origem-select':'', 'ocupacao-select':'', 'reputacao-select':'Sobrevivente',
         'flor-select':'', 'pulseira-select':'Verde', 'ponto-partida':'',
         'grupo-estrada':'', 'attr-bonus-manual':0, 'pp-bonus-manual':0,
-        'prodigio-skill-1':'', 'prodigio-skill-2':'', 'abutre-resource':'',
+        'prodigio-skill-1':'', 'prodigio-skill-2':'', 'prodigio-skill-3':'', 'abutre-resource':'',
         'history-before':'', 'history-loss':'', 'history-purpose':'',
         'history-fear':'', 'history-bonds':'', 'growth-stage':0
       },
@@ -322,7 +322,7 @@
         sourceKey:String(effect.sourceKey || effect.name || uid('effect-source')),
         name:String(effect.name || 'Efeito temporário'),
         bonus:Math.max(0,parseInt(effect.bonus,10) || 0),
-        expires:String(effect.expires || 'use'),
+        expires:effect.expires === 'use' && String(effect.sourceKey || '').indexOf(ENGINE.powerKey('occupation','Prodígio','Aprendizado Rápido')+':') === 0 ? 'use-scene' : String(effect.expires || 'use'),
         allTests:effect.allTests !== false,
         attribute:String(effect.attribute || ''),
         skill:String(effect.skill || '')
@@ -1649,7 +1649,7 @@
 
   function consumeNextTestEffects(attribute, skill){
     model.effects = model.effects.filter(function(effect){
-      return !(effect.expires === 'use' && effectMatchesRoll(effect,attribute,skill));
+      return !((effect.expires === 'use' || effect.expires === 'use-scene') && effectMatchesRoll(effect,attribute,skill));
     });
   }
 
@@ -2154,13 +2154,16 @@
     renderConsolidatedPowers();
   }
 
+  function prodigySkills(){
+    return [1,2,3].map(function(index){ return model.fields['prodigio-skill-'+index]; }).filter(Boolean);
+  }
+
   function occupationChoiceControls(name){
     if(name === 'Prodígio'){
-      var options1 = flattenSkills().map(function(skill){ return '<option '+(model.fields['prodigio-skill-1'] === skill ? 'selected' : '')+'>'+escapeHtml(skill)+'</option>'; }).join('');
-      var options2 = flattenSkills().map(function(skill){ return '<option '+(model.fields['prodigio-skill-2'] === skill ? 'selected' : '')+'>'+escapeHtml(skill)+'</option>'; }).join('');
-      return '<div class="occupation-choice"><strong>Dom Superior</strong><p>Escolha duas Perícias; o rolador aplica 1 Bônus automaticamente.</p><div class="occupation-choice-grid">'+
-        '<select id="prodigio-skill-1" class="prodigio-skill"><option value="">— Perícia 1 —</option>'+options1+'</select>'+
-        '<select id="prodigio-skill-2" class="prodigio-skill"><option value="">— Perícia 2 —</option>'+options2+'</select></div></div>';
+      return '<div class="occupation-choice"><strong>Dom Superior</strong><p>Escolha três Perícias; o rolador aplica 1 Bônus automaticamente. Ao informar Penalidades, desconsidere as de Ambiente ou Terreno para essas Perícias.</p><div class="occupation-choice-grid">'+[1,2,3].map(function(index){
+        var id = 'prodigio-skill-'+index;
+        return '<select id="'+id+'" class="prodigio-skill" aria-label="Dom Superior: Perícia '+index+'"><option value="">— Perícia '+index+' —</option>'+flattenSkills().map(function(skill){ return '<option '+(model.fields[id] === skill ? 'selected' : '')+'>'+escapeHtml(skill)+'</option>'; }).join('')+'</select>';
+      }).join('')+'</div></div>';
     }
     if(name === 'Abutre'){
       return '<div class="occupation-choice"><strong>Acumulador</strong><p>O Recurso escolhido nunca fica abaixo de 1 unidade.</p><select id="abutre-resource"><option value="">— Escolher Recurso —</option>'+DATA.resources.map(function(resource){ return '<option '+(model.fields['abutre-resource'] === resource ? 'selected' : '')+'>'+resource+'</option>'; }).join('')+'</select></div>';
@@ -2372,7 +2375,7 @@
   function renderDurationStatus(){
     var status = $('#duration-status');
     if(!status) return;
-    var expiryLabels = {use:'próximo teste',round:'fim da Rodada',scene:'fim da Cena',conflict:'fim do Conflito'};
+    var expiryLabels = {use:'próximo teste','use-scene':'próximo teste igual, nesta Cena',round:'fim da Rodada',scene:'fim da Cena',conflict:'fim do Conflito'};
     var effects = model.effects.map(function(effect){
       return '<span><b>'+escapeHtml(effect.name)+'</b> · +'+effect.bonus+' até '+escapeHtml(expiryLabels[effect.expires] || effect.expires)+'</span>';
     });
@@ -2434,7 +2437,7 @@
     if(!model.clock.hasOwnProperty(scope)) return;
     model.clock[scope] += 1;
     Object.keys(model.powerUsage).forEach(function(key){ if(model.powerUsage[key].scope === scope) model.powerUsage[key].count = 0; });
-    model.effects = model.effects.filter(function(effect){ return effect.expires !== scope; });
+    model.effects = model.effects.filter(function(effect){ return effect.expires !== scope && !(scope === 'scene' && effect.expires === 'use-scene'); });
     if(scope === 'round') applyContinuousWoundDamage();
     if(scope === 'conflict' && DATA.archetypes[model.fields['origem-select']] === 'Cães de Guerra' && hasGrowthStage(10)) changePF(-3,{source:'Máquina de Guerra · início do Conflito'});
     addRuleLog('relogio','Avançou '+scope+'.',{value:model.clock[scope]});
@@ -3048,7 +3051,7 @@
     var section = $('#vantagens-list').closest('.section-body');
     var status = $('#character-status');
     if(!status){ status = document.createElement('div'); status.id = 'character-status'; status.className = 'status-line character-status'; section.insertBefore(status, section.firstChild); }
-    status.textContent = 'Ficha nova: 3 Vantagens, 2 Desvantagens e 1 Cicatriz · preenchidas: '+advantages+' / '+disadvantages+' / '+model.characteristics.cicatrizes.filter(Boolean).length;
+    status.textContent = (model.fields['ocupacao-select'] === 'Prodígio' ? 'Prodígio: 5 Vantagens, 2 Desvantagens e 1 Cicatriz' : 'Ficha nova: 3 Vantagens, 2 Desvantagens e 1 Cicatriz')+' · preenchidas: '+advantages+' / '+disadvantages+' / '+model.characteristics.cicatrizes.filter(Boolean).length;
     status.classList.remove('over');
     resizeIdentityFields();
   }
@@ -3875,7 +3878,7 @@
     var skill = $('#roll-skill').value;
     var attributeValue = model.attributes[attribute] || 0;
     var skillValue = isSkillLocked(skill) ? 0 : (model.originSkills.indexOf(skill) >= 0 ? 5 : model.skills[skill]);
-    var prodigyBonus = model.fields['ocupacao-select'] === 'Prodígio' && [model.fields['prodigio-skill-1'],model.fields['prodigio-skill-2']].indexOf(skill) >= 0 ? 1 : 0;
+    var prodigyBonus = model.fields['ocupacao-select'] === 'Prodígio' && prodigySkills().indexOf(skill) >= 0 ? 1 : 0;
     var rollEffects = activeRollEffects(attribute,skill);
     var temporaryBonus = rollEffects.reduce(function(total,effect){ return total + effect.bonus; },0);
     var bonus = clamp((Number($('#roll-bonus').value) || 0) + prodigyBonus + temporaryBonus,0,3);
@@ -3917,7 +3920,7 @@
         sourceKey:ENGINE.powerKey('occupation','Prodígio','Aprendizado Rápido')+':'+attribute+':'+skill,
         name:'Aprendizado Rápido · '+attribute+' + '+skill,
         bonus:1,
-        expires:'use',
+        expires:'use-scene',
         allTests:false,
         attribute:attribute,
         skill:skill
@@ -3927,7 +3930,7 @@
     var html = '<div class="roll-summary"><strong>'+labels[nsIndex]+'</strong><span>'+successes+' sucesso'+(successes === 1 ? '' : 's')+'</span>'+(passed === null ? '' : '<span class="'+(passed ? 'budget-ok' : 'over')+'">'+(passed ? 'NS alcançado' : 'NS não alcançado')+'</span>')+'</div>'+
       '<div class="dice-faces">'+results.map(function(die){ return '<span class="die '+(penalized ? (desperateSuccess ? 'success' : 'fail') : (die <= skillValue ? 'success' : 'fail'))+'">'+die+'</span>'; }).join('')+'</div>'+
       plagueHtml+
-      (prodigyBonus ? '<p>Dom Superior aplicou 1 Bônus a esta Perícia.</p>' : '')+
+      (prodigyBonus ? '<p>Dom Superior aplicou 1 Bônus. Penalidades de Ambiente ou Terreno devem ser desconsideradas nesta Perícia.</p>' : '')+
       (rollEffects.length ? '<p>Efeito temporário aplicado: '+escapeHtml(rollEffects.map(function(effect){ return effect.name+' (+'+effect.bonus+')'; }).join(' · '))+'.</p>' : '')+
       (rapidLearning ? '<p>Aprendizado Rápido preparou Bônus para o próximo teste igual.</p>' : '')+
       (penalized ? '<p>Teste penalizado: o número escolhido era '+$('#roll-guess').value+'.</p>' : '')+
@@ -3982,7 +3985,7 @@
     reader.onload = function(){
       try{
         var parsed = JSON.parse(reader.result);
-        model = Number(parsed.version) >= 3 ? normalizeModel(parsed) : normalizeModel(migrateLegacy(parsed,defaultModel()));
+        model = parseBackup(parsed);
         renderAll(); saveModel(true); alert('Backup restaurado com sucesso.');
       } catch(error){ alert('O arquivo de backup não é válido.'); }
     };
@@ -4286,8 +4289,8 @@
     if(target.id==='ocupacao-select'){applyOccupation(target.value);return;}
     if(target.id==='flor-select'){model.fields['flor-select']=target.value;renderFlower();saveModel();return;}
     if(target.classList.contains('prodigio-skill')){
-      var otherSkillId = target.id === 'prodigio-skill-1' ? 'prodigio-skill-2' : 'prodigio-skill-1';
-      if(target.value && model.fields[otherSkillId] === target.value){ alert('Dom Superior exige duas Perícias diferentes.'); renderOccupation(); return; }
+      var duplicate = [1,2,3].some(function(index){ var id = 'prodigio-skill-'+index; return id !== target.id && model.fields[id] === target.value; });
+      if(target.value && duplicate){ alert('Dom Superior exige três Perícias diferentes.'); renderOccupation(); return; }
       model.fields[target.id] = target.value; saveModel(); return;
     }
     if(target.id==='abutre-resource'){
@@ -4322,13 +4325,26 @@
     if(target.id==='wound-type'||target.id==='wound-apply-pf'||target.name==='wound-severity'){$('#wound-rule-preview').classList.remove('error');updateWoundPreview();return;}
   }
 
+  function parseBackup(parsed){
+    if(!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Formato de backup inválido.');
+    if(Number(parsed.version) >= 3 && parsed.fields && typeof parsed.fields === 'object' && !Array.isArray(parsed.fields)) return normalizeModel(parsed);
+    if(Array.isArray(parsed.formValues)) return normalizeModel(migrateLegacy(parsed,defaultModel()));
+    throw new Error('Este JSON não contém uma ficha reconhecida.');
+  }
+
   function onKeyDown(event){
-    if(event.key === 'Tab' && $('#wound-modal').style.display !== 'none'){
-      var woundControls = $$('button,input,select,textarea,[tabindex="0"]',$('#wound-modal')).filter(function(control){return !control.disabled && control.getClientRects().length;});
-      var firstWoundControl = woundControls[0];
-      var lastWoundControl = woundControls[woundControls.length-1];
-      if(event.shiftKey && document.activeElement === firstWoundControl){event.preventDefault();lastWoundControl.focus();return;}
-      if(!event.shiftKey && document.activeElement === lastWoundControl){event.preventDefault();firstWoundControl.focus();return;}
+    if(event.key === 'Tab'){
+      var openModals = $$('.modal-overlay').filter(function(overlay){return getComputedStyle(overlay).display !== 'none' && overlay.getClientRects().length;});
+      openModals.sort(function(a,b){return (parseInt(getComputedStyle(a).zIndex,10)||0)-(parseInt(getComputedStyle(b).zIndex,10)||0);});
+      var topModal = openModals[openModals.length-1];
+      if(topModal){
+        var controls = $$('button,input,select,textarea,a[href],[tabindex]',topModal).filter(function(control){return !control.disabled && control.tabIndex >= 0 && control.getClientRects().length && getComputedStyle(control).visibility !== 'hidden';});
+        var firstControl = controls[0], lastControl = controls[controls.length-1];
+        if(!controls.length){event.preventDefault();return;}
+        if(!topModal.contains(document.activeElement) || (event.shiftKey && (document.activeElement === firstControl || document.activeElement.tabIndex < 0)) || (!event.shiftKey && document.activeElement === lastControl)){
+          event.preventDefault();(event.shiftKey ? lastControl : firstControl).focus();return;
+        }
+      }
     }
     var skillTab = event.target.closest && event.target.closest('.skill-attribute-tab');
     if(skillTab && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')){
@@ -4352,6 +4368,29 @@
     }
   }
 
+  function preparePrint(){
+    finishPrint();
+    $$('input,textarea,select').forEach(function(control){
+      if(control.matches('input[type="checkbox"],input[type="radio"],input[type="file"],input[type="hidden"],input[type="range"]')) return;
+      var value = control.tagName === 'SELECT' ? (control.selectedOptions[0] ? control.selectedOptions[0].textContent : '') : control.value;
+      var text = document.createElement('span');
+      text.className = 'print-value';
+      text.textContent = value || '—';
+      control.classList.add('print-original');
+      control.after(text);
+    });
+    if(Object.keys(model.wounds).length || model.conditions.length){
+      var clinical = document.createElement('div');
+      clinical.className = 'print-clinical';
+      clinical.innerHTML = '<h3>Registro de ferimentos e condições</h3>'+$('#wound-summary').innerHTML+$('#condition-list').innerHTML;
+      $('.diagram-section').appendChild(clinical);
+    }
+  }
+  function finishPrint(){
+    $$('.print-value,.print-clinical').forEach(function(node){node.remove();});
+    $$('.print-original').forEach(function(node){node.classList.remove('print-original');});
+  }
+
   function initialize(){
     buildTabs();
     bindFields();
@@ -4363,6 +4402,8 @@
     document.addEventListener('keydown',onKeyDown);
     window.addEventListener('pagehide',function(){saveModel(true);});
     window.addEventListener('beforeunload',function(){saveModel(true);});
+    window.addEventListener('beforeprint',preparePrint);
+    window.addEventListener('afterprint',finishPrint);
     $('#footer-date').textContent='IMPRESSO EM '+new Date().toLocaleDateString('pt-BR').toUpperCase();
     reconcileCriticalState(pfTotal(),{source:'restauração da ficha'});
     if(peTotal()>=bloodLimits().pe) model.stress.breaking=true;

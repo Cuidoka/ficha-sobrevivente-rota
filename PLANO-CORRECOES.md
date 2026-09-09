@@ -2,7 +2,7 @@
 
 Data: 07/09/2026.
 
-Estado: etapas 1 a 5 implementadas e verificadas. Etapa 5 concluída em 08/09/2026. Etapa 6 pendente.
+Estado: etapas 1 a 6 concluídas no escopo acordado. Em 09/09/2026, o usuário dispensou a verificação de zoom real. Não há correção do TK pendente com o material recebido.
 
 Fonte: mensagens e prints enviados nesta conversa, incluindo o feedback de T.K. de 29/08/2026 e o relato de uso de Moira. O usuário encerrou os envios com “Esta tudo pronto agora” e pediu a organização das correções em sequência.
 
@@ -145,21 +145,24 @@ Conferidos clique nas cinco famílias, navegação por setas nas abas, increment
 
 ### 6. Validar o conjunto e revisar regras separadamente
 
-- [ ] Conferir a composição no navegador em desktop, incluindo 1280×720 e uma tela ampla, e com zoom de 110%/125%.
-- [ ] Conferir a adaptação a tablet/celular e a ausência de cortes ou sobreposição de controles.
-- [ ] Conferir navegação por teclado, fechamento dos pop-ups por Esc, retorno de foco e preferência de movimento reduzido.
-- [ ] Validar as barras nos dois tipos de Sangue, os estágios, permanentes e Corrupção nos limites.
-- [ ] Validar ficha nova 3/2/1 e carregamento de ficha antiga sem perda de informações.
-- [ ] Conferir salvamento local, backup/restauração em JSON e impressão de todas as páginas.
-- [ ] Executar os testes de regras existentes após alterações funcionais; acrescentar cobertura apenas para comportamentos modificados que justifiquem teste.
-- [ ] Reproduzir o relato de Enlouquecendo e conferir a regra na versão do livro adotada antes de alterar a saída desse estado.
-- [ ] Depois dos ajustes visuais, conferir textos e balanceamentos atualizados de Origens e Ocupações.
+- [x] Conferir a composição em 1280×720, 1920×1080 e larguras úteis equivalentes a 110%/125%.
+- Dispensado pelo usuário em 09/09/2026: conferir zoom real de 110%/125%. Não contabilizado como teste realizado.
+- [x] Conferir a adaptação a tablet/celular e a ausência de cortes ou sobreposição de controles.
+- [x] Conferir navegação por teclado, fechamento dos pop-ups por Esc, retorno de foco e preferência de movimento reduzido.
+- [x] Validar as barras nos dois tipos de Sangue, os estágios, permanentes e Corrupção nos limites.
+- [x] Validar ficha nova 3/2/1 e carregamento de ficha antiga sem perda de informações.
+- [x] Conferir salvamento local, backup/restauração em JSON e impressão de todas as páginas.
+- [x] Executar os testes de regras existentes após alterações funcionais; acrescentar cobertura apenas para comportamentos modificados que justifiquem teste.
+- [x] Reproduzir o relato de Enlouquecendo e conferir a regra na versão do livro adotada antes de alterar a saída desse estado.
+- [x] Depois dos ajustes visuais, conferir textos e balanceamentos atualizados de Origens e Ocupações.
 
 Conclusão da etapa: correções visuais e funcionais verificadas; eventuais mudanças de regras fundamentadas na versão correta do livro.
 
+Fechamento em 09/09/2026: implementação concluída, 12 testes passaram. Evidências e correções fundamentadas no UPDATE registradas em [VALIDACAO-FINAL.md](VALIDACAO-FINAL.md). A verificação de zoom real foi dispensada pelo usuário; o escopo acordado está concluído.
+
 ## Constatações da leitura inicial do código
 
-Estas constatações são de leitura, ainda sem validação desta rodada no navegador:
+Registro histórico anterior às correções. As verificações e resoluções posteriores estão descritas nas etapas acima:
 
 1. **Quebrado já está cadastrado**, em `rules-data.js`, na categoria `treated` (Tratadas). O seletor em `renderConditionPicker`, em `script.js`, usa categorias. Portanto o relato pode envolver localização/filtro; não há motivo para cadastrar uma segunda condição igual antes de reproduzir o problema.
 2. **Enlouquecendo persiste de propósito na implementação atual**: o estado `model.stress.breaking` permanece mesmo com redução de PE. O painel informa que a redução não encerra o surto e oferece “O MP encerrou o surto”. Isso explica o comportamento relatado, mas não comprova sua conformidade com o livro atualizado.
@@ -168,16 +171,16 @@ Estas constatações são de leitura, ainda sem validação desta rodada no nave
 5. **A estrutura visual é montada por JavaScript**, principalmente em `buildDossierLayout`, e estilizada em `dashboard-ui.css`, com estilos anteriores em `new-ui.css` e `style.css`. Mover somente o HTML estático não resolve toda a reorganização.
 6. **O Git não mostrou alterações em arquivos rastreados** na conferência inicial. Existe uma pasta de extração de backup não rastreada; ela deve ser preservada. Antes da implementação, registrar o ponto de partida atual para permitir comparação e retorno.
 
-## Decisões em aberto, sem impedir a primeira etapa
+## Decisões finais e materiais futuros
 
 | Ponto | Encaminhamento |
 | --- | --- |
-| Nome que substituirá Mapeamento Somático | Proposta: painel “Ferimentos e Condições” e detalhe “Mapa corporal” |
+| Nome que substituirá Mapeamento Somático | Implementado: painel “Ferimentos e Condições” e detalhe “Mapa corporal” |
 | Escopo do pop-up de Identificação | Resolvido na etapa 2: Origem, Ocupação, Sangue, Paradigma e Arquétipo/Crescimento |
-| Artes versus ícones de perícias | Primeiro avaliar as artes com o novo espaço; ícones simples são alternativa |
-| Logo definitiva | Verificar o arquivo já disponível; usar um novo apenas quando fornecido |
-| Enlouquecendo após reduzir PE | Conferir regra e fluxo de encerramento antes de mudar a mecânica |
-| Livro e balanceamentos posteriores | Usar a versão confirmada para a revisão final; registros antigos do projeto não bastam para determinar as regras mais recentes |
+| Artes versus ícones de perícias | Artes ampliadas e visualizador preservado; ícones simples eram uma alternativa, não uma troca obrigatória |
+| Logo definitiva | Emblema existente `assets/ui/icone-rota.png` mantido no cabeçalho; eventual substituição depende do envio de outro arquivo |
+| Enlouquecendo após reduzir PE | Conferido no UPDATE, pp. 34 e 231: mantida resolução explícita pelo MP |
+| Livro e balanceamentos posteriores | UPDATE confirmado revisado. Outra versão será tratada quando o usuário a fornecer |
 
 ## Arquivos previstos por tipo de mudança
 
@@ -189,4 +192,4 @@ Estas constatações são de leitura, ainda sem validação desta rodada no nave
 | Regras e textos, somente após conferência | `automation-engine.js`, `rules-data.js` |
 | Validação funcional | `tests/rules-engine.test.js` e verificação no navegador |
 
-O plano foi criado para acompanhar as correções em sequência. Nenhuma caixa marcada significa implementação concluída nesta rodada.
+As caixas marcadas registram as entregas e verificações das respectivas etapas. Itens dispensados são indicados explicitamente, sem serem apresentados como testes realizados.

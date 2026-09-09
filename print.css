@@ -1,0 +1,73 @@
+/* A impressão reúne todas as abas e usa medidas de papel, sem os limites da tela. */
+@page{ size:A4; margin:10mm; }
+.print-value,.print-clinical{ display:none; }
+@media print{
+  body.rota-dashboard-ui .page-heading,body.rota-dashboard-ui .page-heading *,body.rota-dashboard-ui .attribute-stepper *{ background:#fff!important; color:#111!important; }
+  body.rota-dashboard-ui .section{ min-height:0!important; }
+  body.rota-dashboard-ui .weapon-card,body.rota-dashboard-ui .recipe-card{ min-height:0!important; }
+  body.rota-dashboard-ui #page-principal .skill-row{ grid-template-rows:auto!important; }
+  body.rota-dashboard-ui #page-principal .skill-attribute-panel{ padding:0!important; min-height:0!important; }
+  html,body.rota-dashboard-ui{ width:auto!important; height:auto!important; overflow:visible!important; background:#fff!important; color:#111!important; }
+  body.rota-dashboard-ui *{ text-shadow:none!important; box-shadow:none!important; background-image:none!important; filter:none!important; letter-spacing:normal!important; animation:none!important; transition:none!important; }
+  body.rota-dashboard-ui *::before,body.rota-dashboard-ui *::after{ display:none!important; }
+  body.rota-dashboard-ui .sheet{ width:auto!important; max-width:none!important; padding:0!important; }
+  body.rota-dashboard-ui .sheet-page{ width:auto!important; margin:0!important; padding:0!important; height:auto!important; min-height:0!important; max-height:none!important; overflow:visible!important; }
+  body.rota-dashboard-ui .section,body.rota-dashboard-ui .rota-identity-panel,body.rota-dashboard-ui .track-block,
+  body.rota-dashboard-ui .weapon-card,body.rota-dashboard-ui .armor-card,body.rota-dashboard-ui .recipe-card,
+  body.rota-dashboard-ui .power-card,body.rota-dashboard-ui .flower-stage,body.rota-dashboard-ui .note-card{ color:#111!important; background:#fff!important; border-color:#888!important; margin-bottom:3mm!important; }
+  body.rota-dashboard-ui .section *,body.rota-dashboard-ui .rota-identity-panel *{ color:#111!important; }
+  body.rota-dashboard-ui #page-principal .attribute-stepper .readout{ background:#fff!important; border-color:#888!important; text-align:center!important; }
+  body.rota-dashboard-ui #page-principal .portrait-placeholder{ background:#fff!important; color:#111!important; }
+  body.rota-dashboard-ui .rota-dashboard{ display:block!important; height:auto!important; }
+  body.rota-dashboard-ui .rota-dashboard-column{ height:auto!important; overflow:visible!important; }
+  body.rota-dashboard-ui .rota-dashboard-left,body.rota-dashboard-ui .rota-dashboard-center{ display:inline-block!important; vertical-align:top; width:48%!important; }
+  body.rota-dashboard-ui .rota-dashboard-left{ margin-right:3%; }
+  body.rota-dashboard-ui .rota-dashboard-right{ display:block!important; width:100%; break-before:page; }
+  body.rota-dashboard-ui .section-body,body.rota-dashboard-ui .resources-list,
+  body.rota-dashboard-ui .skills-grid,body.rota-dashboard-ui .power-list{ height:auto!important; min-height:0!important; max-height:none!important; overflow:visible!important; }
+  body.rota-dashboard-ui .section-title,body.rota-dashboard-ui .rota-panel-heading{ color:#111!important; height:auto!important; min-height:0!important; padding:2mm!important; font-size:11pt!important; background:#eee!important; }
+  body.rota-dashboard-ui #page-principal .rota-identity-panel{ height:auto!important; padding:2mm!important; }
+  body.rota-dashboard-ui #page-principal .doc-header{ display:grid!important; grid-template-columns:25mm minmax(0,1fr)!important; gap:3mm!important; }
+  body.rota-dashboard-ui #page-principal .portrait-shell{ width:25mm!important; height:auto!important; }
+  body.rota-dashboard-ui #page-principal .meta-grid{ grid-column:1/-1; gap:2mm!important; }
+  body.rota-dashboard-ui #page-principal .meta-field{ margin:0!important; }
+  body.rota-dashboard-ui #page-principal .rota-identity-panel label{ font-size:8pt!important; }
+  body.rota-dashboard-ui #page-principal .rota-identity-panel .print-value{ font:10pt/1.35 Arial,sans-serif!important; }
+  body.rota-dashboard-ui #page-principal .character-group-heading{ margin:2mm 0!important; }
+  body.rota-dashboard-ui .print-original{ display:none!important; }
+  body.rota-dashboard-ui .print-value{ display:block; white-space:pre-wrap; overflow-wrap:anywhere; min-height:4mm; font:9pt/1.35 Arial,sans-serif; }
+  body.rota-dashboard-ui .permanent-control .print-value{ display:inline; }
+  body.rota-dashboard-ui #page-principal .rota-vitals-list{ display:block!important; }
+  body.rota-dashboard-ui #page-principal .rota-vitals-list .track-block{ display:block!important; min-height:0!important; padding:2mm!important; }
+  body.rota-dashboard-ui .track-header{ margin-bottom:2mm; }
+  body.rota-dashboard-ui .vital-status-row{ margin-top:2mm; }
+  body.rota-dashboard-ui .rota-vitals-list .box-row{ margin:2mm 0; }
+  body.rota-dashboard-ui .attribute-step-button,body.rota-dashboard-ui .permanent-control button,
+  body.rota-dashboard-ui .vital-rule-button,body.rota-dashboard-ui .rota-condition-heading button,
+  body.rota-dashboard-ui .somatic-inspect-label,body.rota-dashboard-ui #pc-gain-input,
+  body.rota-dashboard-ui #pc-slider,body.rota-dashboard-ui .skill-art,body.rota-dashboard-ui .condition-search-row,
+  body.rota-dashboard-ui .condition-feedback{ display:none!important; }
+  body.rota-dashboard-ui #page-principal .diagram-section{ min-height:0!important; overflow:visible!important; }
+  body.rota-dashboard-ui #page-principal .somatic-summary-body{ height:25mm!important; min-height:25mm!important; flex:none!important; }
+  body.rota-dashboard-ui #page-principal .somatic-summary-card{ min-height:0!important; }
+  body.rota-dashboard-ui #page-principal [data-ui-section="attributes"]{ min-height:0!important; }
+  body.rota-dashboard-ui #page-principal .attr-row{ min-height:0!important; padding:1mm!important; background:#fff!important; border-color:#888!important; }
+  body.rota-dashboard-ui #page-principal .attribute-select-button{ grid-template-rows:auto!important; padding:0!important; }
+  body.rota-dashboard-ui #page-principal .attribute-glyph{ display:none!important; }
+  body.rota-dashboard-ui #page-principal .attribute-stepper{ display:block!important; background:#fff!important; text-align:center!important; border-color:#888!important; }
+  body.rota-dashboard-ui #page-principal [data-section="skills"]{ container-type:normal!important; break-inside:auto!important; }
+  body.rota-dashboard-ui #page-principal .skills-grid{ display:block!important; }
+  body.rota-dashboard-ui #page-principal .skill-attribute-panel{ display:grid!important; grid-template-columns:repeat(3,minmax(0,1fr))!important; gap:1mm!important; margin:0 0 3mm!important; break-inside:avoid; }
+  body.rota-dashboard-ui #page-principal .skill-col-title{ grid-column:1/-1!important; font:10pt/1.3 Arial,sans-serif!important; padding:1mm!important; }
+  body.rota-dashboard-ui #page-principal .skill-row{ display:grid!important; grid-template-columns:minmax(0,1fr) auto!important; grid-template-areas:"name pips"!important; min-height:0!important; padding:2mm!important; background:#fff!important; }
+  body.rota-dashboard-ui #page-principal .skill-row .skill-name{ font:9pt/1.3 Arial,sans-serif!important; padding:0!important; align-self:center!important; }
+  body.rota-dashboard-ui #page-principal .skill-pips{ align-self:center!important; grid-template-columns:repeat(5,8px)!important; gap:2px!important; height:8px!important; margin:0!important; }
+  body.rota-dashboard-ui #page-principal .skill-pips .pip{ width:8px!important; height:8px!important; }
+  body.rota-dashboard-ui .pip{ border:1px solid #777!important; background:#fff!important; }
+  body.rota-dashboard-ui .pip.filled{ background:#333!important; print-color-adjust:exact; }
+  body.rota-dashboard-ui .print-clinical{ display:block; margin-top:3mm; }
+  body.rota-dashboard-ui .print-clinical button{ display:none!important; }
+  body.rota-dashboard-ui .print-clinical h3{ font:10pt Arial,sans-serif; }
+  body.rota-dashboard-ui .print-clinical *{ font-size:9pt!important; line-height:1.35!important; }
+  body.rota-dashboard-ui .footer{ font-size:7pt!important; color:#333!important; break-before:auto; }
+}
