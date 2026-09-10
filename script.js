@@ -815,6 +815,7 @@
 
     if(attributes){
       var attributeOrder = ['Físico','Destreza','Intelecto','Instinto','Espírito'];
+      var attributeIcons = { 'Físico':'fisico', Destreza:'destreza', Intelecto:'intelecto', Instinto:'instinto', 'Espírito':'espirito' };
       var attributeList = $('.attrs-list',attributes);
       attributeOrder.forEach(function(attribute){
         var row = $$('.attr-row',attributes).filter(function(item){ return $('.attr-name',item).textContent.trim() === attribute; })[0];
@@ -824,14 +825,6 @@
         var attributeLabel = $('.attr-name',row);
         var attributePips = $('.pips',row);
         var attributeReadout = $('.readout',row);
-        // Símbolos com a mesma caixa geométrica, sem depender da linha-base da fonte.
-        var glyphs = {
-          'Físico':'<path d="M12 20S3 14.5 3 8.5C3 3.5 9 2.5 12 7c3-4.5 9-3.5 9 1.5C21 14.5 12 20 12 20Z" fill="currentColor" stroke="none"/>',
-          Destreza:'<path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
-          Intelecto:'<path d="M8 8H5.5A2.5 2.5 0 1 1 8 5.5v13A2.5 2.5 0 1 1 5.5 16h13a2.5 2.5 0 1 1-2.5 2.5v-13A2.5 2.5 0 1 1 18.5 8Z"/>',
-          Instinto:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>',
-          'Espírito':'<path d="m12 3 3 6 6 3-6 3-3 6-3-6-6-3 6-3Z"/>'
-        };
         var selectButton = document.createElement('button');
         selectButton.type = 'button';
         selectButton.className = 'attribute-select-button';
@@ -841,7 +834,13 @@
         var glyph = document.createElement('span');
         glyph.className = 'attribute-glyph';
         glyph.setAttribute('aria-hidden','true');
-        glyph.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+glyphs[attribute]+'</svg>';
+        var icon = document.createElement('img');
+        icon.src = 'assets/ui/attributes/'+attributeIcons[attribute]+'.png';
+        icon.alt = '';
+        icon.width = 500;
+        icon.height = 500;
+        icon.draggable = false;
+        glyph.appendChild(icon);
         selectButton.appendChild(glyph);
         row.insertBefore(selectButton,row.firstChild);
 

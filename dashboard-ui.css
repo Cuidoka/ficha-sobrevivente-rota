@@ -2307,9 +2307,18 @@ body.rota-dashboard-ui #page-principal .skill-row .skill-name{ font:600 14px/1.4
 body.rota-dashboard-ui #page-principal .skill-pips{ margin-top:2px; }
 body.rota-dashboard-ui #page-principal .skill-attribute-tab{ min-height:30px; font:400 12px/1.4 var(--font-display); }
 body.rota-dashboard-ui #page-principal .attr-name{ padding:2px 0; font:400 12px/1.4 var(--font-display); }
-body.rota-dashboard-ui #page-principal .attribute-glyph{ line-height:1; }
-body.rota-dashboard-ui #page-principal .attribute-glyph svg{ display:block; width:24px; height:24px; }
-body.rota-dashboard-ui #page-principal .skill-source-active .attribute-glyph{ transform:none; }
+body.rota-dashboard-ui #page-principal .attribute-glyph{
+  width:clamp(42px,4.6vw,72px);
+  max-width:100%;
+  height:auto;
+  aspect-ratio:1;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  line-height:1;
+}
+body.rota-dashboard-ui #page-principal .attribute-glyph img{ display:block; width:100%; height:100%; object-fit:contain; }
+body.rota-dashboard-ui #page-principal .skill-source-active .attribute-glyph{ transform:none; box-shadow:none; }
 body.rota-dashboard-ui #page-principal [data-section="skills"] .pp-bar{ font-size:11px; line-height:1.4; }
 body.rota-dashboard-ui #page-principal .need-card-header strong{ font:400 13px/1.4 var(--font-display); }
 body.rota-dashboard-ui #page-principal .need-card-header span{ font:11px/1.4 var(--font-body,sans-serif); color:#b4a17d; }

@@ -193,3 +193,7 @@ Registro histórico anterior às correções. As verificações e resoluções p
 | Validação funcional | `tests/rules-engine.test.js` e verificação no navegador |
 
 As caixas marcadas registram as entregas e verificações das respectivas etapas. Itens dispensados são indicados explicitamente, sem serem apresentados como testes realizados.
+
+## Complemento — ícones oficiais dos atributos (10/09/2026)
+
+Substituídos os símbolos SVG gerados por código pelas cinco imagens fornecidas pelo usuário: Físico (punho), Destreza (felino), Intelecto (livro), Instinto (olho) e Espírito (máscara). Originais copiados para `assets/ui/attributes`, preservando transparência e proporções. Imagens centralizadas, com tamanho adaptável de 42 a 72 px e sem o círculo dos símbolos antigos. Conferidos carregamento das cinco imagens, seleção das cinco famílias de perícias, ausência de cortes em 1280×720, 390×844 e 1920×1080; console sem erros. Sintaxe e diff verificados.
