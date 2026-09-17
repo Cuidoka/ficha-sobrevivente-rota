@@ -1135,26 +1135,34 @@
   }
 
   function buildEquipmentPage(page){
-    page.innerHTML = pageHeading('Equipamentos','Carga, armas, proteção e fabricação em uma página própria.')+
-      '<div class="row-2 equipment-top">'+
-        '<div class="section"><div class="section-title">Inventário <span class="tag" id="inventory-capacity-tag">MÁX. = 2 + FÍSICO</span></div><div class="section-body">'+
-          '<div class="status-line"><span id="inventory-status"></span><span id="initial-items-status"></span></div><div class="catalog-launch"><button type="button" class="notes-btn" id="open-item-catalog">+ Catálogo de itens e munições</button><small>Itens oficiais entram com usos e regras preenchidos.</small></div>'+
-          '<div class="inv-grid" id="inv-grid"></div><button type="button" class="add-inv-btn" id="add-inv-btn">+ Adicionar espaço sobrecarregado</button>'+
-        '</div></div>'+
-        '<div class="section"><div class="section-title">Espaços de Arma <span class="tag" id="weapon-slots-tag">2 EXCLUSIVOS</span></div><div class="section-body">'+
+    page.innerHTML = pageHeading('Bolsa','Tudo o que acompanha o sobrevivente na estrada.')+
+      '<div class="bag-load section"><div class="section-title">Carga do inventário <span class="tag" id="inventory-capacity-tag">MÁX. = 2 + FÍSICO</span></div><div class="section-body">'+
+        '<div class="status-line"><span id="inventory-status" aria-live="polite"></span><span id="initial-items-status"></span></div>'+
+        '<p class="bag-help">Armas guardadas, munições e utilitários compartilham esta capacidade. Armas equipadas usam os espaços exclusivos.</p>'+
+      '</div></div>'+
+      '<nav class="bag-index no-print" aria-label="Seções da bolsa"><a href="#bag-weapons">Armas e munições</a><a href="#bag-utilities">Utilitários</a><a href="#bag-protection">Proteções</a><a href="#bag-resources">Recursos</a><a href="#bag-crafting">Fabricação</a></nav>'+
+      '<div class="bag-layout">'+
+        '<section class="section bag-weapons" id="bag-weapons" aria-labelledby="bag-weapons-title"><h2 class="section-title" id="bag-weapons-title">Armas e munições <span class="tag" id="weapon-slots-tag">2 EXCLUSIVOS</span></h2><div class="section-body">'+
           '<div class="weapon-add-bar"><label>Catálogo oficial<select id="new-weapon-select">'+allWeaponOptions()+'</select></label><button type="button" class="notes-btn" id="add-weapon-button">Adicionar arma</button></div>'+
-          '<p id="weapon-add-feedback" class="inline-feedback" aria-live="polite"></p><div id="weapons-list"></div></div></div>'+
-      '</div>'+
-      '<div class="row-2">'+
-        '<div class="section"><div class="section-title">Armadura</div><div class="section-body"><div class="armor-grid" id="armor-list"></div></div></div>'+
-        '<div class="section" data-ui-section="equipment-resources"><div class="section-title">Recursos & Partes</div><div class="section-body">'+
+          '<p id="weapon-add-feedback" class="inline-feedback" aria-live="polite"></p><h3 class="bag-subheading">Equipadas</h3><div id="weapons-list"></div>'+
+          '<h3 class="bag-subheading">Guardadas no inventário</h3><div class="inv-grid" id="bag-stored-weapons"></div>'+
+          '<div class="bag-subheading-row"><h3 class="bag-subheading">Munições de reserva</h3><button type="button" class="notes-btn small no-print" data-open-item-catalog>+ Catálogo</button></div><div class="inv-grid" id="bag-ammunition"></div>'+
+        '</div></section>'+
+        '<div class="bag-support">'+
+          '<section class="section" id="bag-utilities" aria-labelledby="bag-utilities-title"><h2 class="section-title" id="bag-utilities-title">Utilitários e outros itens</h2><div class="section-body">'+
+            '<div class="catalog-launch no-print"><button type="button" class="notes-btn" id="open-item-catalog">+ Catálogo de itens e munições</button></div>'+
+            '<p class="bag-help">Itens oficiais mantêm seus usos. Use os campos livres para registrar outros equipamentos.</p><div class="inv-grid" id="inv-grid"></div><button type="button" class="add-inv-btn no-print" id="add-inv-btn">+ Adicionar espaço sobrecarregado</button>'+
+          '</div></section>'+
+          '<section class="section" id="bag-protection" aria-labelledby="bag-protection-title"><h2 class="section-title" id="bag-protection-title">Proteções</h2><div class="section-body"><p class="bag-help">Marque as armaduras em uso e acompanhe sua integridade.</p><div class="armor-grid" id="armor-list"></div></div></section>'+
+          '<section class="section" id="bag-resources" data-ui-section="equipment-resources" aria-labelledby="bag-resources-title"><h2 class="section-title" id="bag-resources-title">Recursos e partes</h2><div class="section-body">'+
           '<div class="parts-control"><span>Partes</span><button type="button" data-parts-delta="-1">−</button><input id="parts-input" type="number" min="0" value="0"><button type="button" data-parts-delta="1">+</button></div>'+
-          '<div class="weapon-card-title">Bolsa de Recursos (¼ de unidade)</div><div class="res-pips-grid" id="res-pips-grid"></div>'+
-        '</div></div>'+
+          '<h3 class="bag-subheading">Bolsa de recursos</h3><p class="bag-help">Cada marca representa ¼ de unidade.</p><div class="res-pips-grid" id="res-pips-grid"></div>'+
+          '</div></section>'+
+        '</div>'+
       '</div>'+
-      '<div class="section"><div class="section-title">Receitas de Fabricação <span class="tag" id="recipe-limit-tag">CONHECIDAS = INTELECTO</span></div><div class="section-body">'+
+      '<section class="section" id="bag-crafting" aria-labelledby="bag-crafting-title"><h2 class="section-title" id="bag-crafting-title">Fabricação <span class="tag" id="recipe-limit-tag">CONHECIDAS = INTELECTO</span></h2><div class="section-body">'+
         '<div class="recipe-toolbar"><span id="recipe-known-status"></span><label class="check-line"><input type="checkbox" id="allow-campaign-recipes"> Permitir receitas aprendidas durante a campanha</label></div>'+
-        '<div class="recipe-grid" id="recipe-grid"></div></div></div>';
+        '<div class="recipe-grid" id="recipe-grid"></div></div></section>';
   }
 
   function buildHistoryPage(page){
@@ -2620,7 +2628,6 @@
   }
 
   function inventoryWeaponEditor(item, state, weapon){
-    var max = weaponMax(state);
     var modLimit = weapon ? (weapon.maxMods || 2) : 0;
     var mods = weapon ? applicableMods(weapon) : [];
     var modHtml = '';
@@ -2629,8 +2636,7 @@
       modHtml += '<label>Modificação '+(modIndex+1)+'<select class="inventory-weapon-mod-select" data-mod-index="'+modIndex+'"><option value="">— Nenhuma —</option>'+mods.map(function(mod){ return '<option value="'+mod.id+'" '+(selected === mod.id ? 'selected' : '')+'>'+escapeHtml(mod.name)+' · '+modificationCost(mod)+' Partes</option>'; }).join('')+'</select></label>';
     }
     var custom = state.weaponId === 'custom' ? '<div class="custom-weapon-fields"><input class="inventory-custom-weapon-name" value="'+escapeHtml(state.customName)+'" placeholder="Nome"><input class="inventory-custom-weapon-damage" value="'+escapeHtml(state.customDamage)+'" placeholder="Ferimento / munição"><input class="inventory-custom-weapon-range" value="'+escapeHtml(state.customRange)+'" placeholder="Distância / recuo"><input class="inventory-custom-weapon-max" type="number" min="0" value="'+state.customMax+'" placeholder="Usos"></div>' : '';
-    var track = max ? '<div class="weapon-track"><span>'+(weapon && weapon.durability ? 'Durabilidade' : 'Munição')+' <b>'+state.current+'/'+max+'</b></span><div class="pips weapon-pips inventory-weapon-pips" data-item-id="'+item.id+'">'+pipButtons(max)+'</div></div>' : '<div class="weapon-track muted">Munição controlada pelo Inventário.</div>';
-    return '<div class="inventory-weapon-editor" data-editor-item-id="'+item.id+'"><div class="inventory-editor-heading"><strong>Editando arma guardada</strong><span>Os ajustes não movem nem duplicam a arma.</span></div><label class="inventory-editor-field">Arma<select class="inventory-weapon-select">'+inventoryWeaponOptions(state.weaponId)+'</select></label>'+custom+weaponPowerDetails(weapon)+track+weaponAmmoActions(state,weapon,'inventory',item.id)+'<div class="weapon-mods">'+modHtml+'</div><textarea class="inventory-weapon-notes" placeholder="Anotações, munição, reparos...">'+escapeHtml(state.notes)+'</textarea><div class="inventory-editor-footer"><button type="button" class="notes-btn small inventory-weapon-equip">Equipar em espaço livre</button></div></div>';
+    return '<div class="inventory-weapon-editor" data-editor-item-id="'+item.id+'"><div class="inventory-editor-heading"><strong>Editando arma guardada</strong><span>Os ajustes não movem nem duplicam a arma.</span></div><label class="inventory-editor-field">Arma<select class="inventory-weapon-select">'+inventoryWeaponOptions(state.weaponId)+'</select></label>'+custom+weaponAmmoActions(state,weapon,'inventory',item.id)+'<div class="weapon-mods">'+modHtml+'</div><textarea class="inventory-weapon-notes" placeholder="Anotações, munição, reparos...">'+escapeHtml(state.notes)+'</textarea></div>';
   }
 
   function placeInventoryEntry(entry){
@@ -2711,42 +2717,71 @@
 
   function renderInventory(){
     if(!$('#inv-grid')) return;
+    var openPowers = $$('#bag-stored-weapons .weapon-power-details[open]').map(function(node){return node.closest('.inv-slot').dataset.itemId;});
     ensureInventorySlots();
-    var used = model.inventory.filter(inventoryEntryUsed).length;
     var capacity = inventoryCapacity();
     var capacityBonus = capacity-(2+model.attributes.Físico);
     $('#inventory-capacity-tag').textContent = 'MÁX. = ' + capacity + ' (2 + FÍSICO'+(capacityBonus ? ' + '+capacityBonus+' EQUIP.' : '')+')';
-    var excess = Math.max(0,used-capacity);
-    $('#inventory-status').textContent = 'Ocupados: ' + used + '/' + capacity + (excess ? ' · Sobrecarregado: −1 PA em Físico ou Destreza por item ('+excess+')' : '');
-    $('#inventory-status').className = used > capacity ? 'over' : '';
     $('#initial-items-status').textContent = 'Criação: até ' + initialItemLimit() + ' itens';
-    $('#inv-grid').innerHTML = model.inventory.map(function(item,index){
-      if(isInventoryWeapon(item)){
-        var state = item.weapon;
-        var weapon = weaponData(state.weaponId);
-        var max = weaponMax(state);
-        state.current = clamp(state.current,0,max || 99);
-        var name = weapon ? weapon.name : (state.customName || 'Arma personalizada');
-        var broken = max > 0 && state.current === 0;
-        var stats = weapon ? [weapon.category,weapon.damage,weapon.severity,weapon.range].filter(Boolean).join(' · ') : [state.customDamage,state.customRange].filter(Boolean).join(' · ');
-        var editing = model.ui.editingInventoryWeaponId === item.id;
-        return '<article class="inv-slot inventory-weapon '+(index >= capacity ? 'overloaded-slot ' : '')+(broken ? 'broken ' : '')+(editing ? 'editing' : '')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div class="inventory-weapon-body"><div class="weapon-card-header"><strong>'+escapeHtml(name)+'</strong>'+(broken ? '<span class="broken-chip">QUEBRADA</span>' : '')+'</div><span>'+escapeHtml(stats)+'</span>'+(max ? '<small>'+(weapon && weapon.durability ? 'Durabilidade' : 'Munição')+': '+state.current+'/'+max+'</small>' : '')+weaponPowerDetails(weapon)+'</div><div class="inventory-weapon-actions"><button type="button" class="notes-btn small inventory-weapon-edit '+(editing ? 'active' : '')+'" aria-expanded="'+(editing ? 'true' : 'false')+'">Editar</button><button type="button" class="list-row-remove inventory-remove" title="Excluir arma">×</button></div>'+(editing ? inventoryWeaponEditor(item,state,weapon) : '')+'</article>';
-      }
-      if(isInventoryAmmo(item)){
-        var ammo=ammunitionData(item.ammoId);var ammoWeapon=weaponData(item.weaponId);var ammoAmount=ammo&&ammo.storage==='container' ? item.charges+'/'+item.capacity+' cargas' : item.quantity+' unidade'+(item.quantity===1?'':'s');
-        return '<article class="inv-slot catalog-inventory-slot ammo-inventory-slot '+(index>=capacity?'overloaded-slot':'')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div><span class="inventory-kind">MUNIÇÃO</span><strong>'+escapeHtml(ammo?ammo.name:item.name)+'</strong><p>'+(ammoWeapon?escapeHtml(ammoWeapon.name)+' · ':'')+ammoAmount+'</p><small>'+escapeHtml(ammo?ammo.reload:'')+'</small></div><div class="inventory-quantity"><button type="button" data-ammo-delta="-1" aria-label="Diminuir munição">−</button><b>'+(ammo&&ammo.storage==='container'?item.charges:item.quantity)+'</b><button type="button" data-ammo-delta="1" aria-label="Aumentar munição">+</button></div><button type="button" class="list-row-remove inventory-remove" title="Excluir">×</button></article>';
-      }
-      var catalog=catalogItem(item.catalogId);
-      if(catalog){
-        var unlimited=catalog.uses&&catalog.uses.max==null;var remaining=unlimited?'∞':Math.max(0,parseInt(item.uses,10)||0);
-        return '<article class="inv-slot catalog-inventory-slot '+(index>=capacity?'overloaded-slot':'')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div><span class="inventory-kind">ITEM COMUM</span><strong>'+escapeHtml(catalog.name)+'</strong><p>'+escapeHtml(catalog.effects.map(function(effect){return effect.name;}).join(' · '))+'</p><small>'+escapeHtml(catalog.uses.label)+'</small></div><div class="inventory-quantity">'+(unlimited?'<b>∞</b>':'<button type="button" data-item-use="-1" aria-label="Gastar uso">−</button><b>'+remaining+'</b><button type="button" data-item-use="1" aria-label="Recuperar uso">+</button>')+'</div><button type="button" class="list-row-remove inventory-remove" title="Excluir">×</button></article>';
-      }
-      return '<div class="inv-slot '+(index >= capacity ? 'overloaded-slot' : '')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div class="inventory-fields"><input type="text" class="inventory-name" value="'+escapeHtml(item.name)+'" placeholder="Item..."><input type="text" class="inventory-uses" value="'+escapeHtml(item.uses)+'" placeholder="Usos"></div><button type="button" class="list-row-remove inventory-remove" title="Excluir">×</button></div>';
-    }).join('');
+    var groups = {utilities:[],weapons:[],ammunition:[]};
+    var occupied = 0;
+    model.inventory.forEach(function(item,index){
+      var used = inventoryEntryUsed(item);
+      if(used) occupied++;
+      groups[inventorySection(item)].push(renderInventoryEntry(item,index,used && occupied > capacity));
+    });
+    $('#inv-grid').innerHTML = groups.utilities.join('') || '<p class="bag-empty">Nenhum utilitário guardado. Adicione itens pelo catálogo.</p>';
+    $('#bag-stored-weapons').innerHTML = groups.weapons.join('') || '<p class="bag-empty">Nenhuma arma guardada. Ao guardar uma arma equipada, ela aparecerá aqui.</p>';
+    $('#bag-ammunition').innerHTML = groups.ammunition.join('') || '<p class="bag-empty">Nenhuma munição de reserva. Adicione pelo catálogo.</p>';
+    $$('#bag-stored-weapons .weapon-power-details').forEach(function(node){node.open=openPowers.indexOf(node.closest('.inv-slot').dataset.itemId)>=0;});
+    refreshInventoryLoad();
     $$('.inventory-weapon-pips').forEach(function(group){
       var item = model.inventory.filter(function(entry){ return entry.id === group.dataset.itemId; })[0];
       if(item && isInventoryWeapon(item)) renderPips(group,item.weapon.current,weaponMax(item.weapon));
     });
+  }
+
+  function refreshInventoryLoad(){
+    var capacity = inventoryCapacity();
+    var occupied = 0;
+    var overloaded = {};
+    model.inventory.forEach(function(item){
+      var used = inventoryEntryUsed(item);
+      if(used) occupied++;
+      overloaded[item.id] = used && occupied > capacity;
+    });
+    var excess = Math.max(0,occupied-capacity);
+    $('#inventory-status').textContent = 'Ocupados: ' + occupied + '/' + capacity + (excess ? ' · Sobrecarregado: −1 PA em Físico ou Destreza por item ('+excess+')' : '');
+    $('#inventory-status').className = excess ? 'over' : '';
+    $$('#page-equipamentos .inv-slot').forEach(function(slot){slot.classList.toggle('overloaded-slot',!!overloaded[slot.dataset.itemId]);});
+  }
+
+  // Organiza a exibição sem reordenar o inventário salvo ou criar novas capacidades.
+  function inventorySection(item){
+    if(isInventoryWeapon(item)) return 'weapons';
+    if(isInventoryAmmo(item)) return 'ammunition';
+    return 'utilities';
+  }
+
+  function renderInventoryEntry(item,index,overloaded){
+      if(isInventoryWeapon(item)){
+        var state = item.weapon;
+        var weapon = weaponData(state.weaponId);
+        state.current = clamp(state.current,0,weaponMax(state) || 99);
+        var view = weaponPresentation(state);
+        var editing = model.ui.editingInventoryWeaponId === item.id;
+        return '<article class="inv-slot inventory-weapon weapon-dossier '+(overloaded ? 'overloaded-slot ' : '')+(view.depleted ? 'weapon-depleted ' : '')+(editing ? 'editing' : '')+'" data-item-id="'+item.id+'"><div class="inventory-weapon-body">'+weaponIdentityHtml(state,'Guardada · inventário '+String(index+1).padStart(2,'0'))+weaponFactsHtml(state)+weaponTrackHtml(state,'inventory',item.id)+weaponPowerDetails(weapon)+'</div><div class="inventory-weapon-actions"><button type="button" class="notes-btn small inventory-weapon-equip">Equipar em espaço livre</button><button type="button" class="notes-btn small inventory-weapon-edit '+(editing ? 'active' : '')+'" aria-expanded="'+(editing ? 'true' : 'false')+'">'+(editing ? 'Fechar ajustes' : 'Ajustar arma')+'</button><button type="button" class="list-row-remove inventory-remove" title="Excluir arma" aria-label="Excluir '+escapeHtml(view.name)+'">×</button></div>'+(editing ? inventoryWeaponEditor(item,state,weapon) : '')+'</article>';
+      }
+      if(isInventoryAmmo(item)){
+        var ammo=ammunitionData(item.ammoId);var ammoWeapon=weaponData(item.weaponId);var ammoAmount=ammo&&ammo.storage==='container' ? item.charges+'/'+item.capacity+' cargas' : item.quantity+' unidade'+(item.quantity===1?'':'s');
+        return '<article class="inv-slot catalog-inventory-slot ammo-inventory-slot '+(overloaded?'overloaded-slot':'')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div><span class="inventory-kind">MUNIÇÃO</span><strong>'+escapeHtml(ammo?ammo.name:item.name)+'</strong><p>'+(ammoWeapon?escapeHtml(ammoWeapon.name)+' · ':'')+ammoAmount+'</p><small>'+escapeHtml(ammo?ammo.reload:'')+'</small></div><div class="inventory-quantity"><button type="button" data-ammo-delta="-1" aria-label="Diminuir munição">−</button><b>'+(ammo&&ammo.storage==='container'?item.charges:item.quantity)+'</b><button type="button" data-ammo-delta="1" aria-label="Aumentar munição">+</button></div><button type="button" class="list-row-remove inventory-remove" title="Excluir">×</button></article>';
+      }
+      var catalog=catalogItem(item.catalogId);
+      if(catalog){
+        var unlimited=catalog.uses&&catalog.uses.max==null;var remaining=unlimited?'∞':Math.max(0,parseInt(item.uses,10)||0);
+        return '<article class="inv-slot catalog-inventory-slot '+(overloaded?'overloaded-slot':'')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div><span class="inventory-kind">ITEM COMUM</span><strong>'+escapeHtml(catalog.name)+'</strong><p>'+escapeHtml(catalog.effects.map(function(effect){return effect.name;}).join(' · '))+'</p><small>'+escapeHtml(catalog.uses.label)+'</small></div><div class="inventory-quantity">'+(unlimited?'<b>∞</b>':'<button type="button" data-item-use="-1" aria-label="Gastar uso">−</button><b>'+remaining+'</b><button type="button" data-item-use="1" aria-label="Recuperar uso">+</button>')+'</div><button type="button" class="list-row-remove inventory-remove" title="Excluir">×</button></article>';
+      }
+      return '<div class="inv-slot '+(overloaded ? 'overloaded-slot' : '')+'" data-item-id="'+item.id+'"><span class="list-num">'+String(index+1).padStart(2,'0')+'</span><div class="inventory-fields"><input type="text" class="inventory-name" value="'+escapeHtml(item.name)+'" placeholder="Item..."><input type="text" class="inventory-uses" value="'+escapeHtml(item.uses)+'" placeholder="Usos"></div><button type="button" class="list-row-remove inventory-remove" title="Excluir">×</button></div>';
   }
 
   function allowedWeaponSlots(){ var occ = getOccupation(); return occ && occ.weaponSlots || 2; }
@@ -2857,6 +2892,54 @@
       return '<article><strong>'+escapeHtml(item.name)+'</strong><p>'+escapeHtml(item.description || '')+'</p></article>';
     }).join('')+'</div></details>';
   }
+
+  function weaponPresentation(state){
+    var weapon = weaponData(state.weaponId);
+    var max = weaponMax(state);
+    var label = weapon && weapon.durability ? 'Durabilidade' : (weapon ? 'Munição' : 'Usos');
+    var depleted = weaponHasContent(state) && max > 0 && state.current === 0;
+    return {
+      name:weapon ? weapon.name : (state.customName || 'Arma personalizada'),
+      category:weapon ? weapon.category : 'Personalizada',
+      label:label,
+      depleted:depleted,
+      status:depleted ? (label === 'Durabilidade' ? 'Quebrada' : (label === 'Munição' ? 'Sem munição' : 'Sem usos')) : ''
+    };
+  }
+
+  function weaponIdentityHtml(state,location){
+    var view = weaponPresentation(state);
+    return '<header class="weapon-identity"><div><span class="weapon-location">'+escapeHtml(location)+'</span><h4 class="weapon-name">'+escapeHtml(view.name)+'</h4></div><span class="weapon-category">'+escapeHtml(view.category)+'</span></header>';
+  }
+
+  function weaponFactsHtml(state){
+    var weapon = weaponData(state.weaponId);
+    var facts = weapon ? [['Ferimento',weapon.damage],['Gravidade',weapon.severity],['Alcance',weapon.range],['Recuo',weapon.recoil]] : [['Ferimento / munição',state.customDamage],['Distância / recuo',state.customRange]];
+    return '<dl class="weapon-facts">'+facts.filter(function(fact){return fact[1];}).map(function(fact){
+      return '<div><dt>'+fact[0]+'</dt><dd>'+escapeHtml(fact[1])+'</dd></div>';
+    }).join('')+'</dl>';
+  }
+
+  function weaponTrackHtml(state,location,itemId){
+    var max = weaponMax(state);
+    var view = weaponPresentation(state);
+    if(!max){
+      var ammo = weaponAmmunition(weaponData(state.weaponId));
+      return '<p class="weapon-track-note">'+(ammo ? escapeHtml(ammo.name)+' usadas diretamente da reserva.' : 'Usos não definidos para esta arma.')+'</p>';
+    }
+    var attributes = location === 'inventory' ? ' data-item-id="'+itemId+'"' : ' data-weapon-index="'+itemId+'"';
+    return '<div class="weapon-track"><div class="weapon-track-heading"><span>'+view.label+'</span><strong>'+state.current+'<small> / '+max+'</small></strong></div><div class="pips weapon-pips'+(location === 'inventory' ? ' inventory-weapon-pips' : '')+'"'+attributes+' role="group" aria-label="'+view.label+' de '+escapeHtml(view.name)+'">'+pipButtons(max)+'</div>'+(view.status ? '<span class="weapon-state-alert">'+view.status+'</span>' : '')+'</div>';
+  }
+
+  function refreshCustomWeaponCard(card,state,location,id){
+    var view = weaponPresentation(state);
+    $('.weapon-name',card).textContent = view.name;
+    $('.weapon-facts',card).outerHTML = weaponFactsHtml(state);
+    $('.weapon-track, .weapon-track-note',card).outerHTML = weaponTrackHtml(state,location,id);
+    card.classList.toggle('weapon-depleted',view.depleted);
+    var pips = $('.weapon-pips',card);
+    if(pips) renderPips(pips,state.current,weaponMax(state));
+  }
   function addOfficialWeapon(id){
     var weapon = weaponData(id);
     if(!weapon) return;
@@ -2881,6 +2964,7 @@
     if(!weaponHasContent(state)) return;
     model.inventory.push({id:uid('weapon-item'),kind:'weapon',weapon:clone(state)});
     model.weapons[index] = emptyWeapon();
+    showWeaponFeedback({ok:true,message:'Arma guardada no inventário. Ela agora aparece em Guardadas no inventário.'});
     renderEquipment();
     saveModel();
   }
@@ -2921,6 +3005,8 @@
   }
 
   function renderWeapons(){
+    var openCards = $$('#weapons-list .weapon-customization[open]').map(function(node){return node.closest('.weapon-card').dataset.weaponIndex;});
+    var openPowers = $$('#weapons-list .weapon-power-details[open]').map(function(node){return node.closest('.weapon-card').dataset.weaponIndex;});
     ensureWeaponSlots();
     var allowed = allowedWeaponSlots();
     $('#weapon-slots-tag').textContent = allowed + ' EXCLUSIVOS' + (model.weapons.length > allowed ? ' · SOBRECARREGADO' : '');
@@ -2928,7 +3014,6 @@
       var weapon = weaponData(state.weaponId);
       var max = weaponMax(state);
       state.current = clamp(state.current,0,max || 99);
-      var stats = weapon ? [weapon.category,weapon.damage,weapon.severity,weapon.range,weapon.recoil ? 'Recuo: '+weapon.recoil : ''].filter(Boolean).join(' · ') : '';
       var modLimit = weapon ? (weapon.maxMods || 2) : 0;
       var mods = weapon ? applicableMods(weapon) : [];
       var modHtml = '';
@@ -2937,11 +3022,18 @@
         modHtml += '<label>Modificação '+(modIndex+1)+'<select class="weapon-mod-select" data-mod-index="'+modIndex+'"><option value="">— Nenhuma —</option>'+mods.map(function(mod){ return '<option value="'+mod.id+'" '+(selected === mod.id ? 'selected' : '')+'>'+mod.name+' · '+modificationCost(mod)+' Partes</option>'; }).join('')+'</select></label>';
       }
       var custom = state.weaponId === 'custom' ? '<div class="custom-weapon-fields"><input class="custom-weapon-name" value="'+escapeHtml(state.customName)+'" placeholder="Nome"><input class="custom-weapon-damage" value="'+escapeHtml(state.customDamage)+'" placeholder="Ferimento / munição"><input class="custom-weapon-range" value="'+escapeHtml(state.customRange)+'" placeholder="Distância / recuo"><input class="custom-weapon-max" type="number" min="0" value="'+state.customMax+'" placeholder="Usos"></div>' : '';
-      var track = max ? '<div class="weapon-track"><span>'+(weapon && weapon.durability ? 'Durabilidade' : 'Munição')+' <b>'+state.current+'/'+max+'</b></span><div class="pips weapon-pips" data-weapon-index="'+index+'">'+pipButtons(max)+'</div></div>' : '<div class="weapon-track muted">Munição carregada diretamente do Inventário.</div>';
       var invalidSlot = weapon && !weaponAllowedInSlot(weapon,index);
-      var broken = weaponHasContent(state) && max > 0 && state.current === 0;
-      return '<article class="weapon-card '+(index >= allowed || invalidSlot ? 'overloaded-slot ' : '')+(broken ? 'broken' : '')+'" data-weapon-index="'+index+'"><div class="weapon-card-header"><div class="weapon-card-title">Espaço '+(index+1)+' · '+weaponSlotLabel(index)+'</div><div>'+(broken ? '<span class="broken-chip">QUEBRADA</span>' : '')+(invalidSlot ? '<span class="warning-chip">Espaço incompatível</span>' : '')+'</div></div><select class="weapon-select">'+weaponOptions(state.weaponId,index)+'</select>'+custom+'<div class="weapon-stats">'+escapeHtml(stats)+'</div>'+weaponPowerDetails(weapon)+track+weaponAmmoActions(state,weapon,'equipped',index)+'<div class="weapon-mods">'+modHtml+'</div><textarea class="weapon-notes" placeholder="Anotações, munição no Inventário, reparos...">'+escapeHtml(state.notes)+'</textarea>'+(weaponHasContent(state) ? '<button type="button" class="notes-btn small weapon-to-inventory">Mover para o Inventário</button>' : '')+'</article>';
+      var occupied = weaponHasContent(state);
+      var view = weaponPresentation(state);
+      var selector = '<label class="weapon-choice">'+(occupied ? 'Trocar arma' : 'Escolher arma')+'<select class="weapon-select" aria-label="Arma do espaço '+(index+1)+'">'+weaponOptions(state.weaponId,index)+'</select></label>';
+      var location = 'Espaço '+(index+1)+' · '+weaponSlotLabel(index);
+      var content = occupied ? weaponIdentityHtml(state,location)+weaponFactsHtml(state)+weaponTrackHtml(state,'equipped',index)+weaponAmmoActions(state,weapon,'equipped',index)+weaponPowerDetails(weapon)+
+        '<details class="weapon-customization"'+(openCards.indexOf(String(index)) >= 0 || state.weaponId === 'custom' ? ' open' : '')+'><summary>Ajustes e anotações <span>'+state.mods.filter(Boolean).length+' modificações</span></summary><div class="weapon-customization-body">'+selector+custom+(modHtml ? '<div class="weapon-mods">'+modHtml+'</div>' : '')+'<label class="weapon-notes-label">Anotações<textarea class="weapon-notes" placeholder="Munição, reparos, história da arma...">'+escapeHtml(state.notes)+'</textarea></label></div></details>'+
+        '<footer class="weapon-card-footer"><button type="button" class="notes-btn small weapon-to-inventory">Guardar no inventário</button></footer>' :
+        '<div class="weapon-empty-header"><span class="weapon-slot-number">'+String(index+1).padStart(2,'0')+'</span><div><span class="weapon-location">'+weaponSlotLabel(index)+'</span><h4 class="weapon-name">Espaço livre</h4></div></div><p class="weapon-track-note">Equipe uma arma neste espaço para acompanhar seus dados e usos.</p>'+selector;
+      return '<article class="weapon-card weapon-dossier '+(!occupied ? 'weapon-empty ' : '')+(index >= allowed || invalidSlot ? 'overloaded-slot ' : '')+(view.depleted ? 'weapon-depleted' : '')+'" data-weapon-index="'+index+'">'+(invalidSlot ? '<span class="warning-chip">Espaço incompatível</span>' : '')+content+'</article>';
     }).join('');
+    $$('#weapons-list .weapon-power-details').forEach(function(node){node.open = openPowers.indexOf(node.closest('.weapon-card').dataset.weaponIndex) >= 0;});
     $$('#weapons-list .weapon-pips').forEach(function(group){
       var index = parseInt(group.dataset.weaponIndex,10);
       renderPips(group,model.weapons[index].current,weaponMax(model.weapons[index]));
@@ -4058,7 +4150,7 @@
     if(event.target.id==='rule-action-modal'){closeRuleModal();return;}
     if(event.target.closest('#open-dying-panel')){openDyingPanel();return;}
     if(event.target.closest('#open-stress-panel')){openStressPanel();return;}
-    if(event.target.closest('#open-item-catalog')){openItemCatalog();return;}
+    if(event.target.closest('#open-item-catalog, [data-open-item-catalog]')){openItemCatalog();return;}
     if(event.target.closest('#paradigm-info-button')){openParadigmMatrix();return;}
     var attributeStep = event.target.closest('[data-attribute-delta]');
     if(attributeStep){handleAttributeStep(attributeStep.dataset.attributeName,parseInt(attributeStep.dataset.attributeDelta,10)||0);return;}
@@ -4228,20 +4320,19 @@
         if(target.classList.contains('inventory-custom-weapon-damage'))storedState.customDamage=target.value;
         if(target.classList.contains('inventory-custom-weapon-range'))storedState.customRange=target.value;
         if(target.classList.contains('inventory-custom-weapon-max')){storedState.customMax=Math.max(0,parseInt(target.value,10)||0);storedState.current=Math.min(storedState.current,storedState.customMax);}
+        if(target.className.indexOf('inventory-custom-weapon-') >= 0) refreshCustomWeaponCard(invRow,storedState,'inventory',item.id);
         saveModel();
       }else if(item){
         if(target.classList.contains('inventory-name'))item.name=target.value;
         if(target.classList.contains('inventory-uses'))item.uses=target.value;
-        var used=model.inventory.filter(inventoryEntryUsed).length;
-        $('#inventory-status').textContent='Ocupados: '+used+'/'+inventoryCapacity();
-        $('#inventory-status').className=used>inventoryCapacity()?'over':'';
+        refreshInventoryLoad();
         saveModel();
       }
       return;
     }
     var charRow=target.closest('.list-input-row'); if(charRow&&target.tagName==='TEXTAREA'){model.characteristics[charRow.dataset.characterType][parseInt(charRow.dataset.characterIndex,10)]=target.value;resizeIdentityText(target);saveModel();return;}
     var painRow=target.closest('.dor-row'); if(painRow&&target.tagName==='INPUT'){model.pains[parseInt(painRow.dataset.painIndex,10)].text=target.value;saveModel();return;}
-    var weaponCard=target.closest('.weapon-card'); if(weaponCard){var weaponState=model.weapons[parseInt(weaponCard.dataset.weaponIndex,10)];if(target.classList.contains('weapon-notes'))weaponState.notes=target.value;if(target.classList.contains('custom-weapon-name'))weaponState.customName=target.value;if(target.classList.contains('custom-weapon-damage'))weaponState.customDamage=target.value;if(target.classList.contains('custom-weapon-range'))weaponState.customRange=target.value;if(target.classList.contains('custom-weapon-max')){weaponState.customMax=Math.max(0,parseInt(target.value,10)||0);weaponState.current=Math.min(weaponState.current,weaponState.customMax);}saveModel();return;}
+    var weaponCard=target.closest('.weapon-card'); if(weaponCard){var weaponState=model.weapons[parseInt(weaponCard.dataset.weaponIndex,10)];if(target.classList.contains('weapon-notes'))weaponState.notes=target.value;if(target.classList.contains('custom-weapon-name'))weaponState.customName=target.value;if(target.classList.contains('custom-weapon-damage'))weaponState.customDamage=target.value;if(target.classList.contains('custom-weapon-range'))weaponState.customRange=target.value;if(target.classList.contains('custom-weapon-max')){weaponState.customMax=Math.max(0,parseInt(target.value,10)||0);weaponState.current=Math.min(weaponState.current,weaponState.customMax);}if(target.className.indexOf('custom-weapon-')>=0)refreshCustomWeaponCard(weaponCard,weaponState,'equipped',weaponCard.dataset.weaponIndex);saveModel();return;}
     var noteCard=target.closest('.note-card'); if(noteCard){var note=getSelectedNotebook().notes.filter(function(entry){return entry.id===noteCard.dataset.noteId;})[0];if(note){if(target.classList.contains('note-title-input'))note.title=target.value;if(target.classList.contains('note-content'))note.content=target.value;saveModel();}return;}
     var relationshipCard=target.closest('.relationship-card');
     if(relationshipCard){
@@ -4369,6 +4460,7 @@
 
   function preparePrint(){
     finishPrint();
+    $$('#page-equipamentos .weapon-customization:not([open])').forEach(function(node){node.dataset.printOpened='true';node.open=true;});
     $$('input,textarea,select').forEach(function(control){
       if(control.matches('input[type="checkbox"],input[type="radio"],input[type="file"],input[type="hidden"],input[type="range"]')) return;
       var value = control.tagName === 'SELECT' ? (control.selectedOptions[0] ? control.selectedOptions[0].textContent : '') : control.value;
@@ -4386,6 +4478,7 @@
     }
   }
   function finishPrint(){
+    $$('[data-print-opened]').forEach(function(node){node.open=false;delete node.dataset.printOpened;});
     $$('.print-value,.print-clinical').forEach(function(node){node.remove();});
     $$('.print-original').forEach(function(node){node.classList.remove('print-original');});
   }

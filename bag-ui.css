@@ -1,0 +1,162 @@
+/* Bolsa: organização por função, com a mesma paleta e tipografia do Sobrevivente. */
+body.rota-dashboard-ui #page-equipamentos{
+  --panel:var(--rota-panel);
+  --panel-2:var(--rota-ink);
+  --panel-3:var(--rota-panel-soft);
+  --line:var(--rota-line-soft);
+  --line-strong:var(--rota-bronze);
+  --text:var(--rota-text);
+  --text-dim:#baa780;
+  --text-faint:#ac9473;
+  --green-bright:var(--rota-gold);
+  --green:var(--rota-bronze);
+}
+#page-equipamentos .bag-load{ margin-bottom:12px; }
+#page-equipamentos .section{ border-radius:2px; }
+#page-equipamentos .section-title{
+  margin:0;
+  padding:12px 16px;
+  color:var(--rota-gold);
+  font-size:19px;
+  font-weight:500;
+  letter-spacing:1.4px;
+  background:linear-gradient(90deg,rgba(111,74,39,.17),transparent);
+}
+#page-equipamentos .section-title .tag{ font-size:10px; line-height:1.6; }
+#page-equipamentos .section-body{ padding:16px; }
+#page-equipamentos .status-line{ font-size:12px; line-height:1.6; }
+#page-equipamentos .bag-help{ color:var(--text-dim); font-size:13px; line-height:1.6; margin:0 0 12px; }
+#page-equipamentos .bag-load .bag-help{ margin:6px 0 0; }
+#page-equipamentos .bag-index{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px; }
+#page-equipamentos .bag-index a{
+  padding:9px 14px;
+  border:1px solid var(--line-strong);
+  color:var(--rota-text);
+  background:var(--panel);
+  font:500 13px/1.4 var(--font-display);
+  letter-spacing:.6px;
+  text-decoration:none;
+}
+#page-equipamentos .bag-index a:hover{ background:var(--panel-3); border-color:var(--rota-gold); }
+#page-equipamentos :is(a,button,input,select,textarea,summary):focus-visible{ outline:2px solid var(--rota-gold); outline-offset:3px; }
+#page-equipamentos .bag-layout{ display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); align-items:start; gap:16px; }
+#page-equipamentos .bag-layout > *,#page-equipamentos .bag-support > *{ min-width:0; }
+#page-equipamentos .bag-support{ display:grid; gap:16px; }
+#page-equipamentos .bag-support .section{ margin:0; }
+#page-equipamentos .bag-layout{ margin-bottom:16px; }
+#page-equipamentos .bag-weapons{ margin:0; }
+#page-equipamentos [id^="bag-"]{ scroll-margin-top:16px; }
+#page-equipamentos .bag-subheading{
+  font:500 14px/1.5 var(--font-display);
+  letter-spacing:1px;
+  text-transform:uppercase;
+  color:var(--rota-gold);
+  margin:18px 0 10px;
+}
+#page-equipamentos .bag-subheading-row{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-top:18px; }
+#page-equipamentos .bag-subheading-row .bag-subheading{ margin:0; }
+#page-equipamentos .bag-subheading-row + .inv-grid{ margin-top:10px; }
+#page-equipamentos .bag-empty{ grid-column:1/-1; margin:0; padding:14px; border:1px dashed var(--line); color:var(--text-dim); font-size:13px; line-height:1.6; }
+#page-equipamentos .inv-grid{ grid-template-columns:minmax(0,1fr); }
+#page-equipamentos #weapons-list{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; gap:10px; }
+#page-equipamentos .weapon-card{ margin:0; padding:12px; min-height:0; }
+#page-equipamentos .weapon-card-header{ flex-wrap:wrap; }
+#page-equipamentos .weapon-card-title{ font:500 13px/1.5 var(--font-display); letter-spacing:.8px; }
+#page-equipamentos .weapon-stats,#page-equipamentos .inventory-weapon-body > span{ font-size:12px; line-height:1.6; }
+#page-equipamentos :is(select,input,textarea){ min-width:0; max-width:100%; font-size:13px; }
+#page-equipamentos .notes-btn{ line-height:1.5; letter-spacing:.5px; }
+#page-equipamentos .inventory-fields{ min-width:0; flex:1; }
+#page-equipamentos .inv-slot{ padding:12px; }
+#page-equipamentos .inv-slot strong{ font:500 15px/1.5 var(--font-display); }
+#page-equipamentos .inv-slot p{ font-size:12px; line-height:1.5; }
+#page-equipamentos .inv-slot small{ font-size:10px; line-height:1.5; }
+#page-equipamentos .inv-slot .list-row-remove{ flex-shrink:0; }
+#page-equipamentos .res-pips-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+#page-equipamentos .res-pip-row{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px; }
+#page-equipamentos .res-pip-row .skill-name{ grid-column:1/-1; font-size:13px; }
+#page-equipamentos .res-pips{ flex-wrap:wrap; }
+#page-equipamentos .armor-card p,#page-equipamentos .recipe-card p{ min-height:0; line-height:1.6; }
+#page-equipamentos .recipe-card{ display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+#page-equipamentos .recipe-card .craft-button{ margin-top:auto; }
+#page-equipamentos .recipe-card strong,#page-equipamentos .armor-card strong{ font:500 15px/1.5 var(--font-display); }
+@media (max-width:1200px){
+  #page-equipamentos #weapons-list{ grid-template-columns:minmax(0,1fr); }
+}
+@media (max-width:850px){
+  #page-equipamentos .bag-layout{ grid-template-columns:minmax(0,1fr); }
+  #page-equipamentos #weapons-list{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:560px){
+  #page-equipamentos #weapons-list,#page-equipamentos .armor-grid,#page-equipamentos .recipe-grid{ grid-template-columns:minmax(0,1fr); }
+  #page-equipamentos .section-body{ padding:12px; }
+  #page-equipamentos .section-title{ padding:12px; font-size:18px; }
+  #page-equipamentos .bag-index{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+  #page-equipamentos .bag-index a{ padding:9px; }
+}
+/* Cartões de armas: leitura de combate à vista, manutenção em segundo nível. */
+#page-equipamentos .weapon-dossier{
+  position:relative;
+  padding:16px;
+  border:1px solid var(--rota-bronze);
+  border-top:3px solid var(--rota-copper);
+  background:linear-gradient(135deg,rgba(111,74,39,.12),transparent 55%),var(--rota-ink);
+  box-shadow:inset 0 0 0 3px rgba(164,110,53,.035),0 5px 16px rgba(0,0,0,.22);
+}
+#page-equipamentos .weapon-identity{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding-bottom:14px; border-bottom:1px solid var(--line); }
+#page-equipamentos .weapon-identity > div{ min-width:0; }
+#page-equipamentos .weapon-location{ color:var(--text-faint); font:500 10px/1.5 var(--font-display); letter-spacing:1.4px; text-transform:uppercase; }
+#page-equipamentos .weapon-name{ margin:5px 0 0; color:#e6c58d; font:500 27px/1.18 var(--font-display); letter-spacing:.6px; text-transform:uppercase; overflow-wrap:anywhere; }
+#page-equipamentos .weapon-category{ flex-shrink:0; max-width:40%; padding:4px 7px; border:1px solid var(--line-strong); color:var(--text-dim); font:500 10px/1.5 var(--font-display); text-transform:uppercase; letter-spacing:.6px; }
+#page-equipamentos .weapon-facts{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 10px; margin:16px 0; }
+#page-equipamentos .weapon-facts:empty{ display:none; }
+#page-equipamentos .weapon-facts > div{ min-width:0; }
+#page-equipamentos .weapon-facts dt{ margin:0 0 4px; color:var(--text-faint); font:500 10px/1.5 var(--font-display); letter-spacing:1px; text-transform:uppercase; }
+#page-equipamentos .weapon-facts dd{ margin:0; color:var(--text); font:400 14px/1.45 var(--font-display); overflow-wrap:anywhere; }
+#page-equipamentos .weapon-dossier .weapon-track{ margin:16px 0; padding:12px; gap:10px; border:1px solid var(--line); background:linear-gradient(90deg,rgba(129,55,27,.13),transparent); }
+#page-equipamentos .weapon-track-heading{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+#page-equipamentos .weapon-track-heading > span{ font:500 12px/1.5 var(--font-display); letter-spacing:1px; text-transform:uppercase; }
+#page-equipamentos .weapon-track-heading > strong{ font:500 25px/1 var(--font-display); color:var(--rota-gold); }
+#page-equipamentos .weapon-track-heading > strong > small{ font:400 12px/1 var(--font-display); color:var(--text-faint); }
+#page-equipamentos .weapon-dossier .weapon-pips{ display:grid; grid-template-columns:repeat(auto-fit,minmax(18px,1fr)); gap:4px; width:100%; }
+#page-equipamentos .weapon-dossier .weapon-pips .pip{ width:100%; height:20px; border-radius:1px; border-color:#855335; background:#100c08; }
+#page-equipamentos .weapon-dossier .weapon-pips .pip.filled{ background:linear-gradient(#c48d49,#89512b); border-color:#d19d58; box-shadow:0 0 6px rgba(212,112,39,.18); }
+#page-equipamentos .weapon-dossier .weapon-pips .pip:hover{ border-color:#f0d09a; box-shadow:0 0 8px rgba(223,138,56,.4); }
+#page-equipamentos .weapon-state-alert{ color:#f49e87; font:500 12px/1.4 var(--font-display); text-transform:uppercase; letter-spacing:1px; }
+#page-equipamentos .weapon-dossier.weapon-depleted{ border-top-color:#b94430; }
+#page-equipamentos .weapon-track-note{ font:400 13px/1.6 var(--font-display); color:var(--text-dim); margin:14px 0; }
+#page-equipamentos .weapon-dossier .weapon-power-details,#page-equipamentos .weapon-customization{ border:1px solid var(--line); background:rgba(24,18,11,.55); margin:10px 0 0; }
+#page-equipamentos .weapon-dossier summary{ cursor:pointer; padding:11px 10px; color:var(--rota-gold); font:500 12px/1.5 var(--font-display); letter-spacing:.5px; text-transform:uppercase; }
+#page-equipamentos .weapon-dossier summary:hover{ background:rgba(137,81,43,.13); }
+#page-equipamentos .weapon-customization summary > span{ display:block; margin-left:14px; color:var(--text-faint); font-size:10px; letter-spacing:0; text-transform:none; }
+#page-equipamentos .weapon-customization-body{ display:grid; gap:14px; padding:4px 12px 12px; }
+#page-equipamentos .weapon-choice,#page-equipamentos .weapon-notes-label{ display:block; color:var(--text-faint); font:500 11px/1.5 var(--font-display); letter-spacing:.6px; text-transform:uppercase; }
+#page-equipamentos .weapon-dossier :is(select,textarea,input){ font-family:var(--font-display); font-style:normal; letter-spacing:.2px; }
+#page-equipamentos .weapon-dossier :is(.weapon-select,.inventory-weapon-select){ font-size:15px; min-height:40px; }
+#page-equipamentos .weapon-dossier .weapon-mods{ grid-template-columns:minmax(0,1fr); gap:12px; }
+#page-equipamentos .weapon-dossier .weapon-mods label{ font:500 11px/1.5 var(--font-display); }
+#page-equipamentos .weapon-dossier :is(.weapon-notes,.inventory-weapon-notes){ min-height:78px; font-size:14px; line-height:1.6; }
+#page-equipamentos .weapon-dossier .weapon-power-details article p{ font:400 13px/1.6 var(--font-display); }
+#page-equipamentos .weapon-card-footer{ margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
+#page-equipamentos .weapon-dossier .weapon-ammo-actions{ padding:0; border:0; background:none; margin:12px 0; }
+#page-equipamentos .weapon-dossier .weapon-ammo-actions small{ flex-basis:100%; margin:4px 0 0; font:400 11px/1.5 var(--font-display); }
+#page-equipamentos .weapon-empty{ border-top-color:var(--rota-bronze); background:rgba(16,13,9,.7); }
+#page-equipamentos .weapon-empty-header{ display:flex; align-items:center; gap:12px; }
+#page-equipamentos .weapon-slot-number{ display:grid; place-items:center; width:44px; height:54px; border:1px solid var(--line-strong); color:var(--rota-bronze); font:500 28px/1 var(--font-display); }
+#page-equipamentos .weapon-empty .weapon-name{ font-size:22px; color:var(--text-dim); }
+#page-equipamentos .inventory-weapon.weapon-dossier{ display:block; }
+#page-equipamentos .weapon-dossier .inventory-weapon-actions{ flex-direction:row; align-items:center; justify-content:flex-start; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); }
+#page-equipamentos .weapon-dossier .inventory-weapon-actions .inventory-remove{ margin-left:auto; }
+#page-equipamentos .weapon-dossier .inventory-weapon-editor{ margin-top:14px; background:rgba(111,74,39,.06); }
+#page-equipamentos .weapon-dossier .inventory-editor-heading{ flex-wrap:wrap; gap:6px; }
+@media (max-width:560px){
+  #page-equipamentos .weapon-dossier{ padding:13px; }
+  #page-equipamentos .weapon-name{ font-size:25px; }
+}
+@media print{
+  body.rota-dashboard-ui #page-equipamentos .weapon-customization-body{ display:block; }
+  body.rota-dashboard-ui #page-equipamentos .weapon-card-footer{ display:none; }
+  body.rota-dashboard-ui #page-equipamentos .bag-layout,body.rota-dashboard-ui #page-equipamentos .bag-support{ display:block; }
+  body.rota-dashboard-ui #page-equipamentos .section{ break-inside:auto; }
+  body.rota-dashboard-ui #page-equipamentos :is(.weapon-card,.inv-slot,.armor-card,.recipe-card){ break-inside:avoid; }
+  body.rota-dashboard-ui #page-equipamentos :is(.bag-empty,.inv-slot){ color:#111!important; background:#fff!important; }
+}
