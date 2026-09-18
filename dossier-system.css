@@ -1,0 +1,242 @@
+/* ========================================================================== */
+/* ROTA · SISTEMA VISUAL COMPARTILHADO                                        */
+/* Tokens e componentes usados por todas as páginas do dossiê.                */
+/* ========================================================================== */
+
+body.rota-dashboard-ui{
+  /* Paleta canônica extraída da aba Sobrevivente. */
+  --rota-charcoal:#070705;
+  --rota-ink:#0d0c09;
+  --rota-panel:#11100c;
+  --rota-panel-soft:#17130e;
+  --rota-bronze:#6f4a27;
+  --rota-copper:#9c4b28;
+  --rota-ember:#db6a23;
+  --rota-crimson:#9f241d;
+  --rota-burgundy:#4d1514;
+  --rota-gold:#c8a66b;
+  --rota-paper:#b8a481;
+  --rota-line:rgba(151,99,48,.5);
+  --rota-line-soft:rgba(177,126,72,.25);
+  --rota-text:#d4c29e;
+  --rota-muted:#8f7c60;
+
+  /* Nomes semânticos: páginas e componentes devem consumir estes tokens. */
+  --dossier-background:var(--rota-charcoal);
+  --dossier-surface:var(--rota-panel);
+  --dossier-surface-deep:var(--rota-ink);
+  --dossier-surface-raised:var(--rota-panel-soft);
+  --dossier-paper:var(--rota-paper);
+  --dossier-paper-ink:#2f2015;
+  --dossier-paper-muted:#5d432d;
+  --dossier-border:var(--rota-line-soft);
+  --dossier-border-strong:var(--rota-bronze);
+  --dossier-accent:var(--rota-gold);
+  --dossier-accent-strong:var(--rota-copper);
+  --dossier-heading:#e6c58d;
+  --dossier-text:var(--rota-text);
+  --dossier-text-muted:#baa780;
+  --dossier-text-faint:#ac9473;
+  --dossier-danger:#b94430;
+  --dossier-danger-text:#f49e87;
+  --dossier-warning:#d7b94a;
+  --dossier-success:#71845b;
+  --dossier-neon-amber:#d49808;
+  --dossier-neon-cyan:#3d91bd;
+  --dossier-neon-violet:#9254b3;
+  --dossier-marker-empty:#100c08;
+  --dossier-marker-border:#855335;
+  --dossier-marker-fill-start:#c48d49;
+  --dossier-marker-fill-end:#89512b;
+  --dossier-marker-fill-border:#d19d58;
+  --dossier-marker-hover:#f0d09a;
+
+  --dossier-space-1:4px;
+  --dossier-space-2:8px;
+  --dossier-space-3:12px;
+  --dossier-space-4:16px;
+  --dossier-space-5:24px;
+  --dossier-space-6:32px;
+  --dossier-radius:2px;
+  --dossier-shadow:inset 0 0 0 1px rgba(205,139,69,.035),0 5px 16px rgba(0,0,0,.22);
+  --dossier-focus:var(--rota-gold);
+  --dossier-title-size:19px;
+  --dossier-card-title-size:27px;
+  --dossier-body-size:15px;
+  --dossier-help-size:13px;
+  --dossier-label-size:11px;
+  --dossier-micro-size:10px;
+}
+
+/* Ponte temporária para componentes antigos enquanto cada aba é migrada. */
+body.rota-dashboard-ui .dossier-secondary-page{
+  --panel:var(--dossier-surface);
+  --panel-2:var(--dossier-surface-deep);
+  --panel-3:var(--dossier-surface-raised);
+  --line:var(--dossier-border);
+  --line-strong:var(--dossier-border-strong);
+  --text:var(--dossier-text);
+  --text-dim:var(--dossier-text-muted);
+  --text-faint:var(--dossier-text-faint);
+  --green-bright:var(--dossier-accent);
+  --green:var(--dossier-border-strong);
+}
+
+body.rota-dashboard-ui .dossier-secondary-page .page-heading{
+  border-color:var(--dossier-border-strong);
+  background:rgba(9,8,6,.88);
+}
+
+body.rota-dashboard-ui .dossier-secondary-page .page-kicker{
+  color:var(--dossier-accent);
+}
+
+body.rota-dashboard-ui .dossier-panel{
+  position:relative;
+  border:1px solid var(--dossier-border);
+  border-radius:var(--dossier-radius);
+  background:var(--dossier-surface);
+  box-shadow:inset 0 0 0 1px rgba(205,139,69,.025);
+}
+
+body.rota-dashboard-ui .dossier-panel__title{
+  margin:0;
+  padding:var(--dossier-space-3) var(--dossier-space-4);
+  border-bottom:1px solid var(--dossier-border);
+  color:var(--dossier-accent);
+  background:linear-gradient(90deg,rgba(111,74,39,.17),transparent);
+  font:500 var(--dossier-title-size)/1.25 var(--font-display);
+  letter-spacing:1.4px;
+  text-transform:uppercase;
+}
+
+body.rota-dashboard-ui .dossier-panel__title .tag{
+  color:var(--dossier-text-faint);
+  font:400 var(--dossier-micro-size)/1.6 var(--font-mono);
+  letter-spacing:1px;
+}
+
+body.rota-dashboard-ui .dossier-card{
+  position:relative;
+  border:1px solid var(--dossier-border);
+  border-radius:var(--dossier-radius);
+  background:var(--dossier-surface-deep);
+  color:var(--dossier-text);
+}
+
+body.rota-dashboard-ui .dossier-card--danger{
+  border-color:var(--dossier-danger);
+}
+
+body.rota-dashboard-ui .dossier-paper{
+  border:1px solid rgba(71,49,29,.55);
+  border-radius:var(--dossier-radius);
+  background-color:var(--dossier-paper);
+  color:var(--dossier-paper-ink);
+}
+
+body.rota-dashboard-ui .dossier-field{
+  min-height:36px;
+  padding:7px 9px;
+  border:1px solid var(--dossier-border);
+  border-radius:var(--dossier-radius);
+  background:var(--dossier-surface-raised);
+  color:var(--dossier-text);
+  font:400 14px/1.4 var(--font-body);
+}
+
+body.rota-dashboard-ui .dossier-button,
+body.rota-dashboard-ui .dossier-secondary-page .notes-btn{
+  border-color:var(--dossier-border-strong);
+  border-radius:var(--dossier-radius);
+  background:var(--dossier-surface-deep);
+  color:var(--dossier-text);
+  font-family:var(--font-display);
+}
+
+body.rota-dashboard-ui .dossier-button:hover,
+body.rota-dashboard-ui .dossier-secondary-page .notes-btn:hover{
+  border-color:var(--dossier-accent);
+  background:var(--dossier-surface-raised);
+  color:var(--dossier-heading);
+}
+
+body.rota-dashboard-ui .dossier-button--danger{
+  border-color:var(--dossier-danger);
+  color:var(--dossier-danger-text);
+}
+
+body.rota-dashboard-ui .dossier-chip{
+  display:inline-flex;
+  align-items:center;
+  min-height:22px;
+  padding:3px 7px;
+  border:1px solid var(--dossier-border-strong);
+  color:var(--dossier-text-muted);
+  font:500 var(--dossier-micro-size)/1.4 var(--font-display);
+  letter-spacing:.6px;
+  text-transform:uppercase;
+}
+
+body.rota-dashboard-ui .dossier-marker{
+  border:1px solid var(--dossier-marker-border);
+  border-radius:1px;
+  background:var(--dossier-marker-empty);
+}
+
+body.rota-dashboard-ui .dossier-marker.is-filled{
+  border-color:var(--dossier-marker-fill-border);
+  background:linear-gradient(var(--dossier-marker-fill-start),var(--dossier-marker-fill-end));
+  box-shadow:0 0 6px rgba(212,112,39,.18);
+}
+
+body.rota-dashboard-ui .dossier-expansion{
+  border:1px solid var(--dossier-border);
+  background:rgba(24,18,11,.55);
+}
+
+body.rota-dashboard-ui .dossier-expansion > summary{
+  cursor:pointer;
+  color:var(--dossier-accent);
+  font-family:var(--font-display);
+  text-transform:uppercase;
+}
+
+body.rota-dashboard-ui .dossier-empty{
+  margin:0;
+  padding:14px;
+  border:1px dashed var(--dossier-border);
+  color:var(--dossier-text-muted);
+  font-size:var(--dossier-help-size);
+  line-height:1.6;
+}
+
+body.rota-dashboard-ui .dossier-feedback{
+  min-height:18px;
+  color:var(--dossier-text-muted);
+  font-size:var(--dossier-label-size);
+  line-height:1.5;
+}
+
+body.rota-dashboard-ui .dossier-feedback.is-danger{
+  color:var(--dossier-danger-text);
+}
+
+body.rota-dashboard-ui .dossier-secondary-page :is(a,button,input,select,textarea,summary):focus-visible{
+  outline:2px solid var(--dossier-focus);
+  outline-offset:3px;
+}
+
+@media (max-width:560px){
+  body.rota-dashboard-ui .dossier-panel__title{
+    padding:var(--dossier-space-3);
+    font-size:18px;
+  }
+}
+
+@media print{
+  body.rota-dashboard-ui .dossier-panel,
+  body.rota-dashboard-ui .dossier-card{
+    box-shadow:none;
+  }
+}

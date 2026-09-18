@@ -13,15 +13,17 @@ A aba Sobrevivente organiza informações relacionadas em painéis, usa a paleta
 - Recursos e partes próximos à área de fabricação; receitas com ingredientes e controles existentes.
 - Atalhos para cada seção e adaptação das colunas a telas menores.
 - Paleta, bordas e tipografia alinhadas ao Sobrevivente, em `bag-ui.css`, restrita à Bolsa.
+- Fundação visual compartilhada em `dossier-system.css`, com tokens semânticos e componentes de painel, cartão, campo, botão, marcador, expansão, estado vazio e feedback. `bag-ui.css` agora guarda apenas a composição e as particularidades da Bolsa.
 
 A separação é visual: o inventário mantém seus IDs, ordem e capacidade compartilhada. Não há migração de ficha nem criação de capacidades por categoria. Itens personalizados permanecem em “Utilitários e outros itens”; não se tenta adivinhar sua categoria pelo nome. A marcação de excesso considera itens ocupados, não espaços vazios anteriores na lista.
 
 ## Próximos aprimoramentos
 
 1. **Concluído:** cartões de armas equipadas e guardadas com nome em destaque, categoria, dados de combate em campos separados e marcador de usos/durabilidade/munição. Poderes e ajustes expansíveis; espaços vazios compactos. Armas sem munição não recebem mais o aviso visual “Quebrada”. Edição personalizada atualiza os dados visíveis imediatamente.
-2. Refinar o catálogo por contexto (armas, munições, utilitários), mantendo as regras atuais.
-3. Avaliar subdivisões dos utilitários, como tratamento, exploração e consumíveis. Definir categorias explícitas antes de classificar itens personalizados.
-4. Se houver artes oficiais de equipamentos, incorporá-las com a mesma linguagem dos atributos. Não são necessárias para usar esta base.
+2. **Concluído:** cartões de munição com tipo, compatibilidade, quantidade ou cargas, regra de recarga, recuperação de Flechas e estado esgotado. Os controles existentes e os limites oficiais foram preservados.
+3. Refinar o catálogo por contexto (armas, munições, utilitários), mantendo as regras atuais.
+4. Avaliar subdivisões dos utilitários, como tratamento, exploração e consumíveis. Definir categorias explícitas antes de classificar itens personalizados.
+5. Se houver artes oficiais de equipamentos, incorporá-las com a mesma linguagem dos atributos. Não são necessárias para usar esta base.
 
 ## Verificação
 

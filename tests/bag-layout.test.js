@@ -17,7 +17,7 @@ function setup(){
   const source = fs.readFileSync(path.join(__dirname,'..','script.js'),'utf8');
   vm.runInContext(source.replace('  initialize();', `
     renderEquipment = renderInventory; saveModel = function(){};
-    window.bagTest = {renderInventory,moveWeaponToInventory,equipInventoryWeapon,weaponStateFromId,weaponPresentation,weaponTrackHtml,weaponFactsHtml,
+    window.bagTest = {renderInventory,renderInventoryEntry,ammunitionCardHtml,moveWeaponToInventory,equipInventoryWeapon,weaponStateFromId,weaponPresentation,weaponTrackHtml,weaponFactsHtml,
       emptyInventoryItem,get model(){return model;}};
   `),context);
   return {api:context.bagTest,controls};
@@ -51,6 +51,36 @@ test('cartão diferencia arma quebrada de munição esgotada e usos personalizad
   assert.equal(api.weaponPresentation(bow).status,'');
   assert.equal(api.weaponPresentation(custom).status,'Sem usos');
   assert.match(api.weaponTrackHtml(bow,'equipped',1),/Flechas usadas diretamente da reserva/);
+});
+
+test('cartão de munição mostra tipo, compatibilidade, reserva e regras sem alterar os dados',()=>{
+  const {api}=setup();
+  const loose={id:'ammo-loose',kind:'ammo',ammoId:'flechas',name:'Flechas',weaponId:'',quantity:4,charges:0,capacity:6};
+  const container={id:'ammo-container',kind:'ammo',ammoId:'pentes',name:'Pentes',weaponId:'pistola',quantity:1,charges:4,capacity:8};
+  const before=JSON.stringify([loose,container]);
+  const looseHtml=api.ammunitionCardHtml(loose,2,false);
+  const containerHtml=api.ammunitionCardHtml(container,3,false);
+  assert.match(looseHtml,/ammo-dossier dossier-card/);
+  assert.match(looseHtml,/ammo-theme-loose/);
+  assert.match(looseHtml,/Munição solta/);
+  assert.match(looseHtml,/Besta · Arco e Flecha/);
+  assert.match(looseHtml,/Recuperação/);
+  assert.match(looseHtml,/4<small> \/ 6<\/small>/);
+  assert.match(containerHtml,/Pente ou tanque/);
+  assert.match(containerHtml,/ammo-theme-container/);
+  assert.match(containerHtml,/Arma vinculada/);
+  assert.match(containerHtml,/Pistola/);
+  assert.match(containerHtml,/data-ammo-delta="-1"/);
+  assert.match(containerHtml,/data-ammo-delta="1"/);
+  assert.equal(JSON.stringify([loose,container]),before);
+});
+
+test('munição zerada recebe estado textual e visual de esgotada',()=>{
+  const {api}=setup();
+  const html=api.ammunitionCardHtml({id:'empty-ammo',kind:'ammo',ammoId:'balas',name:'Balas',weaponId:'',quantity:0,charges:0,capacity:6},0,false);
+  assert.match(html,/is-depleted dossier-card--danger/);
+  assert.match(html,/Esgotada/);
+  assert.match(html,/aria-label="Balas, 0 de 6"/);
 });
 
 test('detalhes de armas personalizadas escapam conteúdo e mantêm os valores completos',()=>{

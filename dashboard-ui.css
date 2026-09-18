@@ -5,21 +5,6 @@
 /* ========================================================================== */
 
 body.rota-dashboard-ui{
-  --rota-charcoal:#070705;
-  --rota-ink:#0d0c09;
-  --rota-panel:#11100c;
-  --rota-panel-soft:#17130e;
-  --rota-bronze:#6f4a27;
-  --rota-copper:#9c4b28;
-  --rota-ember:#db6a23;
-  --rota-crimson:#9f241d;
-  --rota-burgundy:#4d1514;
-  --rota-gold:#c8a66b;
-  --rota-paper:#b8a481;
-  --rota-line:rgba(151,99,48,.5);
-  --rota-line-soft:rgba(177,126,72,.25);
-  --rota-text:#d4c29e;
-  --rota-muted:#8f7c60;
   min-height:100dvh;
   background-color:#050403;
   background-image:
